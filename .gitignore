@@ -27,3 +27,7 @@ target/
 .vscode/
 *.swp
 *.swo
+
+# Database
+*.sql
+schema.sql
