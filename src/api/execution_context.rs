@@ -13,10 +13,10 @@ pub struct ExecutionContextListResponse {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ListExecutionContextsOptions {
-    pub page: Option<u32>,
-    pub per_page: Option<u32>,
-    pub agent_id: Option<String>,
-    pub workflow_id: Option<String>,
+    pub limit: Option<u32>,
+    pub offset: Option<u32>,
+    pub status: Option<String>,
+    pub context_group: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,17 +33,17 @@ pub async fn fetch_execution_contexts(options: Option<ListExecutionContextsOptio
     
     if let Some(opts) = options {
         let mut params = vec![];
-        if let Some(page) = opts.page {
-            params.push(format!("page={}", page));
+        if let Some(limit) = opts.limit {
+            params.push(format!("limit={}", limit));
         }
-        if let Some(per_page) = opts.per_page {
-            params.push(format!("per_page={}", per_page));
+        if let Some(offset) = opts.offset {
+            params.push(format!("offset={}", offset));
         }
-        if let Some(agent_id) = opts.agent_id {
-            params.push(format!("agent_id={}", agent_id));
+        if let Some(status) = opts.status {
+            params.push(format!("status={}", status));
         }
-        if let Some(workflow_id) = opts.workflow_id {
-            params.push(format!("workflow_id={}", workflow_id));
+        if let Some(context_group) = opts.context_group {
+            params.push(format!("context_group={}", context_group));
         }
         if !params.is_empty() {
             url = format!("{}?{}", url, params.join("&"));

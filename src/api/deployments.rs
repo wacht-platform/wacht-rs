@@ -11,12 +11,11 @@ use crate::{
 /// workspace permissions if applicable. Custom claims can be added using JWT templates with 
 /// handlebars syntax that has access to user, session, organization, and workspace data.
 pub async fn generate_token(
-    deployment_id: i64,
     generate_token_request: GenerateTokenRequest,
 ) -> Result<GenerateTokenResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/deployments/{}/token", config.base_url, deployment_id);
+    let url = format!("{}/token", config.base_url);
     
     let response = client
         .post(&url)
@@ -37,3 +36,4 @@ pub async fn generate_token(
         })
     }
 }
+

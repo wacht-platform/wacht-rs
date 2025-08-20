@@ -1,9 +1,45 @@
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{AiAgent, CreateAiAgentRequest, UpdateAiAgentRequest},
+    models::{AiAgent, CreateAiAgentRequest, UpdateAiAgentRequest, GenerateTokenResponse},
 };
 use serde::{Deserialize, Serialize};
+
+/// Request for generating an agent context token
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct GenerateAgentContextTokenRequest {
+    /// The user ID to generate a token for
+    pub user_id: i64,
+    /// Optional audience (context group) for restricting token access
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audience: Option<String>,
+    /// Token validity in hours (defaults to 24 hours if not specified)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub validity_hours: Option<u32>,
+}
+
+impl GenerateAgentContextTokenRequest {
+    /// Create a new GenerateAgentContextTokenRequest
+    pub fn new(user_id: i64) -> GenerateAgentContextTokenRequest {
+        GenerateAgentContextTokenRequest {
+            user_id,
+            audience: None,
+            validity_hours: None,
+        }
+    }
+
+    /// Set the audience (context group) restriction
+    pub fn with_audience(mut self, audience: String) -> Self {
+        self.audience = Some(audience);
+        self
+    }
+
+    /// Set the token validity in hours
+    pub fn with_validity_hours(mut self, validity_hours: u32) -> Self {
+        self.validity_hours = Some(validity_hours);
+        self
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AgentListResponse {
@@ -131,6 +167,39 @@ pub async fn delete_agent(agent_id: &str) -> Result<()> {
             status,
             message: format!("Failed to delete agent {}: {}", agent_id, error_body),
             details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Generate Agent Context Token
+/// 
+/// Generate a JWT token specifically for agent realtime connections. This token includes 
+/// the "agent_context" scope and can optionally include an audience claim to restrict 
+/// access to specific context groups. The token is used for WebSocket authentication 
+/// when connecting to the realtime agent API.
+pub async fn generate_agent_context_token(
+    generate_agent_context_token_request: GenerateAgentContextTokenRequest,
+) -> Result<GenerateTokenResponse> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/token/agent-context", config.base_url);
+    
+    let response = client
+        .post(&url)
+        .json(&generate_agent_context_token_request)
+        .send()
+        .await?;
+    
+    if response.status().is_success() {
+        let token_response: GenerateTokenResponse = response.json().await?;
+        Ok(token_response)
+    } else {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_default();
+        Err(Error::Api {
+            status,
+            message: error_text,
+            details: None,
         })
     }
 }

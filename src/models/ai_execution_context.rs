@@ -9,36 +9,38 @@
  */
 
 use serde::{Deserialize, Serialize};
+use chrono::{DateTime, Utc};
 
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AiExecutionContext {
-    #[serde(rename = "id", skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    #[serde(rename = "agent_id", skip_serializing_if = "Option::is_none")]
-    pub agent_id: Option<String>,
-    #[serde(rename = "workflow_id", skip_serializing_if = "Option::is_none")]
-    pub workflow_id: Option<String>,
-    #[serde(rename = "user_id", skip_serializing_if = "Option::is_none")]
-    pub user_id: Option<String>,
-    #[serde(rename = "session_id", skip_serializing_if = "Option::is_none")]
-    pub session_id: Option<String>,
-    #[serde(rename = "context", skip_serializing_if = "Option::is_none")]
-    pub context: Option<serde_json::Value>,
-    #[serde(rename = "created_at", skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
+    pub id: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub deployment_id: String,
+    pub title: String,
+    pub current_goal: String,
+    pub tasks: Vec<String>,
+    pub context_group: Option<String>,
+    pub last_activity_at: DateTime<Utc>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub execution_state: Option<serde_json::Value>,
+    pub status: ExecutionContextStatus,
 }
 
-impl AiExecutionContext {
-    pub fn new() -> AiExecutionContext {
-        AiExecutionContext {
-            id: None,
-            agent_id: None,
-            workflow_id: None,
-            user_id: None,
-            session_id: None,
-            context: None,
-            created_at: None,
-        }
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExecutionContextStatus {
+    Idle,
+    Running,
+    WaitingForInput,
+    Interrupted,
+    Completed,
+    Failed,
+}
+
+impl Default for ExecutionContextStatus {
+    fn default() -> Self {
+        ExecutionContextStatus::Idle
     }
 }
 
