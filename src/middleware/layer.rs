@@ -8,10 +8,10 @@
 use axum::{
     body::Body,
     extract::Request,
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::Response,
 };
-use jsonwebtoken::{decode, decode_header, Algorithm, DecodingKey, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
 use std::{
     future::Future,
     pin::Pin,
@@ -176,9 +176,6 @@ where
             // Validate token and extract claims
             match validate_token(req, &config).await {
                 Ok((mut req, auth_context)) => {
-                    info!(user_id = %auth_context.user_id, "Token validated successfully");
-
-                    // Add auth context to request extensions
                     req.extensions_mut().insert(auth_context);
 
                     // Call the inner service
@@ -262,7 +259,7 @@ async fn validate_token(
             return Err(error_response(
                 StatusCode::UNAUTHORIZED,
                 "Unsupported algorithm",
-            ))
+            ));
         }
     };
 
@@ -294,7 +291,7 @@ async fn validate_token(
             return Err(error_response(
                 StatusCode::UNAUTHORIZED,
                 "Unsupported algorithm",
-            ))
+            ));
         }
     };
 

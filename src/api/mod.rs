@@ -1,5 +1,6 @@
 pub mod agents;
 pub mod analytics;
+pub mod api_keys;
 pub mod deployments;
 pub mod execution_context;
 pub mod health;
@@ -8,5 +9,6 @@ pub mod organizations;
 pub mod settings;
 pub mod tools;
 pub mod users;
+pub mod webhooks;
 pub mod workflows;
 pub mod workspaces;

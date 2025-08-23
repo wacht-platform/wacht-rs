@@ -28,19 +28,34 @@ pub struct AiExecutionContext {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum ExecutionContextStatus {
+    #[serde(rename = "idle")]
     Idle,
+    #[serde(rename = "running")]
     Running,
+    #[serde(rename = "waiting_for_input")]
     WaitingForInput,
+    #[serde(rename = "interrupted")]
     Interrupted,
+    #[serde(rename = "completed")]
     Completed,
+    #[serde(rename = "failed")]
     Failed,
 }
 
 impl Default for ExecutionContextStatus {
     fn default() -> Self {
         ExecutionContextStatus::Idle
+    }
+}
+
+impl ExecutionContextStatus {
+    pub fn is_active(&self) -> bool {
+        matches!(self, Self::Running | Self::WaitingForInput)
+    }
+
+    pub fn is_terminal(&self) -> bool {
+        matches!(self, Self::Completed | Self::Failed)
     }
 }
 

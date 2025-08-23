@@ -20,6 +20,6 @@ pub use error::{Error, Result};
 
 // Re-export the API modules for easy access
 pub use api::{
-    agents, analytics, deployments, execution_context, health, knowledge_bases, organizations,
-    settings, tools, users, workflows, workspaces,
+    agents, analytics, api_keys, deployments, execution_context, health, knowledge_bases, 
+    organizations, settings, tools, users, webhooks, workflows, workspaces,
 };

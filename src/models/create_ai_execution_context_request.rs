@@ -12,27 +12,25 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CreateAiExecutionContextRequest {
-    #[serde(rename = "agent_id")]
-    pub agent_id: String,
-    #[serde(rename = "workflow_id", skip_serializing_if = "Option::is_none")]
-    pub workflow_id: Option<String>,
-    #[serde(rename = "user_id", skip_serializing_if = "Option::is_none")]
-    pub user_id: Option<String>,
-    #[serde(rename = "session_id", skip_serializing_if = "Option::is_none")]
-    pub session_id: Option<String>,
-    #[serde(rename = "context", skip_serializing_if = "Option::is_none")]
-    pub context: Option<serde_json::Value>,
+    #[serde(rename = "title", skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(rename = "context_group", skip_serializing_if = "Option::is_none")]
+    pub context_group: Option<String>,
 }
 
 impl CreateAiExecutionContextRequest {
-    pub fn new(agent_id: String) -> CreateAiExecutionContextRequest {
-        CreateAiExecutionContextRequest {
-            agent_id,
-            workflow_id: None,
-            user_id: None,
-            session_id: None,
-            context: None,
-        }
+    pub fn new() -> CreateAiExecutionContextRequest {
+        CreateAiExecutionContextRequest::default()
+    }
+    
+    pub fn with_title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+    
+    pub fn with_context_group(mut self, group: impl Into<String>) -> Self {
+        self.context_group = Some(group.into());
+        self
     }
 }
 
