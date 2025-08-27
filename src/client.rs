@@ -1,7 +1,7 @@
 use once_cell::sync::Lazy;
 use reqwest::{
-    header::{HeaderMap, HeaderName, HeaderValue, AUTHORIZATION},
     Client, ClientBuilder,
+    header::{AUTHORIZATION, HeaderMap, HeaderName, HeaderValue},
 };
 use serde::{Deserialize, Serialize};
 use std::sync::RwLock;
