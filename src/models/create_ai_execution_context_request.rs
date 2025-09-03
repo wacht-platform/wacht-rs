@@ -14,6 +14,8 @@ use serde::{Deserialize, Serialize};
 pub struct CreateAiExecutionContextRequest {
     #[serde(rename = "title", skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
+    #[serde(rename = "system_instructions", skip_serializing_if = "Option::is_none")]
+    pub system_instructions: Option<String>,
     #[serde(rename = "context_group", skip_serializing_if = "Option::is_none")]
     pub context_group: Option<String>,
 }
@@ -25,6 +27,11 @@ impl CreateAiExecutionContextRequest {
     
     pub fn with_title(mut self, title: impl Into<String>) -> Self {
         self.title = Some(title.into());
+        self
+    }
+    
+    pub fn with_system_instructions(mut self, instructions: impl Into<String>) -> Self {
+        self.system_instructions = Some(instructions.into());
         self
     }
     

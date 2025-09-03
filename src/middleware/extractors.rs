@@ -1,13 +1,13 @@
 //! Axum extractors for authentication and authorization.
-//! 
+//!
 //! These extractors can be used in handler functions to require authentication
 //! or specific permissions.
 
 #![cfg(feature = "axum")]
 
 use axum::{
-    extract::{FromRequestParts},
-    http::{request::Parts, StatusCode},
+    extract::FromRequestParts,
+    http::{StatusCode, request::Parts},
     response::{IntoResponse, Response},
 };
 use std::marker::PhantomData;
@@ -15,9 +15,9 @@ use std::marker::PhantomData;
 use super::auth::{AuthContext, PermissionScope};
 
 /// Extractor that requires authentication.
-/// 
+///
 /// If authentication fails, returns 401 Unauthorized.
-/// 
+///
 /// # Example
 /// ```ignore
 /// async fn protected_handler(
@@ -45,10 +45,7 @@ where
 {
     type Rejection = (StatusCode, &'static str);
 
-    async fn from_request_parts(
-        parts: &mut Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         parts
             .extensions
             .get::<AuthContext>()
@@ -65,9 +62,9 @@ pub trait Permission: Send + Sync + 'static {
 }
 
 /// Extractor that requires a specific permission.
-/// 
+///
 /// The permission type parameter determines what permission to check.
-/// 
+///
 /// # Example
 /// ```ignore
 /// // Define a permission
@@ -76,7 +73,7 @@ pub trait Permission: Send + Sync + 'static {
 ///     const PERMISSION: &'static str = "admin:read";
 ///     const SCOPE: PermissionScope = PermissionScope::Organization;
 /// }
-/// 
+///
 /// // Use in handler
 /// async fn admin_handler(
 ///     _perm: RequirePermission<AdminRead>,
@@ -107,18 +104,13 @@ where
 {
     type Rejection = Response;
 
-    async fn from_request_parts(
-        parts: &mut Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         // First check authentication
         let auth = parts
             .extensions
             .get::<AuthContext>()
             .cloned()
-            .ok_or_else(|| {
-                (StatusCode::UNAUTHORIZED, "Authentication required").into_response()
-            })?;
+            .ok_or_else(|| (StatusCode::UNAUTHORIZED, "Authentication required").into_response())?;
 
         // Then check permission
         let has_permission = match P::SCOPE {
@@ -150,7 +142,7 @@ where
 }
 
 /// Helper macro to define permissions.
-/// 
+///
 /// # Example
 /// ```ignore
 /// require_permission!(CanReadUsers, "users:read", Organization);
@@ -160,18 +152,19 @@ where
 macro_rules! require_permission {
     ($name:ident, $permission:expr, $scope:ident) => {
         pub struct $name;
-        
+
         impl $crate::middleware::extractors::Permission for $name {
             const PERMISSION: &'static str = $permission;
-            const SCOPE: $crate::middleware::PermissionScope = $crate::middleware::PermissionScope::$scope;
+            const SCOPE: $crate::middleware::PermissionScope =
+                $crate::middleware::PermissionScope::$scope;
         }
     };
 }
 
 /// Extractor that optionally requires authentication.
-/// 
+///
 /// Unlike `RequireAuth`, this won't fail if no auth is present.
-/// 
+///
 /// # Example
 /// ```ignore
 /// async fn maybe_protected_handler(
@@ -193,10 +186,7 @@ where
 {
     type Rejection = std::convert::Infallible;
 
-    async fn from_request_parts(
-        parts: &mut Parts,
-        _state: &S,
-    ) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
         Ok(OptionalAuth(parts.extensions.get::<AuthContext>().cloned()))
     }
 }

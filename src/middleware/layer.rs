@@ -180,17 +180,7 @@ where
 
                     // Call the inner service
                     match inner.call(req).await {
-                        Ok(response) => {
-                            let status = response.status();
-                            if status.is_server_error() {
-                                warn!(status = %status, "Request completed with server error");
-                            } else if status.is_client_error() {
-                                debug!(status = %status, "Request completed with client error");
-                            } else {
-                                debug!(status = %status, "Request completed successfully");
-                            }
-                            Ok(response)
-                        }
+                        Ok(response) => Ok(response),
                         Err(_) => {
                             error!("Inner service call failed");
                             Ok(error_response(

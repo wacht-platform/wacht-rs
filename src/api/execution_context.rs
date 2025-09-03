@@ -19,18 +19,52 @@ pub struct ListExecutionContextsOptions {
     pub context_group: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct UpdateExecutionContextRequest {
-    pub context: Option<serde_json::Value>,
-    pub session_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_instructions: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context_group: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+}
+
+impl UpdateExecutionContextRequest {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_title(mut self, title: impl Into<String>) -> Self {
+        self.title = Some(title.into());
+        self
+    }
+
+    pub fn with_system_instructions(mut self, instructions: impl Into<String>) -> Self {
+        self.system_instructions = Some(instructions.into());
+        self
+    }
+
+    pub fn with_context_group(mut self, group: impl Into<String>) -> Self {
+        self.context_group = Some(group.into());
+        self
+    }
+
+    pub fn with_status(mut self, status: impl Into<String>) -> Self {
+        self.status = Some(status.into());
+        self
+    }
 }
 
 /// Fetch all execution contexts for the current workspace
-pub async fn fetch_execution_contexts(options: Option<ListExecutionContextsOptions>) -> Result<ExecutionContextListResponse> {
+pub async fn fetch_execution_contexts(
+    options: Option<ListExecutionContextsOptions>,
+) -> Result<ExecutionContextListResponse> {
     let config = get_config();
     let client = get_client();
     let mut url = format!("{}/ai-execution-context", config.base_url);
-    
+
     if let Some(opts) = options {
         let mut params = vec![];
         if let Some(limit) = opts.limit {
@@ -49,10 +83,10 @@ pub async fn fetch_execution_contexts(options: Option<ListExecutionContextsOptio
             url = format!("{}?{}", url, params.join("&"));
         }
     }
-    
+
     let response = client.get(&url).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
@@ -70,10 +104,10 @@ pub async fn fetch_execution_context(id: &str) -> Result<AiExecutionContext> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/ai-execution-context/{}", config.base_url, id);
-    
+
     let response = client.get(&url).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
@@ -87,18 +121,23 @@ pub async fn fetch_execution_context(id: &str) -> Result<AiExecutionContext> {
 }
 
 /// Create a new execution context for AI operations
-pub async fn create_execution_context(request: CreateAiExecutionContextRequest) -> Result<AiExecutionContext> {
+pub async fn create_execution_context(
+    request: CreateAiExecutionContextRequest,
+) -> Result<AiExecutionContext> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/ai-execution-context", config.base_url);
-    
+
     let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
         let error_body = response.text().await?;
+
+        println!("error {}", error_body);
+
         Err(Error::Api {
             status,
             message: format!("Failed to create execution context: {}", error_body),
@@ -108,14 +147,17 @@ pub async fn create_execution_context(request: CreateAiExecutionContextRequest) 
 }
 
 /// Update an existing execution context
-pub async fn update_execution_context(id: &str, request: UpdateExecutionContextRequest) -> Result<AiExecutionContext> {
+pub async fn update_execution_context(
+    id: &str,
+    request: UpdateExecutionContextRequest,
+) -> Result<AiExecutionContext> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/ai-execution-context/{}", config.base_url, id);
-    
-    let response = client.put(&url).json(&request).send().await?;
+
+    let response = client.patch(&url).json(&request).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
@@ -133,10 +175,10 @@ pub async fn delete_execution_context(id: &str) -> Result<()> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/ai-execution-context/{}", config.base_url, id);
-    
+
     let response = client.delete(&url).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(())
     } else {
