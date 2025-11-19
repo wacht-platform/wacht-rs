@@ -1,7 +1,7 @@
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{AiAgent, CreateAiAgentRequest, UpdateAiAgentRequest, GenerateTokenResponse},
+    models::{AiAgent, CreateAiAgentRequest, GenerateTokenResponse, UpdateAiAgentRequest},
 };
 use serde::{Deserialize, Serialize};
 
@@ -64,17 +64,17 @@ pub async fn fetch_agents(options: Option<ListAgentsOptions>) -> Result<AgentLis
     let config = get_config();
     let client = get_client();
     let url = format!("{}/ai-agents", config.base_url);
-    
+
     let mut request = client.get(&url);
-    
+
     // Add query parameters
     if let Some(opts) = options {
         request = request.query(&opts);
     }
-    
+
     let response = request.send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
@@ -92,10 +92,10 @@ pub async fn fetch_agent(agent_id: &str) -> Result<AiAgent> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/ai-agents/{}", config.base_url, agent_id);
-    
+
     let response = client.get(&url).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
@@ -113,10 +113,10 @@ pub async fn create_agent(request: CreateAiAgentRequest) -> Result<AiAgent> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/ai-agents", config.base_url);
-    
+
     let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
@@ -134,10 +134,10 @@ pub async fn update_agent(agent_id: &str, request: UpdateAiAgentRequest) -> Resu
     let config = get_config();
     let client = get_client();
     let url = format!("{}/ai-agents/{}", config.base_url, agent_id);
-    
+
     let response = client.patch(&url).json(&request).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
@@ -155,10 +155,10 @@ pub async fn delete_agent(agent_id: &str) -> Result<()> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/ai-agents/{}", config.base_url, agent_id);
-    
+
     let response = client.delete(&url).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(())
     } else {
@@ -172,24 +172,24 @@ pub async fn delete_agent(agent_id: &str) -> Result<()> {
 }
 
 /// Generate Agent Context Token
-/// 
-/// Generate a JWT token specifically for agent realtime connections. This token includes 
-/// the "agent_context" scope and can optionally include an audience claim to restrict 
-/// access to specific context groups. The token is used for WebSocket authentication 
+///
+/// Generate a JWT token specifically for agent realtime connections. This token includes
+/// the "agent_context" scope and can optionally include an audience claim to restrict
+/// access to specific context groups. The token is used for WebSocket authentication
 /// when connecting to the realtime agent API.
 pub async fn generate_agent_context_token(
     generate_agent_context_token_request: GenerateAgentContextTokenRequest,
 ) -> Result<GenerateTokenResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/token/agent-context", config.base_url);
-    
+    let url = format!("{}/token/agent", config.base_url);
+
     let response = client
         .post(&url)
         .json(&generate_agent_context_token_request)
         .send()
         .await?;
-    
+
     if response.status().is_success() {
         let token_response: GenerateTokenResponse = response.json().await?;
         Ok(token_response)
