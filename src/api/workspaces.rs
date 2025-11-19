@@ -3,7 +3,7 @@ use crate::{
     error::{Error, Result},
     models::{
         Workspace, CreateWorkspaceRequest, UpdateWorkspaceRequest,
-        WorkspaceRole, CreateRoleRequest, UpdateRoleRequest
+        WorkspaceMember, WorkspaceRole, CreateRoleRequest, UpdateRoleRequest
     },
 };
 use serde::{Deserialize, Serialize};
@@ -11,6 +11,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WorkspaceListResponse {
     pub data: Vec<Workspace>,
+    pub has_more: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceMemberListResponse {
+    pub data: Vec<WorkspaceMember>,
     pub has_more: bool,
 }
 
@@ -137,6 +143,40 @@ pub async fn create_workspace_in_organization(organization_id: &str, request: Cr
         Err(Error::Api {
             status,
             message: format!("Failed to create workspace in organization {}: {}", organization_id, error_body),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Fetch workspace members
+pub async fn fetch_workspace_members(
+    workspace_id: &str,
+    limit: Option<i32>,
+    offset: Option<i32>,
+) -> Result<WorkspaceMemberListResponse> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/workspaces/{}/members", config.base_url, workspace_id);
+    
+    let mut request = client.get(&url);
+    
+    if let Some(limit) = limit {
+        request = request.query(&[("limit", limit.to_string())]);
+    }
+    if let Some(offset) = offset {
+        request = request.query(&[("offset", offset.to_string())]);
+    }
+    
+    let response = request.send().await?;
+    let status = response.status();
+    
+    if status.is_success() {
+        Ok(response.json().await?)
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!("Failed to fetch members for workspace {}: {}", workspace_id, error_body),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

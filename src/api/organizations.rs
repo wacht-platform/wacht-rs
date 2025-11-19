@@ -16,6 +16,12 @@ pub struct OrganizationListResponse {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OrganizationMemberListResponse {
+    pub data: Vec<OrganizationMember>,
+    pub has_more: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OrganizationRoleListResponse {
     pub data: Vec<OrganizationRole>,
 }
@@ -199,6 +205,40 @@ pub async fn remove_organization_member(organization_id: &str, membership_id: &s
         Err(Error::Api {
             status,
             message: format!("Failed to remove member {} from organization {}: {}", membership_id, organization_id, error_body),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Fetch organization members
+pub async fn fetch_organization_members(
+    organization_id: &str,
+    limit: Option<i32>,
+    offset: Option<i32>,
+) -> Result<OrganizationMemberListResponse> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/organizations/{}/members", config.base_url, organization_id);
+    
+    let mut request = client.get(&url);
+    
+    if let Some(limit) = limit {
+        request = request.query(&[("limit", limit.to_string())]);
+    }
+    if let Some(offset) = offset {
+        request = request.query(&[("offset", offset.to_string())]);
+    }
+    
+    let response = request.send().await?;
+    let status = response.status();
+    
+    if status.is_success() {
+        Ok(response.json().await?)
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!("Failed to fetch members for organization {}: {}", organization_id, error_body),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

@@ -306,9 +306,8 @@ async fn validate_token(
             user_id: token_data.claims.sub.clone(),
             session_id: token_data.claims.session_id.clone(),
             organization_id: token_data.claims.organization.clone(),
-            organization_permissions: token_data.claims.organization_permissions.clone(),
             workspace_id: token_data.claims.workspace.clone(),
-            workspace_permissions: token_data.claims.workspace_permissions.clone(),
+            permissions: token_data.claims.permissions.clone(),
             claims: token_data.claims,
         },
     ))

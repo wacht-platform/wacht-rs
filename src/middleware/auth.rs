@@ -24,23 +24,35 @@ pub struct TokenClaims {
     pub iat: i64,
     /// Expiration timestamp (exp)
     pub exp: i64,
-    /// Session ID
+    /// Session ID (deprecated, use sid)
+    #[serde(alias = "sid")]
     pub session_id: String,
+    /// Session ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sid: Option<String>,
     /// Organization ID if user is in organization context
     #[serde(skip_serializing_if = "Option::is_none")]
     pub organization: Option<String>,
-    /// Organization-level permissions
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub organization_permissions: Option<Vec<String>>,
     /// Workspace ID if user is in workspace context
     #[serde(skip_serializing_if = "Option::is_none")]
     pub workspace: Option<String>,
-    /// Workspace-level permissions
+    /// Permissions grouped by scope
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub workspace_permissions: Option<Vec<String>>,
-    /// Additional custom claims
+    pub permissions: Option<TokenPermissions>,
+    /// Custom claims object
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub claims: Option<serde_json::Map<String, serde_json::Value>>,
+    /// Additional custom claims (flattened)
     #[serde(flatten)]
     pub custom_claims: serde_json::Map<String, serde_json::Value>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenPermissions {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace: Option<Vec<String>>,
 }
 
 /// Authentication context extracted from JWT token.
@@ -55,12 +67,10 @@ pub struct AuthContext {
     pub session_id: String,
     /// Organization ID if present
     pub organization_id: Option<String>,
-    /// Organization permissions
-    pub organization_permissions: Option<Vec<String>>,
     /// Workspace ID if present
     pub workspace_id: Option<String>,
-    /// Workspace permissions
-    pub workspace_permissions: Option<Vec<String>>,
+    /// Permissions
+    pub permissions: Option<TokenPermissions>,
     /// Full token claims
     pub claims: TokenClaims,
 }
@@ -176,17 +186,21 @@ pub async fn require_permission_middleware(
         )
     })?;
 
-    let has_permission = match required.scope {
-        PermissionScope::Organization => auth_context
-            .organization_permissions
-            .as_ref()
-            .map(|perms| perms.contains(&required.permission))
-            .unwrap_or(false),
-        PermissionScope::Workspace => auth_context
-            .workspace_permissions
-            .as_ref()
-            .map(|perms| perms.contains(&required.permission))
-            .unwrap_or(false),
+    let has_permission = if let Some(permissions) = &auth_context.permissions {
+        match required.scope {
+            PermissionScope::Organization => permissions
+                .organization
+                .as_ref()
+                .map(|perms| perms.contains(&required.permission))
+                .unwrap_or(false),
+            PermissionScope::Workspace => permissions
+                .workspace
+                .as_ref()
+                .map(|perms| perms.contains(&required.permission))
+                .unwrap_or(false),
+        }
+    } else {
+        false
     };
 
     if !has_permission {

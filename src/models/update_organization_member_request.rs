@@ -12,14 +12,17 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UpdateOrganizationMemberRequest {
-    #[serde(rename = "role_id")]
-    pub role_id: String,
+    #[serde(rename = "role_ids", skip_serializing_if = "Option::is_none")]
+    pub role_ids: Option<Vec<String>>,
+    #[serde(rename = "public_metadata", skip_serializing_if = "Option::is_none")]
+    pub public_metadata: Option<serde_json::Value>,
 }
 
 impl UpdateOrganizationMemberRequest {
-    pub fn new(role_id: String) -> UpdateOrganizationMemberRequest {
+    pub fn new() -> UpdateOrganizationMemberRequest {
         UpdateOrganizationMemberRequest {
-            role_id,
+            role_ids: None,
+            public_metadata: None,
         }
     }
 }
