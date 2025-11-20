@@ -304,7 +304,7 @@ async fn validate_token(
         req,
         AuthContext {
             user_id: token_data.claims.sub.clone(),
-            session_id: token_data.claims.session_id.clone(),
+            session_id: token_data.claims.sid.clone(),
             organization_id: token_data.claims.organization.clone(),
             workspace_id: token_data.claims.workspace.clone(),
             permissions: token_data.claims.permissions.clone(),

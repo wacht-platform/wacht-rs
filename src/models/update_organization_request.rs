@@ -10,25 +10,29 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Request to update an existing organization.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UpdateOrganizationRequest {
     #[serde(rename = "name", skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
-    #[serde(rename = "display_name", skip_serializing_if = "Option::is_none")]
-    pub display_name: Option<String>,
     #[serde(rename = "description", skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    #[serde(rename = "logo_url", skip_serializing_if = "Option::is_none")]
-    pub logo_url: Option<String>,
+    #[serde(rename = "public_metadata", skip_serializing_if = "Option::is_none")]
+    pub public_metadata: Option<serde_json::Value>,
+    #[serde(rename = "private_metadata", skip_serializing_if = "Option::is_none")]
+    pub private_metadata: Option<serde_json::Value>,
+    #[serde(skip)]
+    pub organization_image: Option<Vec<u8>>,
 }
 
 impl UpdateOrganizationRequest {
     pub fn new() -> UpdateOrganizationRequest {
         UpdateOrganizationRequest {
             name: None,
-            display_name: None,
             description: None,
-            logo_url: None,
+            public_metadata: None,
+            private_metadata: None,
+            organization_image: None,
         }
     }
 }

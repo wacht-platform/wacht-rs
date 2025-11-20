@@ -115,14 +115,26 @@ where
         // Then check permission
         let has_permission = match P::SCOPE {
             PermissionScope::Organization => auth
-                .organization_permissions
+                .permissions
                 .as_ref()
-                .map(|perms| perms.contains(&P::PERMISSION.to_string()))
+                .map(|perms| {
+                    perms
+                        .organization
+                        .as_ref()
+                        .map(|perms| perms.contains(&P::PERMISSION.to_string()))
+                        .unwrap_or(false)
+                })
                 .unwrap_or(false),
             PermissionScope::Workspace => auth
-                .workspace_permissions
+                .permissions
                 .as_ref()
-                .map(|perms| perms.contains(&P::PERMISSION.to_string()))
+                .map(|perms| {
+                    perms
+                        .workspace
+                        .as_ref()
+                        .map(|perms| perms.contains(&P::PERMISSION.to_string()))
+                        .unwrap_or(false)
+                })
                 .unwrap_or(false),
         };
 

@@ -18,6 +18,8 @@ pub enum Error {
     Config(String),
     /// Authentication error
     Auth(String),
+    /// Invalid request error (validation, serialization, etc.)
+    InvalidRequest(String),
 }
 
 impl fmt::Display for Error {
@@ -31,6 +33,7 @@ impl fmt::Display for Error {
             }
             Error::Config(msg) => write!(f, "Configuration error: {}", msg),
             Error::Auth(msg) => write!(f, "Authentication error: {}", msg),
+            Error::InvalidRequest(msg) => write!(f, "Invalid request: {}", msg),
         }
     }
 }

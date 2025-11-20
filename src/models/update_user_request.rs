@@ -10,22 +10,34 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Request to update an existing user.
+/// 
+/// All fields are optional - only provided fields will be updated.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UpdateUserRequest {
-    #[serde(rename = "username", skip_serializing_if = "Option::is_none")]
-    pub username: Option<String>,
     #[serde(rename = "first_name", skip_serializing_if = "Option::is_none")]
     pub first_name: Option<String>,
     #[serde(rename = "last_name", skip_serializing_if = "Option::is_none")]
     pub last_name: Option<String>,
+    #[serde(rename = "username", skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    #[serde(rename = "public_metadata", skip_serializing_if = "Option::is_none")]
+    pub public_metadata: Option<serde_json::Value>,
+    #[serde(rename = "private_metadata", skip_serializing_if = "Option::is_none")]
+    pub private_metadata: Option<serde_json::Value>,
+    #[serde(skip)]
+    pub profile_image: Option<Vec<u8>>,
 }
 
 impl UpdateUserRequest {
     pub fn new() -> UpdateUserRequest {
         UpdateUserRequest {
-            username: None,
             first_name: None,
             last_name: None,
+            username: None,
+            public_metadata: None,
+            private_metadata: None,
+            profile_image: None,
         }
     }
 }

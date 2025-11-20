@@ -108,5 +108,7 @@ pub mod waitlist_user;
 pub use self::waitlist_user::WaitlistUser;
 pub mod workspace;
 pub use self::workspace::Workspace;
+pub mod workspace_member;
+pub use self::workspace_member::WorkspaceMember;
 pub mod workspace_role;
 pub use self::workspace_role::WorkspaceRole;

@@ -10,12 +10,19 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+/// Request to create a new workspace.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CreateWorkspaceRequest {
     #[serde(rename = "name")]
     pub name: String,
     #[serde(rename = "description", skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
+    #[serde(rename = "public_metadata", skip_serializing_if = "Option::is_none")]
+    pub public_metadata: Option<serde_json::Value>,
+    #[serde(rename = "private_metadata", skip_serializing_if = "Option::is_none")]
+    pub private_metadata: Option<serde_json::Value>,
+    #[serde(skip)]
+    pub workspace_image: Option<Vec<u8>>,
 }
 
 impl CreateWorkspaceRequest {
@@ -23,6 +30,9 @@ impl CreateWorkspaceRequest {
         CreateWorkspaceRequest {
             name,
             description: None,
+            public_metadata: None,
+            private_metadata: None,
+            workspace_image: None,
         }
     }
 }

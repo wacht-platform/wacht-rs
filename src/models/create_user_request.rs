@@ -10,28 +10,47 @@
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+/// Request to create a new user.
+/// 
+/// # Required Fields
+/// - `first_name`: User's first name
+/// - `last_name`: User's last name
+/// 
+/// # Optional Fields
+/// - `email_address`: User's email address
+/// - `phone_number`: User's phone number
+/// - `username`: User's username
+/// - `password`: User's password
+/// - `profile_image`: Raw bytes of profile image (PNG, JPEG, GIF, WEBP, or ICO)
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CreateUserRequest {
-    #[serde(rename = "email")]
-    pub email: String,
+    #[serde(rename = "first_name")]
+    pub first_name: String,
+    #[serde(rename = "last_name")]
+    pub last_name: String,
+    #[serde(rename = "email_address", skip_serializing_if = "Option::is_none")]
+    pub email_address: Option<String>,
+    #[serde(rename = "phone_number", skip_serializing_if = "Option::is_none")]
+    pub phone_number: Option<String>,
     #[serde(rename = "username", skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
-    #[serde(rename = "first_name", skip_serializing_if = "Option::is_none")]
-    pub first_name: Option<String>,
-    #[serde(rename = "last_name", skip_serializing_if = "Option::is_none")]
-    pub last_name: Option<String>,
     #[serde(rename = "password", skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
+    #[serde(skip)]
+    pub profile_image: Option<Vec<u8>>,
 }
 
 impl CreateUserRequest {
-    pub fn new(email: String) -> CreateUserRequest {
+    /// Create a new CreateUserRequest with required fields.
+    pub fn new(first_name: String, last_name: String) -> CreateUserRequest {
         CreateUserRequest {
-            email,
+            first_name,
+            last_name,
+            email_address: None,
+            phone_number: None,
             username: None,
-            first_name: None,
-            last_name: None,
             password: None,
+            profile_image: None,
         }
     }
 }

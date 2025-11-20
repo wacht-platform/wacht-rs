@@ -88,7 +88,36 @@ pub async fn create_user(request: CreateUserRequest) -> Result<User> {
     let client = get_client();
     let url = format!("{}/users", config.base_url);
     
-    let response = client.post(&url).json(&request).send().await?;
+    // Build multipart form
+    let mut form = reqwest::multipart::Form::new()
+        .text("first_name", request.first_name.clone())
+        .text("last_name", request.last_name.clone());
+    
+    if let Some(email) = request.email_address {
+        form = form.text("email_address", email);
+    }
+    
+    if let Some(phone) = request.phone_number {
+        form = form.text("phone_number", phone);
+    }
+    
+    if let Some(username) = request.username {
+        form = form.text("username", username);
+    }
+    
+    if let Some(password) = request.password {
+        form = form.text("password", password);
+    }
+    
+    if let Some(image_data) = request.profile_image {
+        let part = reqwest::multipart::Part::bytes(image_data)
+            .file_name("profile.png")
+            .mime_str("image/png")
+            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {}", e)))?;
+        form = form.part("profile_image", part);
+    }
+    
+    let response = client.post(&url).multipart(form).send().await?;
     let status = response.status();
     
     if status.is_success() {
@@ -130,7 +159,42 @@ pub async fn update_user(user_id: &str, request: UpdateUserRequest) -> Result<Us
     let client = get_client();
     let url = format!("{}/users/{}", config.base_url, user_id);
     
-    let response = client.patch(&url).json(&request).send().await?;
+    // Build multipart form
+    let mut form = reqwest::multipart::Form::new();
+    
+    if let Some(first_name) = request.first_name {
+        form = form.text("first_name", first_name);
+    }
+    
+    if let Some(last_name) = request.last_name {
+        form = form.text("last_name", last_name);
+    }
+    
+    if let Some(username) = request.username {
+        form = form.text("username", username);
+    }
+    
+    if let Some(public_metadata) = request.public_metadata {
+        let metadata_str = serde_json::to_string(&public_metadata)
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {}", e)))?;
+        form = form.text("public_metadata", metadata_str);
+    }
+    
+    if let Some(private_metadata) = request.private_metadata {
+        let metadata_str = serde_json::to_string(&private_metadata)
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {}", e)))?;
+        form = form.text("private_metadata", metadata_str);
+    }
+    
+    if let Some(image_data) = request.profile_image {
+        let part = reqwest::multipart::Part::bytes(image_data)
+            .file_name("profile.png")
+            .mime_str("image/png")
+            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {}", e)))?;
+        form = form.part("profile_image", part);
+    }
+    
+    let response = client.patch(&url).multipart(form).send().await?;
     let status = response.status();
     
     if status.is_success() {
@@ -146,12 +210,12 @@ pub async fn update_user(user_id: &str, request: UpdateUserRequest) -> Result<Us
 }
 
 /// Update user password
-pub async fn update_password(user_id: &str, request: UpdatePasswordRequest) -> Result<()> {
+pub async fn update_password(user_id: &str, new_password: String) -> Result<()> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/users/{}/password", config.base_url, user_id);
     
-    let response = client.patch(&url).json(&request).send().await?;
+    let response = client.patch(&url).json(&new_password).send().await?;
     let status = response.status();
     
     if status.is_success() {
@@ -167,7 +231,12 @@ pub async fn update_password(user_id: &str, request: UpdatePasswordRequest) -> R
 }
 
 /// Add email to user
-pub async fn add_email(user_id: &str, email: String) -> Result<UserEmail> {
+pub async fn add_email(
+    user_id: &str,
+    email: String,
+    verified: Option<bool>,
+    is_primary: Option<bool>,
+) -> Result<UserEmail> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/users/{}/emails", config.base_url, user_id);
@@ -175,10 +244,14 @@ pub async fn add_email(user_id: &str, email: String) -> Result<UserEmail> {
     #[derive(Serialize)]
     struct AddEmailRequest {
         email: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        verified: Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        is_primary: Option<bool>,
     }
     
     let response = client.post(&url)
-        .json(&AddEmailRequest { email })
+        .json(&AddEmailRequest { email, verified, is_primary })
         .send()
         .await?;
     let status = response.status();
@@ -247,7 +320,13 @@ pub async fn delete_email(user_id: &str, email_id: &str) -> Result<()> {
 }
 
 /// Add phone to user
-pub async fn add_phone(user_id: &str, phone_number: String) -> Result<UserPhone> {
+pub async fn add_phone(
+    user_id: &str,
+    phone_number: String,
+    country_code: String,
+    verified: Option<bool>,
+    is_primary: Option<bool>,
+) -> Result<UserPhone> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/users/{}/phones", config.base_url, user_id);
@@ -255,10 +334,15 @@ pub async fn add_phone(user_id: &str, phone_number: String) -> Result<UserPhone>
     #[derive(Serialize)]
     struct AddPhoneRequest {
         phone_number: String,
+        country_code: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        verified: Option<bool>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        is_primary: Option<bool>,
     }
     
     let response = client.post(&url)
-        .json(&AddPhoneRequest { phone_number })
+        .json(&AddPhoneRequest { phone_number, country_code, verified, is_primary })
         .send()
         .await?;
     let status = response.status();

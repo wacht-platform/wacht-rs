@@ -10,22 +10,26 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Request to invite a new user to the deployment.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct InviteUserRequest {
-    #[serde(rename = "email")]
-    pub email: String,
-    #[serde(rename = "role", skip_serializing_if = "Option::is_none")]
-    pub role: Option<String>,
-    #[serde(rename = "organization_id", skip_serializing_if = "Option::is_none")]
-    pub organization_id: Option<String>,
+    #[serde(rename = "first_name")]
+    pub first_name: String,
+    #[serde(rename = "last_name")]
+    pub last_name: String,
+    #[serde(rename = "email_address")]
+    pub email_address: String,
+    #[serde(rename = "expiry_days", skip_serializing_if = "Option::is_none")]
+    pub expiry_days: Option<i64>,
 }
 
 impl InviteUserRequest {
-    pub fn new(email: String) -> InviteUserRequest {
+    pub fn new(first_name: String, last_name: String, email_address: String) -> InviteUserRequest {
         InviteUserRequest {
-            email,
-            role: None,
-            organization_id: None,
+            first_name,
+            last_name,
+            email_address,
+            expiry_days: None,
         }
     }
 }

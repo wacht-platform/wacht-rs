@@ -69,7 +69,35 @@ pub async fn create_organization(request: CreateOrganizationRequest) -> Result<O
     let client = get_client();
     let url = format!("{}/organizations", config.base_url);
     
-    let response = client.post(&url).json(&request).send().await?;
+    // Build multipart form
+    let mut form = reqwest::multipart::Form::new()
+        .text("name", request.name.clone());
+    
+    if let Some(description) = request.description {
+        form = form.text("description", description);
+    }
+    
+    if let Some(public_metadata) = request.public_metadata {
+        let metadata_str = serde_json::to_string(&public_metadata)
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {}", e)))?;
+        form = form.text("public_metadata", metadata_str);
+    }
+    
+    if let Some(private_metadata) = request.private_metadata {
+        let metadata_str = serde_json::to_string(&private_metadata)
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {}", e)))?;
+        form = form.text("private_metadata", metadata_str);
+    }
+    
+    if let Some(image_data) = request.organization_image {
+        let part = reqwest::multipart::Part::bytes(image_data)
+            .file_name("logo.png")
+            .mime_str("image/png")
+            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {}", e)))?;
+        form = form.part("organization_image", part);
+    }
+    
+    let response = client.post(&url).multipart(form).send().await?;
     let status = response.status();
     
     if status.is_success() {
@@ -111,7 +139,38 @@ pub async fn update_organization(organization_id: &str, request: UpdateOrganizat
     let client = get_client();
     let url = format!("{}/organizations/{}", config.base_url, organization_id);
     
-    let response = client.patch(&url).json(&request).send().await?;
+    // Build multipart form
+    let mut form = reqwest::multipart::Form::new();
+    
+    if let Some(name) = request.name {
+        form = form.text("name", name);
+    }
+    
+    if let Some(description) = request.description {
+        form = form.text("description", description);
+    }
+    
+    if let Some(public_metadata) = request.public_metadata {
+        let metadata_str = serde_json::to_string(&public_metadata)
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {}", e)))?;
+        form = form.text("public_metadata", metadata_str);
+    }
+    
+    if let Some(private_metadata) = request.private_metadata {
+        let metadata_str = serde_json::to_string(&private_metadata)
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {}", e)))?;
+        form = form.text("private_metadata", metadata_str);
+    }
+    
+    if let Some(image_data) = request.organization_image {
+        let part = reqwest::multipart::Part::bytes(image_data)
+            .file_name("logo.png")
+            .mime_str("image/png")
+            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {}", e)))?;
+        form = form.part("organization_image", part);
+    }
+    
+    let response = client.patch(&url).multipart(form).send().await?;
     let status = response.status();
     
     if status.is_success() {

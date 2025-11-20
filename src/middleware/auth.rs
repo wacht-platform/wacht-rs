@@ -6,7 +6,7 @@
 #![cfg(feature = "axum")]
 
 use axum::{
-    body::Body, extract::Request, http::StatusCode, middleware::Next, response::Response, Extension,
+    Extension, body::Body, extract::Request, http::StatusCode, middleware::Next, response::Response,
 };
 use serde::{Deserialize, Serialize};
 
@@ -24,12 +24,8 @@ pub struct TokenClaims {
     pub iat: i64,
     /// Expiration timestamp (exp)
     pub exp: i64,
-    /// Session ID (deprecated, use sid)
-    #[serde(alias = "sid")]
-    pub session_id: String,
     /// Session ID
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sid: Option<String>,
+    pub sid: String,
     /// Organization ID if user is in organization context
     #[serde(skip_serializing_if = "Option::is_none")]
     pub organization: Option<String>,

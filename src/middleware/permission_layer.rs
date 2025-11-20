@@ -4,12 +4,7 @@
 
 #![cfg(feature = "axum")]
 
-use axum::{
-    body::Body,
-    extract::Request,
-    http::StatusCode,
-    response::Response,
-};
+use axum::{body::Body, extract::Request, http::StatusCode, response::Response};
 use std::{
     future::Future,
     pin::Pin,
@@ -155,28 +150,33 @@ where
 
             // Check permission based on scope
             let has_permission = match scope {
-                PermissionScope::Organization => {
-                    auth_context
-                        .organization_permissions
-                        .as_ref()
-                        .map(|perms| perms.contains(&permission))
-                        .unwrap_or(false)
-                }
-                PermissionScope::Workspace => {
-                    auth_context
-                        .workspace_permissions
-                        .as_ref()
-                        .map(|perms| perms.contains(&permission))
-                        .unwrap_or(false)
-                }
+                PermissionScope::Organization => auth_context
+                    .permissions
+                    .as_ref()
+                    .map(|perms| {
+                        perms
+                            .organization
+                            .as_ref()
+                            .map(|perms| perms.contains(&permission))
+                            .unwrap_or(false)
+                    })
+                    .unwrap_or(false),
+                PermissionScope::Workspace => auth_context
+                    .permissions
+                    .as_ref()
+                    .map(|perms| {
+                        perms
+                            .workspace
+                            .as_ref()
+                            .map(|perms| perms.contains(&permission))
+                            .unwrap_or(false)
+                    })
+                    .unwrap_or(false),
             };
 
             if !has_permission {
                 let error_msg = format!("Missing required permission: {}", permission);
-                return Ok(build_error_response(
-                    StatusCode::FORBIDDEN,
-                    &error_msg,
-                ));
+                return Ok(build_error_response(StatusCode::FORBIDDEN, &error_msg));
             }
 
             // User has permission, forward to inner service
@@ -300,20 +300,28 @@ where
             // Check permissions
             let check_permission = |permission: &str, scope: &PermissionScope| -> bool {
                 match scope {
-                    PermissionScope::Organization => {
-                        auth_context
-                            .organization_permissions
-                            .as_ref()
-                            .map(|perms| perms.contains(&permission.to_string()))
-                            .unwrap_or(false)
-                    }
-                    PermissionScope::Workspace => {
-                        auth_context
-                            .workspace_permissions
-                            .as_ref()
-                            .map(|perms| perms.contains(&permission.to_string()))
-                            .unwrap_or(false)
-                    }
+                    PermissionScope::Organization => auth_context
+                        .permissions
+                        .as_ref()
+                        .map(|perms| {
+                            perms
+                                .organization
+                                .as_ref()
+                                .map(|perms| perms.contains(&permission.to_string()))
+                                .unwrap_or(false)
+                        })
+                        .unwrap_or(false),
+                    PermissionScope::Workspace => auth_context
+                        .permissions
+                        .as_ref()
+                        .map(|perms| {
+                            perms
+                                .workspace
+                                .as_ref()
+                                .map(|perms| perms.contains(&permission.to_string()))
+                                .unwrap_or(false)
+                        })
+                        .unwrap_or(false),
                 }
             };
 
@@ -325,17 +333,26 @@ where
 
             if !has_permission {
                 let message = if require_all {
-                    format!("Missing required permissions: {}",
-                        permissions.iter().map(|(p, _)| p.as_str()).collect::<Vec<_>>().join(" AND "))
+                    format!(
+                        "Missing required permissions: {}",
+                        permissions
+                            .iter()
+                            .map(|(p, _)| p.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" AND ")
+                    )
                 } else {
-                    format!("Missing required permission: {}",
-                        permissions.iter().map(|(p, _)| p.as_str()).collect::<Vec<_>>().join(" OR "))
+                    format!(
+                        "Missing required permission: {}",
+                        permissions
+                            .iter()
+                            .map(|(p, _)| p.as_str())
+                            .collect::<Vec<_>>()
+                            .join(" OR ")
+                    )
                 };
 
-                return Ok(build_error_response(
-                    StatusCode::FORBIDDEN,
-                    &message,
-                ));
+                return Ok(build_error_response(StatusCode::FORBIDDEN, &message));
             }
 
             // User has permission, forward to inner service
@@ -439,23 +456,29 @@ where
             };
 
             // Check if user has any of the required permissions
-            let has_any_permission = permissions.iter().any(|(permission, scope)| {
-                match scope {
-                    PermissionScope::Organization => {
-                        auth_context
-                            .organization_permissions
+            let has_any_permission = permissions.iter().any(|(permission, scope)| match scope {
+                PermissionScope::Organization => auth_context
+                    .permissions
+                    .as_ref()
+                    .map(|perms| {
+                        perms
+                            .organization
                             .as_ref()
                             .map(|perms| perms.contains(permission))
                             .unwrap_or(false)
-                    }
-                    PermissionScope::Workspace => {
-                        auth_context
-                            .workspace_permissions
+                    })
+                    .unwrap_or(false),
+                PermissionScope::Workspace => auth_context
+                    .permissions
+                    .as_ref()
+                    .map(|perms| {
+                        perms
+                            .workspace
                             .as_ref()
                             .map(|perms| perms.contains(permission))
                             .unwrap_or(false)
-                    }
-                }
+                    })
+                    .unwrap_or(false),
             });
 
             if !has_any_permission {
@@ -466,10 +489,7 @@ where
                     .join(" OR ");
 
                 let error_msg = format!("Missing required permission: {}", permission_list);
-                return Ok(build_error_response(
-                    StatusCode::FORBIDDEN,
-                    &error_msg,
-                ));
+                return Ok(build_error_response(StatusCode::FORBIDDEN, &error_msg));
             }
 
             // User has at least one permission, forward to inner service
