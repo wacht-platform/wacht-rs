@@ -14,11 +14,7 @@ pub struct CreateApiKeyAppRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rate_limit_per_minute: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rate_limit_per_hour: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rate_limit_per_day: Option<i32>,
+    pub rate_limits: Option<Vec<RateLimit>>,
 }
 
 /// Update an API key app
@@ -31,11 +27,7 @@ pub struct UpdateApiKeyAppRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_active: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rate_limit_per_minute: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rate_limit_per_hour: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rate_limit_per_day: Option<i32>,
+    pub rate_limits: Option<Vec<RateLimit>>,
 }
 
 /// Create an API key
@@ -70,7 +62,28 @@ pub struct RotateApiKeyRequest {
 #[serde(rename_all = "snake_case")]
 pub enum RateLimitMode {
     PerKey,
-    PerApp,
+    PerIp,
+    PerKeyAndIp,
+}
+
+/// Rate limit unit (second, minute, hour, day)
+#[derive(Debug, Deserialize, Serialize, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum RateLimitUnit {
+    Second,
+    Minute,
+    Hour,
+    Day,
+}
+
+/// Individual rate limit configuration
+#[derive(Debug, Deserialize, Serialize, Clone)]
+pub struct RateLimit {
+    pub unit: RateLimitUnit,
+    pub duration: i32,
+    pub max_requests: i32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mode: Option<RateLimitMode>,
 }
 
 /// API key app data
@@ -81,10 +94,7 @@ pub struct ApiKeyApp {
     pub name: String,
     pub description: Option<String>,
     pub is_active: bool,
-    pub rate_limit_per_minute: Option<i32>,
-    pub rate_limit_per_hour: Option<i32>,
-    pub rate_limit_per_day: Option<i32>,
-    pub rate_limit_mode: Option<RateLimitMode>,
+    pub rate_limits: Vec<RateLimit>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
