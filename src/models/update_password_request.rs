@@ -12,17 +12,17 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UpdatePasswordRequest {
-    #[serde(rename = "current_password")]
-    pub current_password: String,
     #[serde(rename = "new_password")]
     pub new_password: String,
+    #[serde(rename = "skip_password_check", skip_serializing_if = "Option::is_none")]
+    pub skip_password_check: Option<bool>,
 }
 
 impl UpdatePasswordRequest {
-    pub fn new(current_password: String, new_password: String) -> UpdatePasswordRequest {
+    pub fn new(new_password: String) -> UpdatePasswordRequest {
         UpdatePasswordRequest {
-            current_password,
             new_password,
+            skip_password_check: None,
         }
     }
 }

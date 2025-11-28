@@ -109,6 +109,10 @@ pub async fn create_user(request: CreateUserRequest) -> Result<User> {
         form = form.text("password", password);
     }
     
+    if let Some(skip_check) = request.skip_password_check {
+        form = form.text("skip_password_check", skip_check.to_string());
+    }
+    
     if let Some(image_data) = request.profile_image {
         let part = reqwest::multipart::Part::bytes(image_data)
             .file_name("profile.png")

@@ -36,6 +36,8 @@ pub struct CreateUserRequest {
     pub username: Option<String>,
     #[serde(rename = "password", skip_serializing_if = "Option::is_none")]
     pub password: Option<String>,
+    #[serde(rename = "skip_password_check", skip_serializing_if = "Option::is_none")]
+    pub skip_password_check: Option<bool>,
     #[serde(skip)]
     pub profile_image: Option<Vec<u8>>,
 }
@@ -50,6 +52,7 @@ impl CreateUserRequest {
             phone_number: None,
             username: None,
             password: None,
+            skip_password_check: None,
             profile_image: None,
         }
     }

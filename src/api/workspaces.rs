@@ -25,6 +25,11 @@ pub struct WorkspaceRoleListResponse {
     pub data: Vec<WorkspaceRole>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WorkspaceMemberResponse {
+    pub data: WorkspaceMember,
+}
+
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct ListWorkspacesOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -258,6 +263,110 @@ pub async fn fetch_workspace_members(
             message: format!(
                 "Failed to fetch members for workspace {}: {}",
                 workspace_id, error_body
+            ),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Add workspace member
+pub async fn add_workspace_member(
+    workspace_id: &str,
+    user_id: &str,
+    role_ids: Vec<String>,
+) -> Result<WorkspaceMember> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/workspaces/{}/members", config.base_url, workspace_id);
+
+    let payload = serde_json::json!({
+        "user_id": user_id,
+        "role_ids": role_ids,
+    });
+
+    let response = client.post(&url).json(&payload).send().await?;
+    let status = response.status();
+
+    if status.is_success() {
+        let resp: WorkspaceMemberResponse = response.json().await?;
+        Ok(resp.data)
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!(
+                "Failed to add member to workspace {}: {}",
+                workspace_id, error_body
+            ),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Update workspace member
+pub async fn update_workspace_member(
+    workspace_id: &str,
+    membership_id: &str,
+    role_ids: Option<Vec<String>>,
+    public_metadata: Option<serde_json::Value>,
+) -> Result<()> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!(
+        "{}/workspaces/{}/members/{}",
+        config.base_url, workspace_id, membership_id
+    );
+
+    let mut payload = serde_json::Map::new();
+    if let Some(role_ids) = role_ids {
+        payload.insert("role_ids".to_string(), serde_json::json!(role_ids));
+    }
+    if let Some(metadata) = public_metadata {
+        payload.insert("public_metadata".to_string(), metadata);
+    }
+
+    let response = client.patch(&url).json(&payload).send().await?;
+    let status = response.status();
+
+    if status.is_success() {
+        Ok(())
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!(
+                "Failed to update member {} in workspace {}: {}",
+                membership_id, workspace_id, error_body
+            ),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Remove workspace member
+pub async fn remove_workspace_member(
+    workspace_id: &str,
+    membership_id: &str,
+) -> Result<()> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!(
+        "{}/workspaces/{}/members/{}",
+        config.base_url, workspace_id, membership_id
+    );
+
+    let response = client.delete(&url).send().await?;
+    let status = response.status();
+
+    if status.is_success() {
+        Ok(())
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!(
+                "Failed to remove member {} from workspace {}: {}",
+                membership_id, workspace_id, error_body
             ),
             details: serde_json::from_str(&error_body).ok(),
         })
