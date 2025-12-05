@@ -14,38 +14,31 @@ use serde::{Deserialize, Serialize};
 pub struct WaitlistUser {
     #[serde(rename = "id", skip_serializing_if = "Option::is_none")]
     pub id: Option<String>,
-    #[serde(rename = "email", skip_serializing_if = "Option::is_none")]
-    pub email: Option<String>,
-    #[serde(rename = "requested_at", skip_serializing_if = "Option::is_none")]
-    pub requested_at: Option<String>,
-    #[serde(rename = "status", skip_serializing_if = "Option::is_none")]
-    pub status: Option<Status>,
+    #[serde(rename = "created_at", skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+    #[serde(rename = "updated_at", skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
+    #[serde(rename = "deployment_id", skip_serializing_if = "Option::is_none")]
+    pub deployment_id: Option<String>,
+    #[serde(rename = "email_address", skip_serializing_if = "Option::is_none")]
+    pub email_address: Option<String>,
+    #[serde(rename = "first_name", skip_serializing_if = "Option::is_none")]
+    pub first_name: Option<String>,
+    #[serde(rename = "last_name", skip_serializing_if = "Option::is_none")]
+    pub last_name: Option<String>,
 }
 
 impl WaitlistUser {
     pub fn new() -> WaitlistUser {
         WaitlistUser {
             id: None,
-            email: None,
-            requested_at: None,
-            status: None,
+            created_at: None,
+            updated_at: None,
+            deployment_id: None,
+            email_address: None,
+            first_name: None,
+            last_name: None,
         }
-    }
-}
-/// 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub enum Status {
-    #[serde(rename = "pending")]
-    Pending,
-    #[serde(rename = "approved")]
-    Approved,
-    #[serde(rename = "rejected")]
-    Rejected,
-}
-
-impl Default for Status {
-    fn default() -> Status {
-        Self::Pending
     }
 }
 

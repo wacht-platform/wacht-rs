@@ -12,3 +12,4 @@ pub mod users;
 pub mod webhooks;
 pub mod workflows;
 pub mod workspaces;
+pub mod segments;

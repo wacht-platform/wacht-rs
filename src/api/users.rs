@@ -30,11 +30,14 @@ pub struct InvitationListResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UserInvitation {
     pub id: String,
-    pub email: String,
-    pub role: Option<String>,
-    pub organization_id: Option<String>,
-    pub invited_at: String,
-    pub expires_at: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub deployment_id: String,
+    pub first_name: String,
+    pub last_name: String,
+    pub email_address: String,
+    pub token: String,
+    pub expiry: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -499,14 +502,14 @@ pub async fn fetch_waitlist() -> Result<WaitlistResponse> {
 }
 
 /// Approve waitlist user
-pub async fn approve_waitlist_user(waitlist_user_id: &str) -> Result<User> {
+pub async fn approve_waitlist_user(waitlist_user_id: &str) -> Result<UserInvitation> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/user-waitlist/{}/approve", config.base_url, waitlist_user_id);
-    
+
     let response = client.post(&url).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {

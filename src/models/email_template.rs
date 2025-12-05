@@ -12,29 +12,26 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EmailTemplate {
-    #[serde(rename = "name", skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
-    #[serde(rename = "subject", skip_serializing_if = "Option::is_none")]
-    pub subject: Option<String>,
-    #[serde(rename = "html_body", skip_serializing_if = "Option::is_none")]
-    pub html_body: Option<String>,
-    #[serde(rename = "text_body", skip_serializing_if = "Option::is_none")]
-    pub text_body: Option<String>,
-    #[serde(rename = "variables", skip_serializing_if = "Option::is_none")]
-    pub variables: Option<Vec<String>>,
-    #[serde(rename = "updated_at", skip_serializing_if = "Option::is_none")]
-    pub updated_at: Option<String>,
+    #[serde(rename = "template_name", skip_serializing_if = "Option::is_none")]
+    pub template_name: Option<String>,
+    #[serde(rename = "template_data", skip_serializing_if = "Option::is_none")]
+    pub template_data: Option<String>,
+    #[serde(rename = "template_from", skip_serializing_if = "Option::is_none")]
+    pub template_from: Option<String>,
+    #[serde(rename = "template_reply_to", skip_serializing_if = "Option::is_none")]
+    pub template_reply_to: Option<String>,
+    #[serde(rename = "template_subject", skip_serializing_if = "Option::is_none")]
+    pub template_subject: Option<String>,
 }
 
 impl EmailTemplate {
     pub fn new() -> EmailTemplate {
         EmailTemplate {
-            name: None,
-            subject: None,
-            html_body: None,
-            text_body: None,
-            variables: None,
-            updated_at: None,
+            template_name: None,
+            template_data: None,
+            template_from: None,
+            template_reply_to: None,
+            template_subject: None,
         }
     }
 }
