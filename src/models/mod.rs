@@ -9,11 +9,22 @@ pub use self::ai_knowledge_base::AiKnowledgeBase;
 pub mod ai_tool;
 pub use self::ai_tool::AiTool;
 pub mod ai_tool_config;
-pub use self::ai_tool_config::AiToolConfig;
+pub use self::ai_tool_config::{
+    AiToolConfiguration, AiToolType, ApiToolConfiguration, PlatformEventToolConfiguration,
+    PlatformFunctionToolConfiguration, InternalToolConfiguration, InternalToolType,
+    UseExternalServiceToolConfiguration, UseExternalServiceToolType, AuthorizationConfiguration,
+    HttpMethod, SchemaField,
+};
 pub mod ai_tool_config_parameters_inner;
 pub use self::ai_tool_config_parameters_inner::AiToolConfigParametersInner;
 pub mod ai_workflow;
-pub use self::ai_workflow::AiWorkflow;
+pub use self::ai_workflow::{AiWorkflow, WorkflowConfiguration};
+pub mod ai_workflow_definition;
+pub use self::ai_workflow_definition::{
+    WorkflowDefinition, WorkflowNode, NodePosition, WorkflowNodeType, WorkflowNodeData,
+    WorkflowEdge, TriggerNodeConfig, ErrorHandlerNodeConfig, LLMCallNodeConfig, ResponseFormat,
+    SwitchNodeConfig, SwitchCase, ToolCallNodeConfig, UserInputNodeConfig, UserInputType,
+};
 pub mod ai_workflow_steps_inner;
 pub use self::ai_workflow_steps_inner::AiWorkflowStepsInner;
 pub mod analytics_stats;
@@ -58,6 +69,8 @@ pub mod invite_user_request;
 pub use self::invite_user_request::InviteUserRequest;
 pub mod jwt_template;
 pub use self::jwt_template::JwtTemplate;
+pub mod jwt_claims;
+pub use self::jwt_claims::JwtClaims;
 pub mod knowledge_base_document;
 pub use self::knowledge_base_document::KnowledgeBaseDocument;
 pub mod knowledge_base_search_result;
@@ -100,6 +113,8 @@ pub mod update_workspace_request;
 pub use self::update_workspace_request::UpdateWorkspaceRequest;
 pub mod user;
 pub use self::user::User;
+pub mod user_details;
+pub use self::user_details::{UserDetails, UserEmailAddress, UserPhoneNumber, SocialConnection as UserSocialConnection, Segment as UserSegment, SchemaVersion, SecondFactorPolicy, VerificationStrategy};
 pub mod user_email;
 pub use self::user_email::UserEmail;
 pub mod user_phone;
@@ -119,3 +134,34 @@ pub mod create_segment_request;
 pub use self::create_segment_request::CreateSegmentRequest;
 pub mod update_segment_request;
 pub use self::update_segment_request::UpdateSegmentRequest;
+pub mod smtp_config_request;
+pub use self::smtp_config_request::SmtpConfigRequest;
+pub mod smtp_config_response;
+pub use self::smtp_config_response::SmtpConfigResponse;
+pub mod smtp_verify_response;
+pub use self::smtp_verify_response::SmtpVerifyResponse;
+pub mod add_email_request;
+pub use self::add_email_request::AddEmailRequest;
+pub mod update_email_request;
+pub use self::update_email_request::UpdateEmailRequest;
+pub mod add_phone_request;
+pub use self::add_phone_request::AddPhoneRequest;
+pub mod update_phone_request;
+pub use self::update_phone_request::UpdatePhoneRequest;
+pub mod create_session_ticket_request;
+pub use self::create_session_ticket_request::{CreateSessionTicketRequest, SessionTicketResponse};
+pub mod notification;
+pub use self::notification::{Notification, NotificationSeverity, CallToAction};
+pub mod create_notification_request;
+pub use self::create_notification_request::CreateNotificationRequest;
+pub mod agent_integration;
+pub use self::agent_integration::{
+    AgentIntegration, IntegrationType, IntegrationConfig,
+    TeamsConfig, ClickUpConfig, WhatsAppConfig
+};
+pub mod create_agent_integration_request;
+pub use self::create_agent_integration_request::CreateAgentIntegrationRequest;
+pub mod update_agent_integration_request;
+pub use self::update_agent_integration_request::UpdateAgentIntegrationRequest;
+pub mod deployment_ai_settings;
+pub use self::deployment_ai_settings::{DeploymentAiSettings, UpdateDeploymentAiSettingsRequest};

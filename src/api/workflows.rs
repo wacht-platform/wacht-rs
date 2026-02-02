@@ -27,7 +27,7 @@ pub struct ListWorkflowsOptions {
 pub async fn fetch_workflows(options: Option<ListWorkflowsOptions>) -> Result<WorkflowListResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-workflows", config.base_url);
+    let url = format!("{}/ai/workflows", config.base_url);
     
     let mut request = client.get(&url);
     
@@ -44,7 +44,7 @@ pub async fn fetch_workflows(options: Option<ListWorkflowsOptions>) -> Result<Wo
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to list workflows: {}", error_body),
+            message: format!("Failed to list workflows: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -54,7 +54,7 @@ pub async fn fetch_workflows(options: Option<ListWorkflowsOptions>) -> Result<Wo
 pub async fn create_workflow(request: CreateAiWorkflowRequest) -> Result<AiWorkflow> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-workflows", config.base_url);
+    let url = format!("{}/ai/workflows", config.base_url);
     
     let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
@@ -65,7 +65,7 @@ pub async fn create_workflow(request: CreateAiWorkflowRequest) -> Result<AiWorkf
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to create workflow: {}", error_body),
+            message: format!("Failed to create workflow: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -75,7 +75,7 @@ pub async fn create_workflow(request: CreateAiWorkflowRequest) -> Result<AiWorkf
 pub async fn fetch_workflow(workflow_id: &str) -> Result<AiWorkflow> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-workflows/{}", config.base_url, workflow_id);
+    let url = format!("{}/ai/workflows/{}", config.base_url, workflow_id);
     
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -86,7 +86,7 @@ pub async fn fetch_workflow(workflow_id: &str) -> Result<AiWorkflow> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to get workflow {}: {}", workflow_id, error_body),
+            message: format!("Failed to get workflow {workflow_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -96,7 +96,7 @@ pub async fn fetch_workflow(workflow_id: &str) -> Result<AiWorkflow> {
 pub async fn update_workflow(workflow_id: &str, request: UpdateAiWorkflowRequest) -> Result<AiWorkflow> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-workflows/{}", config.base_url, workflow_id);
+    let url = format!("{}/ai/workflows/{}", config.base_url, workflow_id);
     
     let response = client.patch(&url).json(&request).send().await?;
     let status = response.status();
@@ -107,7 +107,7 @@ pub async fn update_workflow(workflow_id: &str, request: UpdateAiWorkflowRequest
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update workflow {}: {}", workflow_id, error_body),
+            message: format!("Failed to update workflow {workflow_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -117,7 +117,7 @@ pub async fn update_workflow(workflow_id: &str, request: UpdateAiWorkflowRequest
 pub async fn delete_workflow(workflow_id: &str) -> Result<()> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-workflows/{}", config.base_url, workflow_id);
+    let url = format!("{}/ai/workflows/{}", config.base_url, workflow_id);
     
     let response = client.delete(&url).send().await?;
     let status = response.status();
@@ -128,7 +128,7 @@ pub async fn delete_workflow(workflow_id: &str) -> Result<()> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete workflow {}: {}", workflow_id, error_body),
+            message: format!("Failed to delete workflow {workflow_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

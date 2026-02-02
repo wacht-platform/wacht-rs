@@ -27,7 +27,7 @@ pub struct ListToolsOptions {
 pub async fn fetch_tools(options: Option<ListToolsOptions>) -> Result<ToolListResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-tools", config.base_url);
+    let url = format!("{}/ai/tools", config.base_url);
     
     let mut request = client.get(&url);
     
@@ -44,7 +44,7 @@ pub async fn fetch_tools(options: Option<ListToolsOptions>) -> Result<ToolListRe
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to list tools: {}", error_body),
+            message: format!("Failed to list tools: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -54,7 +54,7 @@ pub async fn fetch_tools(options: Option<ListToolsOptions>) -> Result<ToolListRe
 pub async fn create_tool(request: CreateAiToolRequest) -> Result<AiTool> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-tools", config.base_url);
+    let url = format!("{}/ai/tools", config.base_url);
     
     let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
@@ -65,7 +65,7 @@ pub async fn create_tool(request: CreateAiToolRequest) -> Result<AiTool> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to create tool: {}", error_body),
+            message: format!("Failed to create tool: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -75,7 +75,7 @@ pub async fn create_tool(request: CreateAiToolRequest) -> Result<AiTool> {
 pub async fn fetch_tool(tool_id: &str) -> Result<AiTool> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-tools/{}", config.base_url, tool_id);
+    let url = format!("{}/ai/tools/{}", config.base_url, tool_id);
     
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -86,7 +86,7 @@ pub async fn fetch_tool(tool_id: &str) -> Result<AiTool> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to get tool {}: {}", tool_id, error_body),
+            message: format!("Failed to get tool {tool_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -96,7 +96,7 @@ pub async fn fetch_tool(tool_id: &str) -> Result<AiTool> {
 pub async fn update_tool(tool_id: &str, request: UpdateAiToolRequest) -> Result<AiTool> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-tools/{}", config.base_url, tool_id);
+    let url = format!("{}/ai/tools/{}", config.base_url, tool_id);
     
     let response = client.patch(&url).json(&request).send().await?;
     let status = response.status();
@@ -107,7 +107,7 @@ pub async fn update_tool(tool_id: &str, request: UpdateAiToolRequest) -> Result<
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update tool {}: {}", tool_id, error_body),
+            message: format!("Failed to update tool {tool_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -117,7 +117,7 @@ pub async fn update_tool(tool_id: &str, request: UpdateAiToolRequest) -> Result<
 pub async fn delete_tool(tool_id: &str) -> Result<()> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-tools/{}", config.base_url, tool_id);
+    let url = format!("{}/ai/tools/{}", config.base_url, tool_id);
     
     let response = client.delete(&url).send().await?;
     let status = response.status();
@@ -128,7 +128,7 @@ pub async fn delete_tool(tool_id: &str) -> Result<()> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete tool {}: {}", tool_id, error_body),
+            message: format!("Failed to delete tool {tool_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

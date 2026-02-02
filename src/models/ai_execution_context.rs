@@ -28,8 +28,10 @@ pub struct AiExecutionContext {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Default)]
 pub enum ExecutionContextStatus {
     #[serde(rename = "idle")]
+    #[default]
     Idle,
     #[serde(rename = "running")]
     Running,
@@ -43,11 +45,6 @@ pub enum ExecutionContextStatus {
     Failed,
 }
 
-impl Default for ExecutionContextStatus {
-    fn default() -> Self {
-        ExecutionContextStatus::Idle
-    }
-}
 
 impl ExecutionContextStatus {
     pub fn is_active(&self) -> bool {

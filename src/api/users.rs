@@ -3,7 +3,9 @@ use crate::{
     error::{Error, Result},
     models::{
         User, CreateUserRequest, UpdateUserRequest, UpdatePasswordRequest,
-        InviteUserRequest, WaitlistUser, UserEmail, UserPhone
+        InviteUserRequest, WaitlistUser, UserEmail, UserPhone, UserDetails,
+        AddEmailRequest, UpdateEmailRequest, AddPhoneRequest, UpdatePhoneRequest,
+        CreateSessionTicketRequest, SessionTicketResponse,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -12,13 +14,6 @@ use serde::{Deserialize, Serialize};
 pub struct UserListResponse {
     pub data: Vec<User>,
     pub has_more: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct UserDetailsResponse {
-    pub user: User,
-    pub organizations: Vec<serde_json::Value>, // Organization details
-    pub workspaces: Vec<serde_json::Value>,    // Workspace details
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -79,7 +74,7 @@ pub async fn fetch_users(options: Option<ListUsersOptions>) -> Result<UserListRe
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch users: {}", error_body),
+            message: format!("Failed to fetch users: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -120,7 +115,7 @@ pub async fn create_user(request: CreateUserRequest) -> Result<User> {
         let part = reqwest::multipart::Part::bytes(image_data)
             .file_name("profile.png")
             .mime_str("image/png")
-            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {e}")))?;
         form = form.part("profile_image", part);
     }
     
@@ -133,28 +128,28 @@ pub async fn create_user(request: CreateUserRequest) -> Result<User> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to create user: {}", error_body),
+            message: format!("Failed to create user: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
 }
 
 /// Fetch user details including organizations and workspaces
-pub async fn fetch_user_details(user_id: &str) -> Result<UserDetailsResponse> {
+pub async fn fetch_user_details(user_id: &str) -> Result<UserDetails> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/users/{}/details", config.base_url, user_id);
-    
+
     let response = client.get(&url).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to get user details {}: {}", user_id, error_body),
+            message: format!("Failed to get user details {user_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -183,13 +178,13 @@ pub async fn update_user(user_id: &str, request: UpdateUserRequest) -> Result<Us
     
     if let Some(public_metadata) = request.public_metadata {
         let metadata_str = serde_json::to_string(&public_metadata)
-            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {e}")))?;
         form = form.text("public_metadata", metadata_str);
     }
     
     if let Some(private_metadata) = request.private_metadata {
         let metadata_str = serde_json::to_string(&private_metadata)
-            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {e}")))?;
         form = form.text("private_metadata", metadata_str);
     }
     
@@ -197,7 +192,7 @@ pub async fn update_user(user_id: &str, request: UpdateUserRequest) -> Result<Us
         let part = reqwest::multipart::Part::bytes(image_data)
             .file_name("profile.png")
             .mime_str("image/png")
-            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {e}")))?;
         form = form.part("profile_image", part);
     }
     
@@ -210,96 +205,70 @@ pub async fn update_user(user_id: &str, request: UpdateUserRequest) -> Result<Us
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update user {}: {}", user_id, error_body),
+            message: format!("Failed to update user {user_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
 }
 
 /// Update user password
-pub async fn update_password(user_id: &str, new_password: String) -> Result<()> {
+pub async fn update_password(user_id: &str, request: UpdatePasswordRequest) -> Result<()> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/users/{}/password", config.base_url, user_id);
-    
-    let response = client.patch(&url).json(&new_password).send().await?;
+
+    let response = client.patch(&url).json(&request).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(())
     } else {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update password for user {}: {}", user_id, error_body),
+            message: format!("Failed to update password for user {user_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
 }
 
 /// Add email to user
-pub async fn add_email(
-    user_id: &str,
-    email: String,
-    verified: Option<bool>,
-    is_primary: Option<bool>,
-) -> Result<UserEmail> {
+pub async fn add_email(user_id: &str, request: AddEmailRequest) -> Result<UserEmail> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/users/{}/emails", config.base_url, user_id);
-    
-    #[derive(Serialize)]
-    struct AddEmailRequest {
-        email: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        verified: Option<bool>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        is_primary: Option<bool>,
-    }
-    
-    let response = client.post(&url)
-        .json(&AddEmailRequest { email, verified, is_primary })
-        .send()
-        .await?;
+
+    let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to add email to user {}: {}", user_id, error_body),
+            message: format!("Failed to add email to user {user_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
 }
 
 /// Update user email
-pub async fn update_email(user_id: &str, email_id: &str, is_primary: bool, is_verified: bool) -> Result<UserEmail> {
+pub async fn update_email(user_id: &str, email_id: &str, request: UpdateEmailRequest) -> Result<UserEmail> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/users/{}/emails/{}", config.base_url, user_id, email_id);
-    
-    #[derive(Serialize)]
-    struct UpdateEmailRequest {
-        is_primary: bool,
-        is_verified: bool,
-    }
-    
-    let response = client.patch(&url)
-        .json(&UpdateEmailRequest { is_primary, is_verified })
-        .send()
-        .await?;
+
+    let response = client.patch(&url).json(&request).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update email {} for user {}: {}", email_id, user_id, error_body),
+            message: format!("Failed to update email {email_id} for user {user_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -320,77 +289,49 @@ pub async fn delete_email(user_id: &str, email_id: &str) -> Result<()> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete email {} for user {}: {}", email_id, user_id, error_body),
+            message: format!("Failed to delete email {email_id} for user {user_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
 }
 
 /// Add phone to user
-pub async fn add_phone(
-    user_id: &str,
-    phone_number: String,
-    country_code: String,
-    verified: Option<bool>,
-    is_primary: Option<bool>,
-) -> Result<UserPhone> {
+pub async fn add_phone(user_id: &str, request: AddPhoneRequest) -> Result<UserPhone> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/users/{}/phones", config.base_url, user_id);
-    
-    #[derive(Serialize)]
-    struct AddPhoneRequest {
-        phone_number: String,
-        country_code: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        verified: Option<bool>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        is_primary: Option<bool>,
-    }
-    
-    let response = client.post(&url)
-        .json(&AddPhoneRequest { phone_number, country_code, verified, is_primary })
-        .send()
-        .await?;
+
+    let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to add phone to user {}: {}", user_id, error_body),
+            message: format!("Failed to add phone to user {user_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
 }
 
 /// Update user phone
-pub async fn update_phone(user_id: &str, phone_id: &str, is_primary: bool, is_verified: bool) -> Result<UserPhone> {
+pub async fn update_phone(user_id: &str, phone_id: &str, request: UpdatePhoneRequest) -> Result<UserPhone> {
     let config = get_config();
     let client = get_client();
     let url = format!("{}/users/{}/phones/{}", config.base_url, user_id, phone_id);
-    
-    #[derive(Serialize)]
-    struct UpdatePhoneRequest {
-        is_primary: bool,
-        is_verified: bool,
-    }
-    
-    let response = client.patch(&url)
-        .json(&UpdatePhoneRequest { is_primary, is_verified })
-        .send()
-        .await?;
+
+    let response = client.patch(&url).json(&request).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update phone {} for user {}: {}", phone_id, user_id, error_body),
+            message: format!("Failed to update phone {phone_id} for user {user_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -411,7 +352,7 @@ pub async fn delete_phone(user_id: &str, phone_id: &str) -> Result<()> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete phone {} for user {}: {}", phone_id, user_id, error_body),
+            message: format!("Failed to delete phone {phone_id} for user {user_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -432,7 +373,7 @@ pub async fn delete_social_connection(user_id: &str, connection_id: &str) -> Res
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete social connection {} for user {}: {}", connection_id, user_id, error_body),
+            message: format!("Failed to delete social connection {connection_id} for user {user_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -442,7 +383,7 @@ pub async fn delete_social_connection(user_id: &str, connection_id: &str) -> Res
 pub async fn fetch_invited_users() -> Result<InvitationListResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/invited-users", config.base_url);
+    let url = format!("{}/invitations", config.base_url);
     
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -453,7 +394,7 @@ pub async fn fetch_invited_users() -> Result<InvitationListResponse> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch invited users: {}", error_body),
+            message: format!("Failed to fetch invited users: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -463,7 +404,7 @@ pub async fn fetch_invited_users() -> Result<InvitationListResponse> {
 pub async fn invite_user(request: InviteUserRequest) -> Result<UserInvitation> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/invited-users", config.base_url);
+    let url = format!("{}/invitations", config.base_url);
     
     let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
@@ -474,7 +415,7 @@ pub async fn invite_user(request: InviteUserRequest) -> Result<UserInvitation> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to invite user: {}", error_body),
+            message: format!("Failed to invite user: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -484,7 +425,7 @@ pub async fn invite_user(request: InviteUserRequest) -> Result<UserInvitation> {
 pub async fn fetch_waitlist() -> Result<WaitlistResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/user-waitlist", config.base_url);
+    let url = format!("{}/waitlist", config.base_url);
     
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -495,7 +436,7 @@ pub async fn fetch_waitlist() -> Result<WaitlistResponse> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch waitlist: {}", error_body),
+            message: format!("Failed to fetch waitlist: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -505,7 +446,7 @@ pub async fn fetch_waitlist() -> Result<WaitlistResponse> {
 pub async fn approve_waitlist_user(waitlist_user_id: &str) -> Result<UserInvitation> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/user-waitlist/{}/approve", config.base_url, waitlist_user_id);
+    let url = format!("{}/waitlist/{}/approve", config.base_url, waitlist_user_id);
 
     let response = client.post(&url).send().await?;
     let status = response.status();
@@ -516,7 +457,70 @@ pub async fn approve_waitlist_user(waitlist_user_id: &str) -> Result<UserInvitat
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to approve waitlist user {}: {}", waitlist_user_id, error_body),
+            message: format!("Failed to approve waitlist user {waitlist_user_id}: {error_body}"),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Delete user
+pub async fn delete_user(user_id: &str) -> Result<()> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/users/{}", config.base_url, user_id);
+
+    let response = client.delete(&url).send().await?;
+    let status = response.status();
+
+    if status.is_success() {
+        Ok(())
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!("Failed to delete user {user_id}: {error_body}"),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Delete invitation
+pub async fn delete_invitation(invitation_id: &str) -> Result<()> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/invitations/{}", config.base_url, invitation_id);
+
+    let response = client.delete(&url).send().await?;
+    let status = response.status();
+
+    if status.is_success() {
+        Ok(())
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!("Failed to delete invitation {invitation_id}: {error_body}"),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Create session ticket
+pub async fn create_session_ticket(request: CreateSessionTicketRequest) -> Result<SessionTicketResponse> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/session/tickets", config.base_url);
+
+    let response = client.post(&url).json(&request).send().await?;
+    let status = response.status();
+
+    if status.is_success() {
+        Ok(response.json().await?)
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!("Failed to create session ticket: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

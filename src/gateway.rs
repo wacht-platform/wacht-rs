@@ -31,7 +31,7 @@ pub struct GatewayCheckResponse {
 
 pub async fn verify_request(api_key: &str, identifier: &str) -> Result<GatewayCheckResponse> {
     let client = reqwest::Client::new();
-    let url = format!("{}/check/{}", GATEWAY_URL, identifier);
+    let url = format!("{GATEWAY_URL}/check/{identifier}");
 
     let mut headers = HeaderMap::new();
     headers.insert(
@@ -93,7 +93,7 @@ fn parse_header_i64(headers: &HeaderMap, key: &str) -> Result<i64> {
         .get(key)
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.parse().ok())
-        .ok_or_else(|| Error::InvalidRequest(format!("Missing or invalid header: {}", key)))
+        .ok_or_else(|| Error::InvalidRequest(format!("Missing or invalid header: {key}")))
 }
 
 fn parse_header_string(headers: &HeaderMap, key: &str) -> Result<String> {
@@ -101,12 +101,12 @@ fn parse_header_string(headers: &HeaderMap, key: &str) -> Result<String> {
         .get(key)
         .and_then(|v| v.to_str().ok())
         .map(|s| s.to_string())
-        .ok_or_else(|| Error::InvalidRequest(format!("Missing or invalid header: {}", key)))
+        .ok_or_else(|| Error::InvalidRequest(format!("Missing or invalid header: {key}")))
 }
 
 fn parse_header_json<T: serde::de::DeserializeOwned>(headers: &HeaderMap, key: &str) -> Result<T> {
     let json_str = parse_header_string(headers, key)?;
-    serde_json::from_str(&json_str).map_err(|e| Error::InvalidRequest(format!("Failed to parse JSON from header {}: {}", key, e)))
+    serde_json::from_str(&json_str).map_err(|e| Error::InvalidRequest(format!("Failed to parse JSON from header {key}: {e}")))
 }
 
 fn parse_rate_limit_headers(headers: &HeaderMap) -> Vec<RateLimitInfo> {
@@ -117,10 +117,10 @@ fn parse_rate_limit_headers(headers: &HeaderMap) -> Vec<RateLimitInfo> {
         if key_str.starts_with("x-ratelimit-") && key_str.ends_with("s-limit") {
             if let Some(window_str) = key_str.strip_prefix("x-ratelimit-").and_then(|s| s.strip_suffix("s-limit")) {
                 if let Ok(window) = window_str.parse::<u64>() {
-                    if let Some(limit_str) = value.to_str().ok() {
+                    if let Ok(limit_str) = value.to_str() {
                         if let Ok(limit) = limit_str.parse::<u32>() {
-                        let remaining_key = format!("x-ratelimit-{}s-remaining", window);
-                        let reset_key = format!("x-ratelimit-{}s-reset", window);
+                        let remaining_key = format!("x-ratelimit-{window}s-remaining");
+                        let reset_key = format!("x-ratelimit-{window}s-reset");
 
                         let remaining = headers
                             .get(&remaining_key)

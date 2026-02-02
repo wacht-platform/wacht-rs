@@ -57,7 +57,7 @@ pub async fn fetch_organizations(options: Option<ListOrganizationsOptions>) -> R
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch organizations: {}", error_body),
+            message: format!("Failed to fetch organizations: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -79,13 +79,13 @@ pub async fn create_organization(request: CreateOrganizationRequest) -> Result<O
     
     if let Some(public_metadata) = request.public_metadata {
         let metadata_str = serde_json::to_string(&public_metadata)
-            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {e}")))?;
         form = form.text("public_metadata", metadata_str);
     }
     
     if let Some(private_metadata) = request.private_metadata {
         let metadata_str = serde_json::to_string(&private_metadata)
-            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {e}")))?;
         form = form.text("private_metadata", metadata_str);
     }
     
@@ -93,7 +93,7 @@ pub async fn create_organization(request: CreateOrganizationRequest) -> Result<O
         let part = reqwest::multipart::Part::bytes(image_data)
             .file_name("logo.png")
             .mime_str("image/png")
-            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {e}")))?;
         form = form.part("organization_image", part);
     }
     
@@ -106,7 +106,7 @@ pub async fn create_organization(request: CreateOrganizationRequest) -> Result<O
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to create organization: {}", error_body),
+            message: format!("Failed to create organization: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -127,7 +127,7 @@ pub async fn fetch_organization(organization_id: &str) -> Result<Organization> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch organization {}: {}", organization_id, error_body),
+            message: format!("Failed to fetch organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -152,13 +152,13 @@ pub async fn update_organization(organization_id: &str, request: UpdateOrganizat
     
     if let Some(public_metadata) = request.public_metadata {
         let metadata_str = serde_json::to_string(&public_metadata)
-            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {e}")))?;
         form = form.text("public_metadata", metadata_str);
     }
     
     if let Some(private_metadata) = request.private_metadata {
         let metadata_str = serde_json::to_string(&private_metadata)
-            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {e}")))?;
         form = form.text("private_metadata", metadata_str);
     }
     
@@ -166,7 +166,7 @@ pub async fn update_organization(organization_id: &str, request: UpdateOrganizat
         let part = reqwest::multipart::Part::bytes(image_data)
             .file_name("logo.png")
             .mime_str("image/png")
-            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {e}")))?;
         form = form.part("organization_image", part);
     }
     
@@ -179,7 +179,7 @@ pub async fn update_organization(organization_id: &str, request: UpdateOrganizat
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update organization {}: {}", organization_id, error_body),
+            message: format!("Failed to update organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -200,7 +200,7 @@ pub async fn delete_organization(organization_id: &str) -> Result<()> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete organization {}: {}", organization_id, error_body),
+            message: format!("Failed to delete organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -221,7 +221,7 @@ pub async fn add_organization_member(organization_id: &str, request: AddOrganiza
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to add member to organization {}: {}", organization_id, error_body),
+            message: format!("Failed to add member to organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -242,7 +242,7 @@ pub async fn update_organization_member(organization_id: &str, membership_id: &s
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update member {} in organization {}: {}", membership_id, organization_id, error_body),
+            message: format!("Failed to update member {membership_id} in organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -263,7 +263,7 @@ pub async fn remove_organization_member(organization_id: &str, membership_id: &s
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to remove member {} from organization {}: {}", membership_id, organization_id, error_body),
+            message: format!("Failed to remove member {membership_id} from organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -297,7 +297,7 @@ pub async fn fetch_organization_members(
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch members for organization {}: {}", organization_id, error_body),
+            message: format!("Failed to fetch members for organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -307,7 +307,7 @@ pub async fn fetch_organization_members(
 pub async fn fetch_organization_roles() -> Result<OrganizationRoleListResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/organization-roles", config.base_url);
+    let url = format!("{}/organizations/roles", config.base_url);
     
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -318,7 +318,7 @@ pub async fn fetch_organization_roles() -> Result<OrganizationRoleListResponse> 
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch organization roles: {}", error_body),
+            message: format!("Failed to fetch organization roles: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -339,7 +339,7 @@ pub async fn create_organization_role(organization_id: &str, request: CreateRole
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to create role for organization {}: {}", organization_id, error_body),
+            message: format!("Failed to create role for organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -360,7 +360,7 @@ pub async fn update_organization_role(organization_id: &str, role_id: &str, requ
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update role {} for organization {}: {}", role_id, organization_id, error_body),
+            message: format!("Failed to update role {role_id} for organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -381,7 +381,7 @@ pub async fn delete_organization_role(organization_id: &str, role_id: &str) -> R
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete role {} for organization {}: {}", role_id, organization_id, error_body),
+            message: format!("Failed to delete role {role_id} for organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

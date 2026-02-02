@@ -86,7 +86,7 @@ pub fn init(config: WachtConfig) -> Result<(), String> {
         .user_agent(&config.user_agent)
         .default_headers(headers)
         .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+        .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
 
     let mut global_client = GLOBAL_CLIENT.write().unwrap();
     *global_client = Some(GlobalClient { config, client });
@@ -157,7 +157,7 @@ pub struct PublicKeyData {
 
 pub async fn fetch_public_key(base_url: &str) -> Result<String, crate::Error> {
     let client = reqwest::Client::new();
-    let url = format!("{}/.well-known/jwk", base_url);
+    let url = format!("{base_url}/.well-known/jwk");
 
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -169,7 +169,7 @@ pub async fn fetch_public_key(base_url: &str) -> Result<String, crate::Error> {
         let error_body = response.text().await?;
         Err(crate::Error::Api {
             status,
-            message: format!("Failed to fetch public key: {}", error_body),
+            message: format!("Failed to fetch public key: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

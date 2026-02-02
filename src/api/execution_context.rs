@@ -63,21 +63,21 @@ pub async fn fetch_execution_contexts(
 ) -> Result<ExecutionContextListResponse> {
     let config = get_config();
     let client = get_client();
-    let mut url = format!("{}/ai-execution-context", config.base_url);
+    let mut url = format!("{}/ai/execution-contexts", config.base_url);
 
     if let Some(opts) = options {
         let mut params = vec![];
         if let Some(limit) = opts.limit {
-            params.push(format!("limit={}", limit));
+            params.push(format!("limit={limit}"));
         }
         if let Some(offset) = opts.offset {
-            params.push(format!("offset={}", offset));
+            params.push(format!("offset={offset}"));
         }
         if let Some(status) = opts.status {
-            params.push(format!("status={}", status));
+            params.push(format!("status={status}"));
         }
         if let Some(context_group) = opts.context_group {
-            params.push(format!("context_group={}", context_group));
+            params.push(format!("context_group={context_group}"));
         }
         if !params.is_empty() {
             url = format!("{}?{}", url, params.join("&"));
@@ -93,7 +93,7 @@ pub async fn fetch_execution_contexts(
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch execution contexts: {}", error_body),
+            message: format!("Failed to fetch execution contexts: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -103,7 +103,7 @@ pub async fn fetch_execution_contexts(
 pub async fn fetch_execution_context(id: &str) -> Result<AiExecutionContext> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-execution-context/{}", config.base_url, id);
+    let url = format!("{}/ai/execution-contexts/{}", config.base_url, id);
 
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -114,7 +114,7 @@ pub async fn fetch_execution_context(id: &str) -> Result<AiExecutionContext> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch execution context: {}", error_body),
+            message: format!("Failed to fetch execution context: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -126,7 +126,7 @@ pub async fn create_execution_context(
 ) -> Result<AiExecutionContext> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-execution-context", config.base_url);
+    let url = format!("{}/ai/execution-contexts", config.base_url);
 
     let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
@@ -136,11 +136,11 @@ pub async fn create_execution_context(
     } else {
         let error_body = response.text().await?;
 
-        println!("error {}", error_body);
+        println!("error {error_body}");
 
         Err(Error::Api {
             status,
-            message: format!("Failed to create execution context: {}", error_body),
+            message: format!("Failed to create execution context: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -153,7 +153,7 @@ pub async fn update_execution_context(
 ) -> Result<AiExecutionContext> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-execution-context/{}", config.base_url, id);
+    let url = format!("{}/ai/execution-contexts/{}", config.base_url, id);
 
     let response = client.patch(&url).json(&request).send().await?;
     let status = response.status();
@@ -164,28 +164,31 @@ pub async fn update_execution_context(
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update execution context: {}", error_body),
+            message: format!("Failed to update execution context: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
 }
 
-/// Delete an execution context
-pub async fn delete_execution_context(id: &str) -> Result<()> {
+/// Execute agent in execution context
+pub async fn execute_agent(
+    context_id: &str,
+    request: serde_json::Value,
+) -> Result<serde_json::Value> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-execution-context/{}", config.base_url, id);
+    let url = format!("{}/ai/execution-contexts/{}/execute", config.base_url, context_id);
 
-    let response = client.delete(&url).send().await?;
+    let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
 
     if status.is_success() {
-        Ok(())
+        Ok(response.json().await?)
     } else {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete execution context: {}", error_body),
+            message: format!("Failed to execute agent: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

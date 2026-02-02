@@ -11,6 +11,21 @@ pub struct RecentSignupsResponse {
     pub total: u32,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecentSigninsResponse {
+    pub data: Vec<RecentSignin>,
+    pub total: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RecentSignin {
+    pub user_id: String,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub email_address: Option<String>,
+    pub timestamp: String,
+}
+
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct AnalyticsStatsOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -42,7 +57,7 @@ pub async fn fetch_analytics_stats(options: Option<AnalyticsStatsOptions>) -> Re
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch analytics statistics: {}", error_body),
+            message: format!("Failed to fetch analytics statistics: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -53,23 +68,50 @@ pub async fn fetch_recent_signups(limit: Option<u32>) -> Result<RecentSignupsRes
     let config = get_config();
     let client = get_client();
     let url = format!("{}/analytics/recent-signups", config.base_url);
-    
+
     let mut request = client.get(&url);
-    
+
     if let Some(limit) = limit {
         request = request.query(&[("limit", limit)]);
     }
-    
+
     let response = request.send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(response.json().await?)
     } else {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch recent signups: {}", error_body),
+            message: format!("Failed to fetch recent signups: {error_body}"),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Fetch recent signins
+pub async fn fetch_recent_signins(limit: Option<u32>) -> Result<RecentSigninsResponse> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/analytics/recent-signins", config.base_url);
+
+    let mut request = client.get(&url);
+
+    if let Some(limit) = limit {
+        request = request.query(&[("limit", limit)]);
+    }
+
+    let response = request.send().await?;
+    let status = response.status();
+
+    if status.is_success() {
+        Ok(response.json().await?)
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!("Failed to fetch recent signins: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

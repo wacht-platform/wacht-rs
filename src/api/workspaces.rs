@@ -65,7 +65,7 @@ pub async fn fetch_workspaces(
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch workspaces: {}", error_body),
+            message: format!("Failed to fetch workspaces: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -86,7 +86,7 @@ pub async fn fetch_workspace(workspace_id: &str) -> Result<Workspace> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch workspace {}: {}", workspace_id, error_body),
+            message: format!("Failed to fetch workspace {workspace_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -114,13 +114,13 @@ pub async fn update_workspace(
     
     if let Some(public_metadata) = request.public_metadata {
         let metadata_str = serde_json::to_string(&public_metadata)
-            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {e}")))?;
         form = form.text("public_metadata", metadata_str);
     }
     
     if let Some(private_metadata) = request.private_metadata {
         let metadata_str = serde_json::to_string(&private_metadata)
-            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {e}")))?;
         form = form.text("private_metadata", metadata_str);
     }
     
@@ -128,7 +128,7 @@ pub async fn update_workspace(
         let part = reqwest::multipart::Part::bytes(image_data)
             .file_name("logo.png")
             .mime_str("image/png")
-            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {e}")))?;
         form = form.part("workspace_image", part);
     }
 
@@ -142,8 +142,7 @@ pub async fn update_workspace(
         Err(Error::Api {
             status,
             message: format!(
-                "Failed to update workspace {}: {}",
-                workspace_id, error_body
+                "Failed to update workspace {workspace_id}: {error_body}"
             ),
             details: serde_json::from_str(&error_body).ok(),
         })
@@ -166,8 +165,7 @@ pub async fn delete_workspace(workspace_id: &str) -> Result<()> {
         Err(Error::Api {
             status,
             message: format!(
-                "Failed to delete workspace {}: {}",
-                workspace_id, error_body
+                "Failed to delete workspace {workspace_id}: {error_body}"
             ),
             details: serde_json::from_str(&error_body).ok(),
         })
@@ -196,13 +194,13 @@ pub async fn create_workspace_in_organization(
     
     if let Some(public_metadata) = request.public_metadata {
         let metadata_str = serde_json::to_string(&public_metadata)
-            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize public_metadata: {e}")))?;
         form = form.text("public_metadata", metadata_str);
     }
     
     if let Some(private_metadata) = request.private_metadata {
         let metadata_str = serde_json::to_string(&private_metadata)
-            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Failed to serialize private_metadata: {e}")))?;
         form = form.text("private_metadata", metadata_str);
     }
     
@@ -210,7 +208,7 @@ pub async fn create_workspace_in_organization(
         let part = reqwest::multipart::Part::bytes(image_data)
             .file_name("logo.png")
             .mime_str("image/png")
-            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {}", e)))?;
+            .map_err(|e| Error::InvalidRequest(format!("Invalid image MIME type: {e}")))?;
         form = form.part("workspace_image", part);
     }
 
@@ -224,8 +222,7 @@ pub async fn create_workspace_in_organization(
         Err(Error::Api {
             status,
             message: format!(
-                "Failed to create workspace in organization {}: {}",
-                organization_id, error_body
+                "Failed to create workspace in organization {organization_id}: {error_body}"
             ),
             details: serde_json::from_str(&error_body).ok(),
         })
@@ -261,8 +258,7 @@ pub async fn fetch_workspace_members(
         Err(Error::Api {
             status,
             message: format!(
-                "Failed to fetch members for workspace {}: {}",
-                workspace_id, error_body
+                "Failed to fetch members for workspace {workspace_id}: {error_body}"
             ),
             details: serde_json::from_str(&error_body).ok(),
         })
@@ -288,15 +284,13 @@ pub async fn add_workspace_member(
     let status = response.status();
 
     if status.is_success() {
-        let resp: WorkspaceMemberResponse = response.json().await?;
-        Ok(resp.data)
+        Ok(response.json().await?)
     } else {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
             message: format!(
-                "Failed to add member to workspace {}: {}",
-                workspace_id, error_body
+                "Failed to add member to workspace {workspace_id}: {error_body}"
             ),
             details: serde_json::from_str(&error_body).ok(),
         })
@@ -335,8 +329,7 @@ pub async fn update_workspace_member(
         Err(Error::Api {
             status,
             message: format!(
-                "Failed to update member {} in workspace {}: {}",
-                membership_id, workspace_id, error_body
+                "Failed to update member {membership_id} in workspace {workspace_id}: {error_body}"
             ),
             details: serde_json::from_str(&error_body).ok(),
         })
@@ -365,8 +358,7 @@ pub async fn remove_workspace_member(
         Err(Error::Api {
             status,
             message: format!(
-                "Failed to remove member {} from workspace {}: {}",
-                membership_id, workspace_id, error_body
+                "Failed to remove member {membership_id} from workspace {workspace_id}: {error_body}"
             ),
             details: serde_json::from_str(&error_body).ok(),
         })
@@ -377,7 +369,7 @@ pub async fn remove_workspace_member(
 pub async fn fetch_workspace_roles() -> Result<WorkspaceRoleListResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/workspace-roles", config.base_url);
+    let url = format!("{}/workspaces/roles", config.base_url);
 
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -388,7 +380,7 @@ pub async fn fetch_workspace_roles() -> Result<WorkspaceRoleListResponse> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch workspace roles: {}", error_body),
+            message: format!("Failed to fetch workspace roles: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -413,8 +405,7 @@ pub async fn create_workspace_role(
         Err(Error::Api {
             status,
             message: format!(
-                "Failed to create role for workspace {}: {}",
-                workspace_id, error_body
+                "Failed to create role for workspace {workspace_id}: {error_body}"
             ),
             details: serde_json::from_str(&error_body).ok(),
         })
@@ -444,8 +435,7 @@ pub async fn update_workspace_role(
         Err(Error::Api {
             status,
             message: format!(
-                "Failed to update role {} for workspace {}: {}",
-                role_id, workspace_id, error_body
+                "Failed to update role {role_id} for workspace {workspace_id}: {error_body}"
             ),
             details: serde_json::from_str(&error_body).ok(),
         })
@@ -471,8 +461,7 @@ pub async fn delete_workspace_role(workspace_id: &str, role_id: &str) -> Result<
         Err(Error::Api {
             status,
             message: format!(
-                "Failed to delete role {} for workspace {}: {}",
-                role_id, workspace_id, error_body
+                "Failed to delete role {role_id} for workspace {workspace_id}: {error_body}"
             ),
             details: serde_json::from_str(&error_body).ok(),
         })

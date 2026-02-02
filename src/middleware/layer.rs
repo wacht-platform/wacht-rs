@@ -41,6 +41,12 @@ pub struct AuthLayer {
     config: Arc<AuthConfig>,
 }
 
+impl Default for AuthLayer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AuthLayer {
     /// Create a new authentication layer using the public key from global SDK configuration.
     ///
@@ -231,7 +237,7 @@ async fn validate_token(
     let header = decode_header(token).map_err(|e| {
         error_response(
             StatusCode::UNAUTHORIZED,
-            &format!("Invalid token header: {}", e),
+            &format!("Invalid token header: {e}"),
         )
     })?;
 
@@ -260,7 +266,7 @@ async fn validate_token(
             DecodingKey::from_ec_pem(config.public_key.as_bytes()).map_err(|e| {
                 error_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    &format!("Invalid EC public key: {}", e),
+                    &format!("Invalid EC public key: {e}"),
                 )
             })?
         }
@@ -269,7 +275,7 @@ async fn validate_token(
             DecodingKey::from_rsa_pem(config.public_key.as_bytes()).map_err(|e| {
                 error_response(
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    &format!("Invalid RSA public key: {}", e),
+                    &format!("Invalid RSA public key: {e}"),
                 )
             })?
         }
@@ -297,7 +303,7 @@ async fn validate_token(
 
     // Decode and validate token
     let token_data = decode::<TokenClaims>(token, &decoding_key, &validation)
-        .map_err(|e| error_response(StatusCode::UNAUTHORIZED, &format!("Invalid token: {}", e)))?;
+        .map_err(|e| error_response(StatusCode::UNAUTHORIZED, &format!("Invalid token: {e}")))?;
 
     // Return request and auth context
     Ok((
@@ -335,7 +341,7 @@ fn error_response(status: StatusCode, message: &str) -> Response {
             error!(error = %e, "Failed to build auth error response");
             Response::builder()
                 .status(status)
-                .body(Body::from(format!("Authentication error: {}", status)))
+                .body(Body::from(format!("Authentication error: {status}")))
                 .unwrap_or_else(|_| {
                     // Last resort fallback
                     Response::new(Body::from("Authentication error"))

@@ -43,7 +43,7 @@ pub struct KnowledgeBaseSearchOptions {
 pub async fn fetch_knowledge_bases(options: Option<ListKnowledgeBasesOptions>) -> Result<KnowledgeBaseListResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-knowledge-bases", config.base_url);
+    let url = format!("{}/ai/knowledge-bases", config.base_url);
     
     let mut request = client.get(&url);
     
@@ -60,7 +60,7 @@ pub async fn fetch_knowledge_bases(options: Option<ListKnowledgeBasesOptions>) -
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to list knowledge bases: {}", error_body),
+            message: format!("Failed to list knowledge bases: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -70,7 +70,7 @@ pub async fn fetch_knowledge_bases(options: Option<ListKnowledgeBasesOptions>) -
 pub async fn create_knowledge_base(request: CreateAiKnowledgeBaseRequest) -> Result<AiKnowledgeBase> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-knowledge-bases", config.base_url);
+    let url = format!("{}/ai/knowledge-bases", config.base_url);
     
     let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
@@ -81,7 +81,7 @@ pub async fn create_knowledge_base(request: CreateAiKnowledgeBaseRequest) -> Res
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to create knowledge base: {}", error_body),
+            message: format!("Failed to create knowledge base: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -91,7 +91,7 @@ pub async fn create_knowledge_base(request: CreateAiKnowledgeBaseRequest) -> Res
 pub async fn fetch_knowledge_base(knowledge_base_id: &str) -> Result<AiKnowledgeBase> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-knowledge-bases/{}", config.base_url, knowledge_base_id);
+    let url = format!("{}/ai/knowledge-bases/{}", config.base_url, knowledge_base_id);
     
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -102,7 +102,7 @@ pub async fn fetch_knowledge_base(knowledge_base_id: &str) -> Result<AiKnowledge
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to get knowledge base {}: {}", knowledge_base_id, error_body),
+            message: format!("Failed to get knowledge base {knowledge_base_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -112,7 +112,7 @@ pub async fn fetch_knowledge_base(knowledge_base_id: &str) -> Result<AiKnowledge
 pub async fn update_knowledge_base(knowledge_base_id: &str, request: UpdateAiKnowledgeBaseRequest) -> Result<AiKnowledgeBase> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-knowledge-bases/{}", config.base_url, knowledge_base_id);
+    let url = format!("{}/ai/knowledge-bases/{}", config.base_url, knowledge_base_id);
     
     let response = client.patch(&url).json(&request).send().await?;
     let status = response.status();
@@ -123,7 +123,7 @@ pub async fn update_knowledge_base(knowledge_base_id: &str, request: UpdateAiKno
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update knowledge base {}: {}", knowledge_base_id, error_body),
+            message: format!("Failed to update knowledge base {knowledge_base_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -133,7 +133,7 @@ pub async fn update_knowledge_base(knowledge_base_id: &str, request: UpdateAiKno
 pub async fn delete_knowledge_base(knowledge_base_id: &str) -> Result<()> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-knowledge-bases/{}", config.base_url, knowledge_base_id);
+    let url = format!("{}/ai/knowledge-bases/{}", config.base_url, knowledge_base_id);
     
     let response = client.delete(&url).send().await?;
     let status = response.status();
@@ -144,7 +144,7 @@ pub async fn delete_knowledge_base(knowledge_base_id: &str) -> Result<()> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete knowledge base {}: {}", knowledge_base_id, error_body),
+            message: format!("Failed to delete knowledge base {knowledge_base_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -154,7 +154,7 @@ pub async fn delete_knowledge_base(knowledge_base_id: &str) -> Result<()> {
 pub async fn fetch_documents(knowledge_base_id: &str) -> Result<DocumentListResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-knowledge-bases/{}/documents", config.base_url, knowledge_base_id);
+    let url = format!("{}/ai/knowledge-bases/{}/documents", config.base_url, knowledge_base_id);
     
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -165,7 +165,7 @@ pub async fn fetch_documents(knowledge_base_id: &str) -> Result<DocumentListResp
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to list documents for knowledge base {}: {}", knowledge_base_id, error_body),
+            message: format!("Failed to list documents for knowledge base {knowledge_base_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -175,7 +175,7 @@ pub async fn fetch_documents(knowledge_base_id: &str) -> Result<DocumentListResp
 pub async fn upload_document(knowledge_base_id: &str, file_content: Vec<u8>, file_name: String) -> Result<KnowledgeBaseDocument> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-knowledge-bases/{}/documents", config.base_url, knowledge_base_id);
+    let url = format!("{}/ai/knowledge-bases/{}/documents", config.base_url, knowledge_base_id);
     
     let part = reqwest::multipart::Part::bytes(file_content)
         .file_name(file_name);
@@ -195,7 +195,7 @@ pub async fn upload_document(knowledge_base_id: &str, file_content: Vec<u8>, fil
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to upload document to knowledge base {}: {}", knowledge_base_id, error_body),
+            message: format!("Failed to upload document to knowledge base {knowledge_base_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -205,7 +205,7 @@ pub async fn upload_document(knowledge_base_id: &str, file_content: Vec<u8>, fil
 pub async fn delete_document(knowledge_base_id: &str, document_id: &str) -> Result<()> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-knowledge-bases/{}/documents/{}", config.base_url, knowledge_base_id, document_id);
+    let url = format!("{}/ai/knowledge-bases/{}/documents/{}", config.base_url, knowledge_base_id, document_id);
     
     let response = client.delete(&url).send().await?;
     let status = response.status();
@@ -216,7 +216,7 @@ pub async fn delete_document(knowledge_base_id: &str, document_id: &str) -> Resu
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete document {} from knowledge base {}: {}", document_id, knowledge_base_id, error_body),
+            message: format!("Failed to delete document {document_id} from knowledge base {knowledge_base_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -226,7 +226,7 @@ pub async fn delete_document(knowledge_base_id: &str, document_id: &str) -> Resu
 pub async fn search_global(options: KnowledgeBaseSearchOptions) -> Result<KnowledgeBaseSearchResult> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-knowledge-bases/search", config.base_url);
+    let url = format!("{}/ai/knowledge-bases/search", config.base_url);
     
     let response = client.get(&url)
         .query(&options)
@@ -240,7 +240,7 @@ pub async fn search_global(options: KnowledgeBaseSearchOptions) -> Result<Knowle
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to search knowledge bases: {}", error_body),
+            message: format!("Failed to search knowledge bases: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -250,7 +250,7 @@ pub async fn search_global(options: KnowledgeBaseSearchOptions) -> Result<Knowle
 pub async fn search_knowledge_base(knowledge_base_id: &str, options: KnowledgeBaseSearchOptions) -> Result<KnowledgeBaseSearchResult> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-knowledge-bases/{}/search", config.base_url, knowledge_base_id);
+    let url = format!("{}/ai/knowledge-bases/{}/search", config.base_url, knowledge_base_id);
     
     let response = client.get(&url)
         .query(&options)
@@ -264,7 +264,7 @@ pub async fn search_knowledge_base(knowledge_base_id: &str, options: KnowledgeBa
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to search knowledge base {}: {}", knowledge_base_id, error_body),
+            message: format!("Failed to search knowledge base {knowledge_base_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

@@ -14,15 +14,15 @@ use serde::{Deserialize, Serialize};
 pub struct AddOrganizationMemberRequest {
     #[serde(rename = "user_id")]
     pub user_id: String,
-    #[serde(rename = "role_id")]
-    pub role_id: String,
+    #[serde(rename = "role_ids")]
+    pub role_ids: Vec<String>,
 }
 
 impl AddOrganizationMemberRequest {
-    pub fn new(user_id: String, role_id: String) -> AddOrganizationMemberRequest {
+    pub fn new(user_id: String, role_ids: Vec<String>) -> AddOrganizationMemberRequest {
         AddOrganizationMemberRequest {
             user_id,
-            role_id,
+            role_ids,
         }
     }
 }

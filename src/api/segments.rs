@@ -39,7 +39,7 @@ pub async fn fetch_segments(options: Option<ListSegmentsOptions>) -> Result<Segm
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to fetch segments: {}", error_body),
+            message: format!("Failed to fetch segments: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -60,7 +60,7 @@ pub async fn create_segment(request: CreateSegmentRequest) -> Result<Segment> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to create segment: {}", error_body),
+            message: format!("Failed to create segment: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -81,7 +81,7 @@ pub async fn update_segment(segment_id: &str, request: UpdateSegmentRequest) -> 
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update segment {}: {}", segment_id, error_body),
+            message: format!("Failed to update segment {segment_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -102,7 +102,7 @@ pub async fn delete_segment(segment_id: &str) -> Result<()> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete segment {}: {}", segment_id, error_body),
+            message: format!("Failed to delete segment {segment_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -131,7 +131,7 @@ pub async fn assign_organization_segment(organization_id: &str, segment_id: &str
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to assign segment {} to organization {}: {}", segment_id, organization_id, error_body),
+            message: format!("Failed to assign segment {segment_id} to organization {organization_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -142,17 +142,120 @@ pub async fn remove_organization_segment(organization_id: &str, segment_id: &str
     let config = get_config();
     let client = get_client();
     let url = format!("{}/organizations/{}/segments/{}", config.base_url, organization_id, segment_id);
-    
+
     let response = client.delete(&url).send().await?;
     let status = response.status();
-    
+
     if status.is_success() {
         Ok(())
     } else {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to remove segment {} from organization {}: {}", segment_id, organization_id, error_body),
+            message: format!("Failed to remove segment {segment_id} from organization {organization_id}: {error_body}"),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Assign entity to segment
+pub async fn assign_segment(segment_id: &str, entity_id: &str, entity_type: &str) -> Result<()> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/segments/{}/assign", config.base_url, segment_id);
+
+    #[derive(Serialize)]
+    struct AssignSegmentRequest {
+        entity_id: String,
+        entity_type: String,
+    }
+
+    let response = client
+        .post(&url)
+        .json(&AssignSegmentRequest {
+            entity_id: entity_id.to_string(),
+            entity_type: entity_type.to_string(),
+        })
+        .send()
+        .await?;
+    let status = response.status();
+
+    if status.is_success() {
+        Ok(())
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!("Failed to assign entity to segment {segment_id}: {error_body}"),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Remove entity from segment
+pub async fn remove_segment(segment_id: &str, entity_id: &str, entity_type: &str) -> Result<()> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/segments/{}/remove", config.base_url, segment_id);
+
+    #[derive(Serialize)]
+    struct RemoveSegmentRequest {
+        entity_id: String,
+        entity_type: String,
+    }
+
+    let response = client
+        .post(&url)
+        .json(&RemoveSegmentRequest {
+            entity_id: entity_id.to_string(),
+            entity_type: entity_type.to_string(),
+        })
+        .send()
+        .await?;
+    let status = response.status();
+
+    if status.is_success() {
+        Ok(())
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!("Failed to remove entity from segment {segment_id}: {error_body}"),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Get segment data
+pub async fn get_segment_data(segment_id: &str, filters: Option<serde_json::Value>) -> Result<serde_json::Value> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/segments/data", config.base_url);
+
+    #[derive(Serialize)]
+    struct SegmentDataRequest {
+        segment_id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        filters: Option<serde_json::Value>,
+    }
+
+    let response = client
+        .post(&url)
+        .json(&SegmentDataRequest {
+            segment_id: segment_id.to_string(),
+            filters,
+        })
+        .send()
+        .await?;
+    let status = response.status();
+
+    if status.is_success() {
+        Ok(response.json().await?)
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!("Failed to get segment data: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

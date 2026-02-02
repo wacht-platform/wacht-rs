@@ -272,7 +272,7 @@ pub async fn get_webhook_app(app_name: &str) -> Result<WebhookApp> {
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to get webhook app: {}", error_text),
+            message: format!("Failed to get webhook app: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -285,7 +285,7 @@ pub async fn list_webhook_apps(include_inactive: Option<bool>) -> Result<Vec<Web
     let mut url = format!("{}/webhooks/apps", config.base_url);
     
     if let Some(inactive) = include_inactive {
-        url.push_str(&format!("?include_inactive={}", inactive));
+        url.push_str(&format!("?include_inactive={inactive}"));
     }
     
     let response = client.get(&url).send().await?;
@@ -298,7 +298,7 @@ pub async fn list_webhook_apps(include_inactive: Option<bool>) -> Result<Vec<Web
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to list webhook apps: {}", error_text),
+            message: format!("Failed to list webhook apps: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -320,7 +320,7 @@ pub async fn create_webhook_app(request: CreateWebhookAppRequest) -> Result<Webh
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to create webhook app: {}", error_text),
+            message: format!("Failed to create webhook app: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -345,7 +345,7 @@ pub async fn update_webhook_app(
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to update webhook app: {}", error_text),
+            message: format!("Failed to update webhook app: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -366,7 +366,7 @@ pub async fn delete_webhook_app(app_name: &str) -> Result<()> {
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to delete webhook app: {}", error_text),
+            message: format!("Failed to delete webhook app: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -388,7 +388,7 @@ pub async fn rotate_webhook_secret(app_name: &str) -> Result<WebhookApp> {
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to rotate webhook secret: {}", error_text),
+            message: format!("Failed to rotate webhook secret: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -410,7 +410,7 @@ pub async fn get_webhook_events(app_name: &str) -> Result<Vec<WebhookAppEvent>> 
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to get webhook events: {}", error_text),
+            message: format!("Failed to get webhook events: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -448,17 +448,17 @@ pub async fn get_webhook_endpoints_with_subscriptions(
     
     let mut params = Vec::new();
     if let Some(inactive) = include_inactive {
-        params.push(format!("include_inactive={}", inactive));
+        params.push(format!("include_inactive={inactive}"));
     }
     if let Some(lim) = limit {
-        params.push(format!("limit={}", lim));
+        params.push(format!("limit={lim}"));
     }
     if let Some(off) = offset {
-        params.push(format!("offset={}", off));
+        params.push(format!("offset={off}"));
     }
     
     if !params.is_empty() {
-        url.push_str("?");
+        url.push('?');
         url.push_str(&params.join("&"));
     }
     
@@ -495,7 +495,7 @@ pub async fn get_webhook_endpoints_with_subscriptions(
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to get webhook endpoints with subscriptions: {}", error_text),
+            message: format!("Failed to get webhook endpoints with subscriptions: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -512,14 +512,14 @@ pub async fn list_webhook_endpoints(
     
     let mut params = Vec::new();
     if let Some(name) = app_name {
-        params.push(format!("app_name={}", name));
+        params.push(format!("app_name={name}"));
     }
     if let Some(inactive) = include_inactive {
-        params.push(format!("include_inactive={}", inactive));
+        params.push(format!("include_inactive={inactive}"));
     }
     
     if !params.is_empty() {
-        url.push_str("?");
+        url.push('?');
         url.push_str(&params.join("&"));
     }
     
@@ -533,7 +533,7 @@ pub async fn list_webhook_endpoints(
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to list webhook endpoints: {}", error_text),
+            message: format!("Failed to list webhook endpoints: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -555,7 +555,7 @@ pub async fn create_webhook_endpoint(request: CreateWebhookEndpointRequest) -> R
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to create webhook endpoint: {}", error_text),
+            message: format!("Failed to create webhook endpoint: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -580,7 +580,7 @@ pub async fn update_webhook_endpoint(
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to update webhook endpoint: {}", error_text),
+            message: format!("Failed to update webhook endpoint: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -601,7 +601,7 @@ pub async fn delete_webhook_endpoint(endpoint_id: String) -> Result<()> {
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to delete webhook endpoint: {}", error_text),
+            message: format!("Failed to delete webhook endpoint: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -625,7 +625,7 @@ pub async fn trigger_webhook_event(
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to trigger webhook event: {}", error_text),
+            message: format!("Failed to trigger webhook event: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -657,23 +657,23 @@ pub async fn get_webhook_deliveries(
     
     let mut params = Vec::new();
     if let Some(id) = endpoint_id {
-        params.push(format!("endpoint_id={}", id));
+        params.push(format!("endpoint_id={id}"));
     }
     if let Some(event) = event_name {
-        params.push(format!("event_name={}", event));
+        params.push(format!("event_name={event}"));
     }
     if let Some(s) = status {
-        params.push(format!("status={}", s));
+        params.push(format!("status={s}"));
     }
     if let Some(l) = limit {
-        params.push(format!("limit={}", l));
+        params.push(format!("limit={l}"));
     }
     if let Some(o) = offset {
-        params.push(format!("offset={}", o));
+        params.push(format!("offset={o}"));
     }
     
     if !params.is_empty() {
-        url.push_str("?");
+        url.push('?');
         url.push_str(&params.join("&"));
     }
     
@@ -687,7 +687,7 @@ pub async fn get_webhook_deliveries(
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to get webhook deliveries: {}", error_text),
+            message: format!("Failed to get webhook deliveries: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -717,7 +717,7 @@ pub async fn get_webhook_delivery_details(
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to get webhook delivery details: {}", error_text),
+            message: format!("Failed to get webhook delivery details: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -745,7 +745,7 @@ pub async fn replay_webhook_deliveries(app_name: String, delivery_ids: Vec<Strin
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to replay webhook deliveries: {}", error_text),
+            message: format!("Failed to replay webhook deliveries: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -767,7 +767,7 @@ pub async fn reactivate_webhook_endpoint(endpoint_id: String) -> Result<Value> {
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to reactivate webhook endpoint: {}", error_text),
+            message: format!("Failed to reactivate webhook endpoint: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -799,7 +799,7 @@ pub async fn test_webhook_endpoint(
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to test webhook endpoint: {}", error_text),
+            message: format!("Failed to test webhook endpoint: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -821,7 +821,7 @@ pub async fn get_webhook_stats(app_name: &str) -> Result<WebhookStats> {
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to get webhook stats: {}", error_text),
+            message: format!("Failed to get webhook stats: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -909,7 +909,7 @@ pub async fn get_webhook_timeseries(
     }
     
     if !query_params.is_empty() {
-        url.push_str("?");
+        url.push('?');
         url.push_str(&query_params.join("&"));
     }
     
@@ -923,7 +923,7 @@ pub async fn get_webhook_timeseries(
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to get webhook timeseries: {}", error_text),
+            message: format!("Failed to get webhook timeseries: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }
@@ -949,7 +949,7 @@ pub async fn get_webhook_analytics(
     }
     
     if !query_params.is_empty() {
-        url.push_str("?");
+        url.push('?');
         url.push_str(&query_params.join("&"));
     }
     
@@ -963,7 +963,7 @@ pub async fn get_webhook_analytics(
         let error_text = response.text().await.unwrap_or_default();
         Err(Error::Api {
             status,
-            message: format!("Failed to get webhook analytics: {}", error_text),
+            message: format!("Failed to get webhook analytics: {error_text}"),
             details: serde_json::from_str(&error_text).ok(),
         })
     }

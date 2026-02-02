@@ -63,7 +63,7 @@ pub struct ListAgentsOptions {
 pub async fn fetch_agents(options: Option<ListAgentsOptions>) -> Result<AgentListResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-agents", config.base_url);
+    let url = format!("{}/ai/agents", config.base_url);
 
     let mut request = client.get(&url);
 
@@ -81,7 +81,7 @@ pub async fn fetch_agents(options: Option<ListAgentsOptions>) -> Result<AgentLis
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to list agents: {}", error_body),
+            message: format!("Failed to list agents: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -91,7 +91,7 @@ pub async fn fetch_agents(options: Option<ListAgentsOptions>) -> Result<AgentLis
 pub async fn fetch_agent(agent_id: &str) -> Result<AiAgent> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-agents/{}", config.base_url, agent_id);
+    let url = format!("{}/ai/agents/{}", config.base_url, agent_id);
 
     let response = client.get(&url).send().await?;
     let status = response.status();
@@ -102,7 +102,7 @@ pub async fn fetch_agent(agent_id: &str) -> Result<AiAgent> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to get agent {}: {}", agent_id, error_body),
+            message: format!("Failed to get agent {agent_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -112,7 +112,7 @@ pub async fn fetch_agent(agent_id: &str) -> Result<AiAgent> {
 pub async fn create_agent(request: CreateAiAgentRequest) -> Result<AiAgent> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-agents", config.base_url);
+    let url = format!("{}/ai/agents", config.base_url);
 
     let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
@@ -123,7 +123,7 @@ pub async fn create_agent(request: CreateAiAgentRequest) -> Result<AiAgent> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to create agent: {}", error_body),
+            message: format!("Failed to create agent: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -133,7 +133,7 @@ pub async fn create_agent(request: CreateAiAgentRequest) -> Result<AiAgent> {
 pub async fn update_agent(agent_id: &str, request: UpdateAiAgentRequest) -> Result<AiAgent> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-agents/{}", config.base_url, agent_id);
+    let url = format!("{}/ai/agents/{}", config.base_url, agent_id);
 
     let response = client.patch(&url).json(&request).send().await?;
     let status = response.status();
@@ -144,7 +144,7 @@ pub async fn update_agent(agent_id: &str, request: UpdateAiAgentRequest) -> Resu
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to update agent {}: {}", agent_id, error_body),
+            message: format!("Failed to update agent {agent_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }
@@ -154,7 +154,7 @@ pub async fn update_agent(agent_id: &str, request: UpdateAiAgentRequest) -> Resu
 pub async fn delete_agent(agent_id: &str) -> Result<()> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai-agents/{}", config.base_url, agent_id);
+    let url = format!("{}/ai/agents/{}", config.base_url, agent_id);
 
     let response = client.delete(&url).send().await?;
     let status = response.status();
@@ -165,7 +165,28 @@ pub async fn delete_agent(agent_id: &str) -> Result<()> {
         let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: format!("Failed to delete agent {}: {}", agent_id, error_body),
+            message: format!("Failed to delete agent {agent_id}: {error_body}"),
+            details: serde_json::from_str(&error_body).ok(),
+        })
+    }
+}
+
+/// Get AI agent details
+pub async fn fetch_agent_details(agent_id: &str) -> Result<AiAgent> {
+    let config = get_config();
+    let client = get_client();
+    let url = format!("{}/ai/agents/{}/details", config.base_url, agent_id);
+
+    let response = client.get(&url).send().await?;
+    let status = response.status();
+
+    if status.is_success() {
+        Ok(response.json().await?)
+    } else {
+        let error_body = response.text().await?;
+        Err(Error::Api {
+            status,
+            message: format!("Failed to get agent details {agent_id}: {error_body}"),
             details: serde_json::from_str(&error_body).ok(),
         })
     }

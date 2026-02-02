@@ -41,7 +41,7 @@ fn build_error_response(status: StatusCode, message: &str) -> Response {
             // Fallback response
             Response::builder()
                 .status(status)
-                .body(Body::from(format!("Error: {}", status)))
+                .body(Body::from(format!("Error: {status}")))
                 .unwrap_or_else(|_| Response::new(Body::from("Error")))
         })
 }
@@ -175,7 +175,7 @@ where
             };
 
             if !has_permission {
-                let error_msg = format!("Missing required permission: {}", permission);
+                let error_msg = format!("Missing required permission: {permission}");
                 return Ok(build_error_response(StatusCode::FORBIDDEN, &error_msg));
             }
 
@@ -488,7 +488,7 @@ where
                     .collect::<Vec<_>>()
                     .join(" OR ");
 
-                let error_msg = format!("Missing required permission: {}", permission_list);
+                let error_msg = format!("Missing required permission: {permission_list}");
                 return Ok(build_error_response(StatusCode::FORBIDDEN, &error_msg));
             }
 

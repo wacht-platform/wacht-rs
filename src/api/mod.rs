@@ -1,9 +1,12 @@
 pub mod agents;
+pub mod ai_settings;
 pub mod analytics;
 pub mod api_keys;
+pub mod notifications;
 pub mod deployments;
 pub mod execution_context;
 pub mod health;
+pub mod integrations;
 pub mod knowledge_bases;
 pub mod organizations;
 pub mod settings;

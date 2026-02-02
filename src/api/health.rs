@@ -7,16 +7,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HealthStatus {
     pub status: String,
-    pub version: String,
-    pub timestamp: String,
-    pub services: Vec<ServiceHealth>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ServiceHealth {
-    pub name: String,
-    pub status: String,
-    pub message: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timestamp: Option<String>,
 }
 
 /// Check the health status of the API

@@ -25,15 +25,15 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Error::Request(e) => write!(f, "Request error: {}", e),
-            Error::Json(e) => write!(f, "JSON error: {}", e),
-            Error::Io(e) => write!(f, "IO error: {}", e),
+            Error::Request(e) => write!(f, "Request error: {e}"),
+            Error::Json(e) => write!(f, "JSON error: {e}"),
+            Error::Io(e) => write!(f, "IO error: {e}"),
             Error::Api { status, message, .. } => {
-                write!(f, "API error ({}): {}", status, message)
+                write!(f, "API error ({status}): {message}")
             }
-            Error::Config(msg) => write!(f, "Configuration error: {}", msg),
-            Error::Auth(msg) => write!(f, "Authentication error: {}", msg),
-            Error::InvalidRequest(msg) => write!(f, "Invalid request: {}", msg),
+            Error::Config(msg) => write!(f, "Configuration error: {msg}"),
+            Error::Auth(msg) => write!(f, "Authentication error: {msg}"),
+            Error::InvalidRequest(msg) => write!(f, "Invalid request: {msg}"),
         }
     }
 }
