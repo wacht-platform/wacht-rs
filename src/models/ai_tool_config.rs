@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum AiToolConfiguration {
     Api(ApiToolConfiguration),
     PlatformEvent(PlatformEventToolConfiguration),
@@ -131,12 +131,16 @@ pub struct AuthorizationConfiguration {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
 pub enum HttpMethod {
+    #[serde(rename = "GET")]
     Get,
+    #[serde(rename = "POST")]
     Post,
+    #[serde(rename = "PUT")]
     Put,
+    #[serde(rename = "DELETE")]
     Delete,
+    #[serde(rename = "PATCH")]
     Patch,
 }
 
@@ -176,5 +180,11 @@ impl Default for PlatformFunctionToolConfiguration {
             output_schema: None,
             is_overridable: true,
         }
+    }
+}
+
+impl Default for AiToolConfiguration {
+    fn default() -> Self {
+        Self::Api(ApiToolConfiguration::default())
     }
 }

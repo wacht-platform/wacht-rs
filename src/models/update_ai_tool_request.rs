@@ -8,9 +8,9 @@ pub struct UpdateAiToolRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub config: Option<AiToolConfiguration>,
+    pub tool_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_active: Option<bool>,
+    pub configuration: Option<AiToolConfiguration>,
 }
 
 impl UpdateAiToolRequest {
@@ -18,8 +18,8 @@ impl UpdateAiToolRequest {
         UpdateAiToolRequest {
             name: None,
             description: None,
-            config: None,
-            is_active: None,
+            tool_type: None,
+            configuration: None,
         }
     }
 }

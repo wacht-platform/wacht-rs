@@ -18,13 +18,15 @@ pub struct AiExecutionContext {
     pub updated_at: DateTime<Utc>,
     pub deployment_id: String,
     pub title: String,
-    pub current_goal: String,
-    pub tasks: Vec<String>,
+    pub system_instructions: Option<String>,
     pub context_group: Option<String>,
     pub last_activity_at: DateTime<Utc>,
     pub completed_at: Option<DateTime<Utc>>,
     pub execution_state: Option<serde_json::Value>,
     pub status: ExecutionContextStatus,
+    pub source: Option<String>,
+    pub external_context_id: Option<String>,
+    pub external_resource_metadata: Option<serde_json::Value>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

@@ -4,44 +4,78 @@ use crate::{
     models::{DeploymentAiSettings, UpdateDeploymentAiSettingsRequest},
 };
 
-/// Get AI settings
-pub async fn fetch_ai_settings() -> Result<DeploymentAiSettings> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/ai/settings", config.base_url);
+/// Builder for fetching AI settings
+pub struct FetchAiSettingsBuilder {
+    _private: (),
+}
 
-    let response = client.get(&url).send().await?;
-    let status = response.status();
+impl FetchAiSettingsBuilder {
+    /// Create a new builder for fetching AI settings
+    pub fn new() -> Self {
+        Self { _private: () }
+    }
 
-    if status.is_success() {
-        Ok(response.json().await?)
-    } else {
-        let error_body = response.text().await?;
-        Err(Error::Api {
-            status,
-            message: format!("Failed to fetch AI settings: {error_body}"),
-            details: serde_json::from_str(&error_body).ok(),
-        })
+    /// Execute the fetch operation
+    pub async fn send(self) -> Result<DeploymentAiSettings> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/ai/settings", config.base_url);
+
+        let response = client.get(&url).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::Api {
+                status,
+                message: format!("Failed to fetch AI settings: {error_body}"),
+                details: serde_json::from_str(&error_body).ok(),
+            })
+        }
     }
 }
 
-/// Update AI settings
-pub async fn update_ai_settings(request: UpdateDeploymentAiSettingsRequest) -> Result<DeploymentAiSettings> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/ai/settings", config.base_url);
+/// Builder for updating AI settings
+pub struct UpdateAiSettingsBuilder {
+    request: UpdateDeploymentAiSettingsRequest,
+}
 
-    let response = client.put(&url).json(&request).send().await?;
-    let status = response.status();
-
-    if status.is_success() {
-        Ok(response.json().await?)
-    } else {
-        let error_body = response.text().await?;
-        Err(Error::Api {
-            status,
-            message: format!("Failed to update AI settings: {error_body}"),
-            details: serde_json::from_str(&error_body).ok(),
-        })
+impl UpdateAiSettingsBuilder {
+    /// Create a new builder for updating AI settings
+    pub fn new(request: UpdateDeploymentAiSettingsRequest) -> Self {
+        Self { request }
     }
+
+    /// Execute the update operation
+    pub async fn send(self) -> Result<DeploymentAiSettings> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/ai/settings", config.base_url);
+
+        let response = client.put(&url).json(&self.request).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::Api {
+                status,
+                message: format!("Failed to update AI settings: {error_body}"),
+                details: serde_json::from_str(&error_body).ok(),
+            })
+        }
+    }
+}
+
+/// Convenience function to create a fetch AI settings builder
+pub fn fetch_ai_settings() -> FetchAiSettingsBuilder {
+    FetchAiSettingsBuilder::new()
+}
+
+/// Convenience function to create an update AI settings builder
+pub fn update_ai_settings(request: UpdateDeploymentAiSettingsRequest) -> UpdateAiSettingsBuilder {
+    UpdateAiSettingsBuilder::new(request)
 }

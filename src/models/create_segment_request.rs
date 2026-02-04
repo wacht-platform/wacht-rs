@@ -6,14 +6,14 @@ pub struct CreateSegmentRequest {
     #[serde(rename = "name")]
     pub name: String,
     #[serde(rename = "type")]
-    pub r#type: String,
+    pub segment_type: String,
 }
 
 impl CreateSegmentRequest {
-    pub fn new(name: String, r#type: String) -> CreateSegmentRequest {
+    pub fn new(name: String, segment_type: String) -> CreateSegmentRequest {
         CreateSegmentRequest {
             name,
-            r#type,
+            segment_type,
         }
     }
 }

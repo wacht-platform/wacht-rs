@@ -8,3 +8,12 @@ pub struct UpdateAgentIntegrationRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub config: Option<IntegrationConfig>,
 }
+
+impl Default for UpdateAgentIntegrationRequest {
+    fn default() -> Self {
+        Self {
+            name: None,
+            config: None,
+        }
+    }
+}

@@ -6,15 +6,17 @@ pub struct CreateAiToolRequest {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
-    pub config: AiToolConfiguration,
+    pub tool_type: String,
+    pub configuration: AiToolConfiguration,
 }
 
 impl CreateAiToolRequest {
-    pub fn new(name: String, config: AiToolConfiguration) -> CreateAiToolRequest {
+    pub fn new(name: String, tool_type: String, configuration: AiToolConfiguration) -> CreateAiToolRequest {
         CreateAiToolRequest {
             name,
             description: None,
-            config,
+            tool_type,
+            configuration,
         }
     }
 }

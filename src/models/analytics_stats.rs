@@ -24,8 +24,6 @@ pub struct AnalyticsStats {
     pub total_workspaces: Option<i32>,
     #[serde(rename = "ai_agents_count", skip_serializing_if = "Option::is_none")]
     pub ai_agents_count: Option<i32>,
-    #[serde(rename = "ai_workflows_count", skip_serializing_if = "Option::is_none")]
-    pub ai_workflows_count: Option<i32>,
     #[serde(rename = "ai_executions_30d", skip_serializing_if = "Option::is_none")]
     pub ai_executions_30d: Option<i32>,
     #[serde(rename = "knowledge_base_documents", skip_serializing_if = "Option::is_none")]
@@ -43,7 +41,6 @@ impl AnalyticsStats {
             total_organizations: None,
             total_workspaces: None,
             ai_agents_count: None,
-            ai_workflows_count: None,
             ai_executions_30d: None,
             knowledge_base_documents: None,
             storage_used_gb: None,

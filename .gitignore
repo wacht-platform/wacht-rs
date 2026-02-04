@@ -31,3 +31,5 @@ target/
 # Database
 *.sql
 schema.sql
+# Integration tests
+tests/

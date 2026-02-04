@@ -1,10 +1,10 @@
-use once_cell::sync::Lazy;
 use reqwest::{
     Client, ClientBuilder,
     header::{AUTHORIZATION, HeaderMap, HeaderName, HeaderValue},
 };
 use serde::{Deserialize, Serialize};
-use std::sync::RwLock;
+use std::sync::Arc;
+use std::sync::OnceLock;
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -63,12 +63,13 @@ impl WachtConfig {
 
 pub(crate) struct GlobalClient {
     config: WachtConfig,
-    client: Client,
+    client: Arc<Client>,
+    headers: HeaderMap,
 }
 
-// Global client with lazy initialization
-pub(crate) static GLOBAL_CLIENT: Lazy<RwLock<Option<GlobalClient>>> =
-    Lazy::new(|| RwLock::new(None));
+// Global client with lazy initialization using OnceLock for thread safety
+static GLOBAL_CONFIG: OnceLock<WachtConfig> = OnceLock::new();
+static GLOBAL_HEADERS: OnceLock<HeaderMap> = OnceLock::new();
 
 /// Initialize the Wacht SDK with configuration
 /// This MUST be called before using any API methods
@@ -80,16 +81,9 @@ pub fn init(config: WachtConfig) -> Result<(), String> {
         .map_err(|_| "Invalid authentication token")?;
     headers.insert(AUTHORIZATION, auth_value);
 
-    // Build HTTP client with authentication headers
-    let client = ClientBuilder::new()
-        .timeout(config.timeout)
-        .user_agent(&config.user_agent)
-        .default_headers(headers)
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
-
-    let mut global_client = GLOBAL_CLIENT.write().unwrap();
-    *global_client = Some(GlobalClient { config, client });
+    // Store config and headers globally (ignores if already set)
+    let _ = GLOBAL_CONFIG.set(config);
+    let _ = GLOBAL_HEADERS.set(headers);
 
     Ok(())
 }
@@ -103,38 +97,41 @@ pub async fn init_from_env() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Get the global HTTP client
+/// Creates a new client per-call to avoid cross-runtime issues
 /// Panics if init() hasn't been called
 pub fn get_client() -> Client {
-    let global_client = GLOBAL_CLIENT.read().unwrap();
-    global_client
-        .as_ref()
-        .expect("Wacht SDK not initialized. Call init() first")
-        .client
-        .clone()
+    let config = GLOBAL_CONFIG.get()
+        .expect("Wacht SDK not initialized. Call init() first");
+    let headers = GLOBAL_HEADERS.get()
+        .expect("Wacht SDK not initialized. Call init() first");
+
+    ClientBuilder::new()
+        .timeout(config.timeout)
+        .user_agent(&config.user_agent)
+        .default_headers(headers.clone())
+        .pool_max_idle_per_host(500)
+        .pool_idle_timeout(Duration::from_secs(90))
+        .build()
+        .expect("Failed to create HTTP client")
 }
 
 /// Get the current configuration
 /// Panics if init() hasn't been called
 pub fn get_config() -> WachtConfig {
-    let global_client = GLOBAL_CLIENT.read().unwrap();
-    global_client
-        .as_ref()
+    GLOBAL_CONFIG.get()
         .expect("Wacht SDK not initialized. Call init() first")
-        .config
         .clone()
 }
 
 /// Check if the SDK has been initialized
 pub fn is_initialized() -> bool {
-    GLOBAL_CLIENT.read().unwrap().is_some()
+    GLOBAL_CONFIG.get().is_some()
 }
 
 /// Get the public key if one is configured
 pub fn get_public_signing_key() -> Option<String> {
-    let global_client = GLOBAL_CLIENT.read().unwrap();
-    global_client
-        .as_ref()
-        .and_then(|client| client.config.public_signing_key.clone())
+    GLOBAL_CONFIG.get()
+        .and_then(|config| config.public_signing_key.clone())
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

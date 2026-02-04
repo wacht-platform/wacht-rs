@@ -8,6 +8,80 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use url::form_urlencoded;
 
+/// List webhook apps response
+#[derive(Debug, Deserialize)]
+pub struct ListWebhookAppsResponse {
+    pub data: Vec<WebhookApp>,
+    #[serde(default)]
+    pub limit: Option<i32>,
+    #[serde(default)]
+    pub offset: Option<i32>,
+    pub has_more: bool,
+}
+
+/// Query parameters for listing webhook endpoints (matches backend ListWebhookEndpointsQuery)
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct ListWebhookEndpointsQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub include_inactive: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<i32>,
+}
+
+impl ListWebhookEndpointsQuery {
+    pub fn is_empty(&self) -> bool {
+        self.include_inactive.is_none() && self.limit.is_none() && self.offset.is_none()
+    }
+}
+
+/// Query parameters for listing webhook deliveries (matches backend GetAppWebhookDeliveriesQuery)
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct GetAppWebhookDeliveriesQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub since: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub until: Option<String>,
+}
+
+/// Query parameters for webhook analytics (matches backend WebhookAnalyticsQuery)
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct WebhookAnalyticsQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub app_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_date: Option<String>,
+}
+
+/// Query parameters for webhook timeseries (matches backend WebhookTimeseriesQuery)
+#[derive(Debug, Clone, Serialize, Default)]
+pub struct WebhookTimeseriesQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub app_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint_id: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start_date: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end_date: Option<String>,
+    pub interval: String,
+}
+
 /// Create a webhook app
 #[derive(Debug, Serialize)]
 pub struct CreateWebhookAppRequest {
@@ -16,8 +90,7 @@ pub struct CreateWebhookAppRequest {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_active: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub events: Option<Vec<WebhookEventDefinition>>,
+    pub events: Vec<WebhookEventDefinition>,
 }
 
 /// Update a webhook app
@@ -256,166 +329,298 @@ struct EventsResponse {
     events: Vec<WebhookAppEvent>,
 }
 
-/// Get webhook app by name
-pub async fn get_webhook_app(app_name: &str) -> Result<WebhookApp> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/apps/{}", config.base_url, app_name);
-    
-    let response = client.get(&url).send().await?;
-    
-    if response.status().is_success() {
-        let app = response.json().await?;
-        Ok(app)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to get webhook app: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+/// Builder for list_webhook_apps
+pub struct ListWebhookAppsBuilder {
+    include_inactive: Option<bool>,
+}
+
+/// Builder for get_webhook_app
+pub struct GetWebhookAppBuilder {
+    app_name: String,
+}
+
+impl GetWebhookAppBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<WebhookApp> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}", config.base_url, self.app_name);
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let app = response.json().await?;
+            Ok(app)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to get webhook app: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// List webhook apps
-pub async fn list_webhook_apps(include_inactive: Option<bool>) -> Result<Vec<WebhookApp>> {
-    let config = get_config();
-    let client = get_client();
-    let mut url = format!("{}/webhooks/apps", config.base_url);
-    
-    if let Some(inactive) = include_inactive {
-        url.push_str(&format!("?include_inactive={inactive}"));
+impl ListWebhookAppsBuilder {
+    pub fn new() -> Self {
+        Self {
+            include_inactive: None,
+        }
     }
-    
-    let response = client.get(&url).send().await?;
-    
-    if response.status().is_success() {
-        let apps = response.json().await?;
-        Ok(apps)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to list webhook apps: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+
+    pub fn include_inactive(mut self, include: bool) -> Self {
+        self.include_inactive = Some(include);
+        self
+    }
+
+    pub async fn send(self) -> Result<Vec<WebhookApp>> {
+        let config = get_config();
+        let client = get_client();
+        let mut url = format!("{}/webhooks/apps", config.base_url);
+
+        if let Some(inactive) = self.include_inactive {
+            url.push_str(&format!("?include_inactive={inactive}"));
+        }
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let result: ListWebhookAppsResponse = response.json().await?;
+            Ok(result.data)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to list webhook apps: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Create a webhook app
-pub async fn create_webhook_app(request: CreateWebhookAppRequest) -> Result<WebhookApp> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/apps", config.base_url);
-    
-    let response = client.post(&url).json(&request).send().await?;
-    
-    if response.status().is_success() {
-        let app = response.json().await?;
-        Ok(app)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to create webhook app: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+/// Builder for create_webhook_app
+pub struct CreateWebhookAppBuilder {
+    request: CreateWebhookAppRequest,
+}
+
+impl CreateWebhookAppBuilder {
+    pub fn new(name: &str) -> Self {
+        Self {
+            request: CreateWebhookAppRequest {
+                name: name.to_string(),
+                description: None,
+                is_active: None,
+                events: Vec::new(),
+            },
+        }
+    }
+
+    pub fn description(mut self, description: &str) -> Self {
+        self.request.description = Some(description.to_string());
+        self
+    }
+
+    pub fn is_active(mut self, is_active: bool) -> Self {
+        self.request.is_active = Some(is_active);
+        self
+    }
+
+    pub fn events(mut self, events: Vec<WebhookEventDefinition>) -> Self {
+        self.request.events = events;
+        self
+    }
+
+    pub fn add_event(mut self, event: WebhookEventDefinition) -> Self {
+        self.request.events.push(event);
+        self
+    }
+
+    pub async fn send(self) -> Result<WebhookApp> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps", config.base_url);
+
+        let response = client.post(&url).json(&self.request).send().await?;
+
+        if response.status().is_success() {
+            let app = response.json().await?;
+            Ok(app)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to create webhook app: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Update a webhook app
-pub async fn update_webhook_app(
-    app_name: &str,
-    request: UpdateWebhookAppRequest,
-) -> Result<WebhookApp> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/apps/{}", config.base_url, app_name);
-    
-    let response = client.patch(&url).json(&request).send().await?;
-    
-    if response.status().is_success() {
-        let app = response.json().await?;
-        Ok(app)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to update webhook app: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+/// Create a webhook app (legacy function for backward compatibility)
+/// Builder for update_webhook_app
+pub struct UpdateWebhookAppBuilder {
+    app_name: String,
+    description: Option<String>,
+    is_active: Option<bool>,
+}
+
+impl UpdateWebhookAppBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            description: None,
+            is_active: None,
+        }
+    }
+
+    pub fn description(mut self, description: &str) -> Self {
+        self.description = Some(description.to_string());
+        self
+    }
+
+    pub fn is_active(mut self, is_active: bool) -> Self {
+        self.is_active = Some(is_active);
+        self
+    }
+
+    pub async fn send(self) -> Result<WebhookApp> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}", config.base_url, self.app_name);
+
+        let request = UpdateWebhookAppRequest {
+            description: self.description,
+            is_active: self.is_active,
+        };
+
+        let response = client.patch(&url).json(&request).send().await?;
+
+        if response.status().is_success() {
+            let app = response.json().await?;
+            Ok(app)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to update webhook app: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Delete a webhook app
-pub async fn delete_webhook_app(app_name: &str) -> Result<()> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/apps/{}", config.base_url, app_name);
-    
-    let response = client.delete(&url).send().await?;
-    
-    if response.status().is_success() {
-        Ok(())
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to delete webhook app: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+/// Builder for delete_webhook_app
+pub struct DeleteWebhookAppBuilder {
+    app_name: String,
+}
+
+impl DeleteWebhookAppBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<()> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}", config.base_url, self.app_name);
+
+        let response = client.delete(&url).send().await?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to delete webhook app: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Rotate webhook secret
-pub async fn rotate_webhook_secret(app_name: &str) -> Result<WebhookApp> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/apps/{}/rotate-secret", config.base_url, app_name);
-    
-    let response = client.post(&url).send().await?;
-    
-    if response.status().is_success() {
-        let result = response.json().await?;
-        Ok(result)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to rotate webhook secret: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+/// Delete a webhook app (legacy function for backward compatibility)
+pub struct RotateWebhookSecretBuilder {
+    app_name: String,
+}
+
+impl RotateWebhookSecretBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<WebhookApp> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}/rotate-secret", config.base_url, self.app_name);
+
+        let response = client.post(&url).send().await?;
+
+        if response.status().is_success() {
+            let result = response.json().await?;
+            Ok(result)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to rotate webhook secret: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Get webhook events for an app
-pub async fn get_webhook_events(app_name: &str) -> Result<Vec<WebhookAppEvent>> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/apps/{}/events", config.base_url, app_name);
-    
-    let response = client.get(&url).send().await?;
-    
-    if response.status().is_success() {
-        let response_data: EventsResponse = response.json().await?;
-        Ok(response_data.events)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to get webhook events: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+/// Rotate webhook secret (legacy function for backward compatibility)
+pub struct GetWebhookEventsBuilder {
+    app_name: String,
+}
+
+impl GetWebhookEventsBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<Vec<WebhookAppEvent>> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}/events", config.base_url, self.app_name);
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let response_data: EventsResponse = response.json().await?;
+            Ok(response_data.events)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to get webhook events: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
+/// Get webhook events for an app (legacy function for backward compatibility)
 #[derive(Debug, Deserialize)]
 pub struct EndpointsResponse {
     pub data: Vec<WebhookEndpoint>,
@@ -435,206 +640,472 @@ pub struct PaginatedEndpointsResponse {
     pub has_more: bool,
 }
 
-/// Get webhook endpoints with subscriptions
-pub async fn get_webhook_endpoints_with_subscriptions(
-    app_name: &str,
+/// Builder for list_webhook_endpoints
+pub struct ListWebhookEndpointsBuilder {
+    app_name: Option<String>,
     include_inactive: Option<bool>,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> Result<PaginatedEndpointsResponse> {
-    let config = get_config();
-    let client = get_client();
-    let mut url = format!("{}/webhooks/apps/{}/endpoints", config.base_url, app_name);
-    
-    let mut params = Vec::new();
-    if let Some(inactive) = include_inactive {
-        params.push(format!("include_inactive={inactive}"));
+}
+
+impl ListWebhookEndpointsBuilder {
+    pub fn new() -> Self {
+        Self {
+            app_name: None,
+            include_inactive: None,
+            limit: None,
+            offset: None,
+        }
     }
-    if let Some(lim) = limit {
-        params.push(format!("limit={lim}"));
+
+    pub fn app_name(mut self, app_name: &str) -> Self {
+        self.app_name = Some(app_name.to_string());
+        self
     }
-    if let Some(off) = offset {
-        params.push(format!("offset={off}"));
+
+    pub fn include_inactive(mut self, include: bool) -> Self {
+        self.include_inactive = Some(include);
+        self
     }
-    
-    if !params.is_empty() {
-        url.push('?');
-        url.push_str(&params.join("&"));
+
+    pub fn limit(mut self, limit: i32) -> Self {
+        self.limit = Some(limit);
+        self
     }
-    
-    let response = client.get(&url).send().await?;
-    
-    if response.status().is_success() {
-        let response_data: EndpointsResponse = response.json().await?;
-        
-        // Convert WebhookEndpoint to WebhookEndpointWithSubscriptions
-        let endpoints_with_subs: Vec<WebhookEndpointWithSubscriptions> = response_data.data.into_iter().map(|mut endpoint| {
-            let subscribed_events = endpoint.subscriptions.iter()
-                .map(|sub| sub.event_name.clone())
-                .collect();
-            
-            // Clear subscriptions from endpoint to avoid duplication
-            endpoint.subscriptions.clear();
-            
-            WebhookEndpointWithSubscriptions {
-                endpoint,
-                subscribed_events,
+
+    pub fn offset(mut self, offset: i32) -> Self {
+        self.offset = Some(offset);
+        self
+    }
+
+    pub async fn send(self) -> Result<Vec<WebhookEndpoint>> {
+        let config = get_config();
+        let client = get_client();
+
+        if let Some(app_name) = &self.app_name {
+            let mut url = format!("{}/webhooks/apps/{}/endpoints", config.base_url, app_name);
+
+            let mut params = Vec::new();
+            if let Some(inactive) = self.include_inactive {
+                params.push(format!("include_inactive={inactive}"));
             }
-        }).collect();
-        
-        let count = endpoints_with_subs.len();
-        Ok(PaginatedEndpointsResponse {
-            endpoints: endpoints_with_subs,
-            count,
-            limit: response_data.limit.unwrap_or(100),
-            offset: response_data.offset.unwrap_or(0),
-            has_more: response_data.has_more,
-        })
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to get webhook endpoints with subscriptions: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+            if let Some(limit) = self.limit {
+                params.push(format!("limit={limit}"));
+            }
+            if let Some(offset) = self.offset {
+                params.push(format!("offset={offset}"));
+            }
+
+            if !params.is_empty() {
+                url.push('?');
+                url.push_str(&params.join("&"));
+            }
+
+            let response = client.get(&url).send().await?;
+
+            if response.status().is_success() {
+                let result: EndpointsResponse = response.json().await?;
+                Ok(result.data)
+            } else {
+                let status = response.status();
+                let error_text = response.text().await.unwrap_or_default();
+                Err(Error::Api {
+                    status,
+                    message: format!("Failed to list webhook endpoints: {error_text}"),
+                    details: serde_json::from_str(&error_text).ok(),
+                })
+            }
+        } else {
+            Err(Error::Api {
+                status: reqwest::StatusCode::BAD_REQUEST,
+                message: "app_name is required for listing webhook endpoints".to_string(),
+                details: None,
+            })
+        }
     }
 }
 
-/// List webhook endpoints
-pub async fn list_webhook_endpoints(
-    app_name: Option<&str>,
+/// Builder for get_webhook_endpoints_with_subscriptions
+pub struct GetWebhookEndpointsWithSubscriptionsBuilder {
+    app_name: String,
     include_inactive: Option<bool>,
-) -> Result<Vec<WebhookEndpoint>> {
-    let config = get_config();
-    let client = get_client();
-    let mut url = format!("{}/webhooks/endpoints", config.base_url);
-    
-    let mut params = Vec::new();
-    if let Some(name) = app_name {
-        params.push(format!("app_name={name}"));
+    limit: Option<i32>,
+    offset: Option<i32>,
+}
+
+impl GetWebhookEndpointsWithSubscriptionsBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            include_inactive: None,
+            limit: None,
+            offset: None,
+        }
     }
-    if let Some(inactive) = include_inactive {
-        params.push(format!("include_inactive={inactive}"));
+
+    pub fn include_inactive(mut self, include: bool) -> Self {
+        self.include_inactive = Some(include);
+        self
     }
-    
-    if !params.is_empty() {
-        url.push('?');
-        url.push_str(&params.join("&"));
+
+    pub fn limit(mut self, limit: i32) -> Self {
+        self.limit = Some(limit);
+        self
     }
-    
-    let response = client.get(&url).send().await?;
-    
-    if response.status().is_success() {
-        let endpoints = response.json().await?;
-        Ok(endpoints)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to list webhook endpoints: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+
+    pub fn offset(mut self, offset: i32) -> Self {
+        self.offset = Some(offset);
+        self
+    }
+
+    pub async fn send(self) -> Result<PaginatedEndpointsResponse> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}/endpoints", config.base_url, self.app_name);
+
+        let mut options = ListWebhookEndpointsQuery::default();
+        options.include_inactive = self.include_inactive;
+        options.limit = self.limit;
+        options.offset = self.offset;
+
+        let mut request = client.get(&url);
+
+        if !options.is_empty() {
+            request = request.query(&options);
+        }
+
+        let response = request.send().await?;
+
+        if response.status().is_success() {
+            let response_data: EndpointsResponse = response.json().await?;
+
+            // Convert WebhookEndpoint to WebhookEndpointWithSubscriptions
+            let endpoints_with_subs: Vec<WebhookEndpointWithSubscriptions> = response_data.data.into_iter().map(|mut endpoint| {
+                let subscribed_events = endpoint.subscriptions.iter()
+                    .map(|sub| sub.event_name.clone())
+                    .collect();
+
+                // Clear subscriptions from endpoint to avoid duplication
+                endpoint.subscriptions.clear();
+
+                WebhookEndpointWithSubscriptions {
+                    endpoint,
+                    subscribed_events,
+                }
+            }).collect();
+
+            let count = endpoints_with_subs.len();
+            Ok(PaginatedEndpointsResponse {
+                endpoints: endpoints_with_subs,
+                count,
+                limit: response_data.limit.unwrap_or(100),
+                offset: response_data.offset.unwrap_or(0),
+                has_more: response_data.has_more,
+            })
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to get webhook endpoints with subscriptions: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Create a webhook endpoint
-pub async fn create_webhook_endpoint(request: CreateWebhookEndpointRequest) -> Result<WebhookEndpoint> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/endpoints", config.base_url);
-    
-    let response = client.post(&url).json(&request).send().await?;
-    
-    if response.status().is_success() {
-        let endpoint = response.json().await?;
-        Ok(endpoint)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to create webhook endpoint: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+/// Builder for create_webhook_endpoint
+pub struct CreateWebhookEndpointBuilder {
+    app_name: String,
+    url: String,
+    description: Option<String>,
+    headers: Option<Value>,
+    subscriptions: Vec<EventSubscription>,
+    max_retries: Option<i32>,
+    timeout_seconds: Option<i32>,
+}
+
+impl CreateWebhookEndpointBuilder {
+    pub fn new(app_name: &str, url: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            url: url.to_string(),
+            description: None,
+            headers: None,
+            subscriptions: Vec::new(),
+            max_retries: None,
+            timeout_seconds: None,
+        }
+    }
+
+    pub fn description(mut self, description: &str) -> Self {
+        self.description = Some(description.to_string());
+        self
+    }
+
+    pub fn headers(mut self, headers: Value) -> Self {
+        self.headers = Some(headers);
+        self
+    }
+
+    pub fn subscriptions(mut self, subscriptions: Vec<EventSubscription>) -> Self {
+        self.subscriptions = subscriptions;
+        self
+    }
+
+    pub fn add_subscription(mut self, subscription: EventSubscription) -> Self {
+        self.subscriptions.push(subscription);
+        self
+    }
+
+    pub fn add_event(mut self, event_name: &str, filter_rules: Value) -> Self {
+        self.subscriptions.push(EventSubscription {
+            event_name: event_name.to_string(),
+            filter_rules: Some(filter_rules),
+        });
+        self
+    }
+
+    pub fn max_retries(mut self, max_retries: i32) -> Self {
+        self.max_retries = Some(max_retries);
+        self
+    }
+
+    pub fn timeout_seconds(mut self, timeout_seconds: i32) -> Self {
+        self.timeout_seconds = Some(timeout_seconds);
+        self
+    }
+
+    pub async fn send(self) -> Result<WebhookEndpoint> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/endpoints", config.base_url);
+
+        let request = CreateWebhookEndpointRequest {
+            app_name: self.app_name,
+            url: self.url,
+            description: self.description,
+            headers: self.headers,
+            subscriptions: self.subscriptions,
+            max_retries: self.max_retries,
+            timeout_seconds: self.timeout_seconds,
+        };
+
+        let response = client.post(&url).json(&request).send().await?;
+
+        if response.status().is_success() {
+            let endpoint = response.json().await?;
+            Ok(endpoint)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to create webhook endpoint: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Update a webhook endpoint
-pub async fn update_webhook_endpoint(
+/// Builder for update_webhook_endpoint
+pub struct UpdateWebhookEndpointBuilder {
     endpoint_id: String,
-    request: UpdateWebhookEndpointRequest,
-) -> Result<WebhookEndpoint> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/endpoints/{}", config.base_url, endpoint_id);
-    
-    let response = client.patch(&url).json(&request).send().await?;
-    
-    if response.status().is_success() {
-        let endpoint = response.json().await?;
-        Ok(endpoint)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to update webhook endpoint: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+    url: Option<String>,
+    description: Option<String>,
+    headers: Option<Value>,
+    is_active: Option<bool>,
+    max_retries: Option<i32>,
+    timeout_seconds: Option<i32>,
+    subscriptions: Option<Vec<EventSubscription>>,
+}
+
+impl UpdateWebhookEndpointBuilder {
+    pub fn new(endpoint_id: &str) -> Self {
+        Self {
+            endpoint_id: endpoint_id.to_string(),
+            url: None,
+            description: None,
+            headers: None,
+            is_active: None,
+            max_retries: None,
+            timeout_seconds: None,
+            subscriptions: None,
+        }
+    }
+
+    pub fn url(mut self, url: &str) -> Self {
+        self.url = Some(url.to_string());
+        self
+    }
+
+    pub fn description(mut self, description: &str) -> Self {
+        self.description = Some(description.to_string());
+        self
+    }
+
+    pub fn headers(mut self, headers: Value) -> Self {
+        self.headers = Some(headers);
+        self
+    }
+
+    pub fn is_active(mut self, is_active: bool) -> Self {
+        self.is_active = Some(is_active);
+        self
+    }
+
+    pub fn max_retries(mut self, max_retries: i32) -> Self {
+        self.max_retries = Some(max_retries);
+        self
+    }
+
+    pub fn timeout_seconds(mut self, timeout_seconds: i32) -> Self {
+        self.timeout_seconds = Some(timeout_seconds);
+        self
+    }
+
+    pub fn subscriptions(mut self, subscriptions: Vec<EventSubscription>) -> Self {
+        self.subscriptions = Some(subscriptions);
+        self
+    }
+
+    pub async fn send(self) -> Result<WebhookEndpoint> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/endpoints/{}", config.base_url, self.endpoint_id);
+
+        let request = UpdateWebhookEndpointRequest {
+            url: self.url,
+            description: self.description,
+            headers: self.headers,
+            is_active: self.is_active,
+            max_retries: self.max_retries,
+            timeout_seconds: self.timeout_seconds,
+            subscriptions: self.subscriptions,
+        };
+
+        let response = client.patch(&url).json(&request).send().await?;
+
+        if response.status().is_success() {
+            let endpoint = response.json().await?;
+            Ok(endpoint)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to update webhook endpoint: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Delete a webhook endpoint
-pub async fn delete_webhook_endpoint(endpoint_id: String) -> Result<()> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/endpoints/{}", config.base_url, endpoint_id);
-    
-    let response = client.delete(&url).send().await?;
-    
-    if response.status().is_success() {
-        Ok(())
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to delete webhook endpoint: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+/// Builder for delete_webhook_endpoint
+pub struct DeleteWebhookEndpointBuilder {
+    endpoint_id: String,
+}
+
+impl DeleteWebhookEndpointBuilder {
+    pub fn new(endpoint_id: &str) -> Self {
+        Self {
+            endpoint_id: endpoint_id.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<()> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/endpoints/{}", config.base_url, self.endpoint_id);
+
+        let response = client.delete(&url).send().await?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to delete webhook endpoint: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Trigger a webhook event
-pub async fn trigger_webhook_event(
-    request: TriggerWebhookEventRequest,
-) -> Result<TriggerWebhookEventResponse> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/trigger", config.base_url);
-    
-    let response = client.post(&url).json(&request).send().await?;
-    
-    if response.status().is_success() {
-        let result = response.json().await?;
-        Ok(result)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to trigger webhook event: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+/// Builder for trigger_webhook_event
+pub struct TriggerWebhookEventBuilder {
+    app_name: String,
+    event_name: String,
+    payload: Value,
+    filter_context: Option<Value>,
+}
+
+impl TriggerWebhookEventBuilder {
+    pub fn new(app_name: &str, event_name: &str, payload: Value) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            event_name: event_name.to_string(),
+            payload,
+            filter_context: None,
+        }
+    }
+
+    pub fn filter_context(mut self, filter_context: Value) -> Self {
+        self.filter_context = Some(filter_context);
+        self
+    }
+
+    pub async fn send(self) -> Result<TriggerWebhookEventResponse> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}/trigger", config.base_url, self.app_name);
+
+        let request = TriggerWebhookEventRequest {
+            app_name: self.app_name.clone(),
+            event_name: self.event_name,
+            payload: self.payload,
+            filter_context: self.filter_context,
+        };
+
+        let response = client.post(&url).json(&request).send().await?;
+
+        if response.status().is_success() {
+            let result = response.json().await?;
+            Ok(result)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to trigger webhook event: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Get webhook deliveries response
+/// Webhook event trigger for batch operations
+#[derive(Debug, Serialize)]
+pub struct WebhookEventTrigger {
+    pub event_name: String,
+    pub payload: Value,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub filter_context: Option<Value>,
+}
+
+/// Batch trigger webhook events request
+#[derive(Debug, Serialize)]
+pub struct BatchTriggerWebhookEventsRequest {
+    pub app_name: String,
+    pub events: Vec<WebhookEventTrigger>,
+}
+
+/// Batch trigger response
 #[derive(Debug, Deserialize)]
-pub struct GetWebhookDeliveriesResponse {
-    pub data: Vec<WebhookDelivery>,
+pub struct BatchTriggerWebhookEventsResponse {
+    pub data: Vec<TriggerWebhookEventResponse>,
     #[serde(default)]
     pub limit: Option<i32>,
     #[serde(default)]
@@ -642,193 +1113,397 @@ pub struct GetWebhookDeliveriesResponse {
     pub has_more: bool,
 }
 
-/// Get webhook deliveries
-pub async fn get_webhook_deliveries(
-    app_name: &str,
+/// Builder for batch_trigger_webhook_events
+pub struct BatchTriggerWebhookEventsBuilder {
+    app_name: String,
+    events: Vec<WebhookEventTrigger>,
+}
+
+impl BatchTriggerWebhookEventsBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            events: Vec::new(),
+        }
+    }
+
+    pub fn events(mut self, events: Vec<WebhookEventTrigger>) -> Self {
+        self.events = events;
+        self
+    }
+
+    pub fn add_event(mut self, event_name: &str, payload: Value) -> Self {
+        self.events.push(WebhookEventTrigger {
+            event_name: event_name.to_string(),
+            payload,
+            filter_context: None,
+        });
+        self
+    }
+
+    pub fn add_event_with_filter(mut self, event_name: &str, payload: Value, filter_context: Value) -> Self {
+        self.events.push(WebhookEventTrigger {
+            event_name: event_name.to_string(),
+            payload,
+            filter_context: Some(filter_context),
+        });
+        self
+    }
+
+    pub async fn send(self) -> Result<Vec<TriggerWebhookEventResponse>> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}/trigger/batch", config.base_url, self.app_name);
+
+        let request = BatchTriggerWebhookEventsRequest {
+            app_name: self.app_name,
+            events: self.events,
+        };
+
+        let response = client.post(&url).json(&request).send().await?;
+
+        if response.status().is_success() {
+            let result: BatchTriggerWebhookEventsResponse = response.json().await?;
+            Ok(result.data)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to batch trigger webhook events: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
+    }
+}
+
+/// Builder for get_webhook_deliveries
+pub struct GetWebhookDeliveriesBuilder {
+    app_name: String,
     endpoint_id: Option<i64>,
-    event_name: Option<&str>,
-    status: Option<&str>,
+    event_name: Option<String>,
+    status: Option<String>,
     limit: Option<i32>,
     offset: Option<i32>,
-) -> Result<GetWebhookDeliveriesResponse> {
-    let config = get_config();
-    let client = get_client();
-    let mut url = format!("{}/webhooks/apps/{}/deliveries", config.base_url, app_name);
-    
-    let mut params = Vec::new();
-    if let Some(id) = endpoint_id {
-        params.push(format!("endpoint_id={id}"));
+    since: Option<String>,
+    until: Option<String>,
+}
+
+impl GetWebhookDeliveriesBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            endpoint_id: None,
+            event_name: None,
+            status: None,
+            limit: None,
+            offset: None,
+            since: None,
+            until: None,
+        }
     }
-    if let Some(event) = event_name {
-        params.push(format!("event_name={event}"));
+
+    pub fn endpoint_id(mut self, endpoint_id: i64) -> Self {
+        self.endpoint_id = Some(endpoint_id);
+        self
     }
-    if let Some(s) = status {
-        params.push(format!("status={s}"));
+
+    pub fn event_name(mut self, event_name: &str) -> Self {
+        self.event_name = Some(event_name.to_string());
+        self
     }
-    if let Some(l) = limit {
-        params.push(format!("limit={l}"));
+
+    pub fn status(mut self, status: &str) -> Self {
+        self.status = Some(status.to_string());
+        self
     }
-    if let Some(o) = offset {
-        params.push(format!("offset={o}"));
+
+    pub fn limit(mut self, limit: i32) -> Self {
+        self.limit = Some(limit);
+        self
     }
-    
-    if !params.is_empty() {
-        url.push('?');
-        url.push_str(&params.join("&"));
+
+    pub fn offset(mut self, offset: i32) -> Self {
+        self.offset = Some(offset);
+        self
     }
-    
-    let response = client.get(&url).send().await?;
-    
-    if response.status().is_success() {
-        let result = response.json().await?;
-        Ok(result)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to get webhook deliveries: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+
+    pub fn since(mut self, since: &str) -> Self {
+        self.since = Some(since.to_string());
+        self
+    }
+
+    pub fn until(mut self, until: &str) -> Self {
+        self.until = Some(until.to_string());
+        self
+    }
+
+    pub async fn send(self) -> Result<GetWebhookDeliveriesResponse> {
+        let config = get_config();
+        let client = get_client();
+        let mut url = format!("{}/webhooks/apps/{}/deliveries", config.base_url, self.app_name);
+
+        let mut params = Vec::new();
+        if let Some(id) = self.endpoint_id {
+            params.push(format!("endpoint_id={id}"));
+        }
+        if let Some(event) = &self.event_name {
+            params.push(format!("event_name={event}"));
+        }
+        if let Some(s) = &self.status {
+            params.push(format!("status={s}"));
+        }
+        if let Some(l) = self.limit {
+            params.push(format!("limit={l}"));
+        }
+        if let Some(o) = self.offset {
+            params.push(format!("offset={o}"));
+        }
+        if let Some(since) = &self.since {
+            params.push(format!("since={since}"));
+        }
+        if let Some(until) = &self.until {
+            params.push(format!("until={until}"));
+        }
+
+        if !params.is_empty() {
+            url.push('?');
+            url.push_str(&params.join("&"));
+        }
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let result = response.json().await?;
+            Ok(result)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to get webhook deliveries: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Get webhook delivery details
-pub async fn get_webhook_delivery_details(
+/// Response for get_webhook_deliveries
+#[derive(Debug, Deserialize)]
+pub struct GetWebhookDeliveriesResponse {
+    pub data: Vec<WebhookDelivery>,
+    pub has_more: bool,
+    #[serde(default)]
+    pub limit: Option<i32>,
+    #[serde(default)]
+    pub offset: Option<i32>,
+}
+
+/// Builder for get_webhook_delivery_details
+pub struct GetWebhookDeliveryDetailsBuilder {
     delivery_id: String,
-    status: Option<&str>,
-) -> Result<WebhookDeliveryDetails> {
-    let config = get_config();
-    let client = get_client();
-    let mut url = format!("{}/webhooks/deliveries/{}", config.base_url, delivery_id);
-    
-    // Add status query parameter if provided
-    if let Some(status) = status {
-        url.push_str(&format!("?status={}", urlencoding::encode(status)));
+}
+
+impl GetWebhookDeliveryDetailsBuilder {
+    pub fn new(delivery_id: &str) -> Self {
+        Self {
+            delivery_id: delivery_id.to_string(),
+        }
     }
-    
-    let response = client.get(&url).send().await?;
-    
-    if response.status().is_success() {
-        let delivery = response.json().await?;
-        Ok(delivery)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to get webhook delivery details: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+
+    pub async fn send(self) -> Result<WebhookDeliveryDetails> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/deliveries/{}", config.base_url, self.delivery_id);
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let result = response.json().await?;
+            Ok(result)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to get webhook delivery details: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
+/// Builder for replay_webhook_deliveries
+pub struct ReplayWebhookDeliveriesBuilder {
+    app_name: String,
+    request: ReplayWebhookDeliveriesRequest,
+}
 
-/// Replay webhook deliveries
-pub async fn replay_webhook_deliveries(app_name: String, delivery_ids: Vec<String>, include_successful: bool) -> Result<Value> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/apps/{}/deliveries/replay", config.base_url, app_name);
-    
-    let request_body = serde_json::json!({
-        "delivery_ids": delivery_ids,
-        "include_successful": include_successful
-    });
-    
-    let response = client.post(&url).json(&request_body).send().await?;
-    
-    if response.status().is_success() {
-        let result = response.json().await?;
-        Ok(result)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to replay webhook deliveries: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
+pub enum ReplayWebhookDeliveriesRequest {
+    ByIds {
+        delivery_ids: Vec<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        include_successful: Option<bool>,
+    },
+    ByDateRange {
+        start_date: DateTime<Utc>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        end_date: Option<DateTime<Utc>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        include_successful: Option<bool>,
+    },
+}
+
+impl ReplayWebhookDeliveriesBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            request: ReplayWebhookDeliveriesRequest::ByIds {
+                delivery_ids: Vec::new(),
+                include_successful: None,
+            },
+        }
+    }
+
+    pub fn by_ids(mut self, delivery_ids: Vec<String>, include_successful: bool) -> Self {
+        self.request = ReplayWebhookDeliveriesRequest::ByIds {
+            delivery_ids,
+            include_successful: Some(include_successful),
+        };
+        self
+    }
+
+    pub fn by_date_range(mut self, start_date: DateTime<Utc>, end_date: Option<DateTime<Utc>>, include_successful: bool) -> Self {
+        self.request = ReplayWebhookDeliveriesRequest::ByDateRange {
+            start_date,
+            end_date,
+            include_successful: Some(include_successful),
+        };
+        self
+    }
+
+    pub async fn send(self) -> Result<ReplayWebhookDeliveriesResponse> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}/deliveries/replay", config.base_url, self.app_name);
+
+        let response = client.post(&url).json(&self.request).send().await?;
+
+        if response.status().is_success() {
+            let result = response.json().await?;
+            Ok(result)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to replay webhook deliveries: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Reactivate a webhook endpoint
-pub async fn reactivate_webhook_endpoint(endpoint_id: String) -> Result<Value> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/endpoints/{}/reactivate", config.base_url, endpoint_id);
-    
-    let response = client.post(&url).send().await?;
-    
-    if response.status().is_success() {
-        let result = response.json().await?;
-        Ok(result)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to reactivate webhook endpoint: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+#[derive(Debug, Deserialize)]
+pub struct ReplayWebhookDeliveriesResponse {
+    pub status: String,
+    pub message: String,
+}
+
+/// Builder for reactivate_webhook_endpoint
+pub struct ReactivateWebhookEndpointBuilder {
+    endpoint_id: String,
+}
+
+impl ReactivateWebhookEndpointBuilder {
+    pub fn new(endpoint_id: &str) -> Self {
+        Self {
+            endpoint_id: endpoint_id.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<ReactivateEndpointResponse> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/endpoints/{}/reactivate", config.base_url, self.endpoint_id);
+
+        let response = client.post(&url).send().await?;
+
+        if response.status().is_success() {
+            let result = response.json().await?;
+            Ok(result)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to reactivate webhook endpoint: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Test webhook endpoint
-pub async fn test_webhook_endpoint(
-    app_name: &str,
+#[derive(Debug, Deserialize)]
+pub struct ReactivateEndpointResponse {
+    pub success: bool,
+    pub message: String,
+}
+
+/// Builder for test_webhook_endpoint
+pub struct TestWebhookEndpointBuilder {
+    app_name: String,
     endpoint_id: String,
     event_name: String,
     payload: Option<Value>,
-) -> Result<TestWebhookEndpointResponse> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/apps/{}/endpoints/{}/test", config.base_url, app_name, endpoint_id);
-    
-    let request_body = serde_json::json!({
-        "event_name": event_name,
-        "payload": payload
-    });
-    
-    let response = client.post(&url).json(&request_body).send().await?;
-    
-    if response.status().is_success() {
-        let result: TestWebhookEndpointResponse = response.json().await?;
-        Ok(result)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to test webhook endpoint: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+}
+
+impl TestWebhookEndpointBuilder {
+    pub fn new(app_name: &str, endpoint_id: &str, event_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            endpoint_id: endpoint_id.to_string(),
+            event_name: event_name.to_string(),
+            payload: None,
+        }
+    }
+
+    pub fn payload(mut self, payload: Value) -> Self {
+        self.payload = Some(payload);
+        self
+    }
+
+    pub async fn send(self) -> Result<TestWebhookEndpointResponse> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}/endpoints/{}/test", config.base_url, self.app_name, self.endpoint_id);
+
+        let request_body = serde_json::json!({
+            "event_name": self.event_name,
+            "payload": self.payload
+        });
+
+        let response = client.post(&url).json(&request_body).send().await?;
+
+        if response.status().is_success() {
+            let result: TestWebhookEndpointResponse = response.json().await?;
+            Ok(result)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to test webhook endpoint: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
-/// Get webhook stats
-pub async fn get_webhook_stats(app_name: &str) -> Result<WebhookStats> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/webhooks/apps/{}/stats", config.base_url, app_name);
-    
-    let response = client.get(&url).send().await?;
-    
-    if response.status().is_success() {
-        let stats = response.json().await?;
-        Ok(stats)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to get webhook stats: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
-    }
-}
-
-/// Webhook analytics result
-#[derive(Debug, Deserialize, Serialize)]
+/// Analytics result
+#[derive(Debug, Deserialize)]
 pub struct AnalyticsResult {
     pub total_events: i64,
     pub total_deliveries: i64,
@@ -887,84 +1562,283 @@ pub struct TimeseriesDataPoint {
     pub success_rate: f64,
 }
 
-/// Get webhook timeseries
-pub async fn get_webhook_timeseries(
-    app_name: &str,
-    interval: &str,
-    start_date: Option<&str>,
-    end_date: Option<&str>,
-) -> Result<TimeseriesResult> {
-    let config = get_config();
-    let client = get_client();
-    let mut url = format!("{}/webhooks/apps/{}/timeseries", config.base_url, app_name);
-    
-    // Build query parameters
-    let mut query_params = Vec::new();
-    query_params.push(format!("interval={}", urlencoding::encode(interval)));
-    if let Some(start) = start_date {
-        query_params.push(format!("start_date={}", urlencoding::encode(start)));
+/// Builder for get_webhook_timeseries
+pub struct GetWebhookTimeseriesBuilder {
+    app_name: String,
+    interval: String,
+    start_date: Option<String>,
+    end_date: Option<String>,
+}
+
+impl GetWebhookTimeseriesBuilder {
+    pub fn new(app_name: &str, interval: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            interval: interval.to_string(),
+            start_date: None,
+            end_date: None,
+        }
     }
-    if let Some(end) = end_date {
-        query_params.push(format!("end_date={}", urlencoding::encode(end)));
+
+    pub fn start_date(mut self, start_date: &str) -> Self {
+        self.start_date = Some(start_date.to_string());
+        self
     }
-    
-    if !query_params.is_empty() {
-        url.push('?');
-        url.push_str(&query_params.join("&"));
+
+    pub fn end_date(mut self, end_date: &str) -> Self {
+        self.end_date = Some(end_date.to_string());
+        self
     }
-    
-    let response = client.get(&url).send().await?;
-    
-    if response.status().is_success() {
-        let timeseries: TimeseriesResult = response.json().await?;
-        Ok(timeseries)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to get webhook timeseries: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+
+    pub async fn send(self) -> Result<TimeseriesResult> {
+        let config = get_config();
+        let client = get_client();
+        let mut url = format!("{}/webhooks/apps/{}/timeseries", config.base_url, self.app_name);
+
+        // Build query parameters
+        let mut query_params = Vec::new();
+        query_params.push(format!("interval={}", urlencoding::encode(&self.interval)));
+        if let Some(start) = &self.start_date {
+            query_params.push(format!("start_date={}", urlencoding::encode(start)));
+        }
+        if let Some(end) = &self.end_date {
+            query_params.push(format!("end_date={}", urlencoding::encode(end)));
+        }
+
+        if !query_params.is_empty() {
+            url.push('?');
+            url.push_str(&query_params.join("&"));
+        }
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let timeseries: TimeseriesResult = response.json().await?;
+            Ok(timeseries)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to get webhook timeseries: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
+/// Builder for get_webhook_analytics
+pub struct GetWebhookAnalyticsBuilder {
+    app_name: String,
+    start_date: Option<String>,
+    end_date: Option<String>,
+    endpoint_id: Option<i64>,
+}
+
+impl GetWebhookAnalyticsBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            start_date: None,
+            end_date: None,
+            endpoint_id: None,
+        }
+    }
+
+    pub fn start_date(mut self, start_date: &str) -> Self {
+        self.start_date = Some(start_date.to_string());
+        self
+    }
+
+    pub fn end_date(mut self, end_date: &str) -> Self {
+        self.end_date = Some(end_date.to_string());
+        self
+    }
+
+    pub fn endpoint_id(mut self, endpoint_id: i64) -> Self {
+        self.endpoint_id = Some(endpoint_id);
+        self
+    }
+
+    pub async fn send(self) -> Result<AnalyticsResult> {
+        let config = get_config();
+        let client = get_client();
+        let mut url = format!("{}/webhooks/apps/{}/analytics", config.base_url, self.app_name);
+
+        // Build query parameters
+        let mut query_params = Vec::new();
+        if let Some(start) = &self.start_date {
+            query_params.push(format!("start_date={}", urlencoding::encode(start)));
+        }
+        if let Some(end) = &self.end_date {
+            query_params.push(format!("end_date={}", urlencoding::encode(end)));
+        }
+        if let Some(endpoint_id) = self.endpoint_id {
+            query_params.push(format!("endpoint_id={}", endpoint_id));
+        }
+
+        if !query_params.is_empty() {
+            url.push('?');
+            url.push_str(&query_params.join("&"));
+        }
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let analytics: AnalyticsResult = response.json().await?;
+            Ok(analytics)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to get webhook analytics: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
+    }
+}
+
+/// Builder for get_webhook_stats
+pub struct GetWebhookStatsBuilder {
+    app_name: String,
+}
+
+impl GetWebhookStatsBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<AnalyticsResult> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/webhooks/apps/{}/stats", config.base_url, self.app_name);
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let stats: AnalyticsResult = response.json().await?;
+            Ok(stats)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to get webhook stats: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
+    }
+}
+
+/// List webhook apps
+pub fn list_webhook_apps() -> ListWebhookAppsBuilder {
+    ListWebhookAppsBuilder::new()
+}
+
+/// Get webhook app details
+pub fn get_webhook_app(app_name: &str) -> GetWebhookAppBuilder {
+    GetWebhookAppBuilder::new(app_name)
+}
+
+/// Create a webhook app
+pub fn create_webhook_app(name: &str) -> CreateWebhookAppBuilder {
+    CreateWebhookAppBuilder::new(name)
+}
+
+/// Update a webhook app
+pub fn update_webhook_app(app_name: &str) -> UpdateWebhookAppBuilder {
+    UpdateWebhookAppBuilder::new(app_name)
+}
+
+/// Delete a webhook app
+pub fn delete_webhook_app(app_name: &str) -> DeleteWebhookAppBuilder {
+    DeleteWebhookAppBuilder::new(app_name)
+}
+
+/// Rotate webhook secret
+pub fn rotate_webhook_secret(app_name: &str) -> RotateWebhookSecretBuilder {
+    RotateWebhookSecretBuilder::new(app_name)
+}
+
+/// Get webhook events
+pub fn get_webhook_events(app_name: &str) -> GetWebhookEventsBuilder {
+    GetWebhookEventsBuilder::new(app_name)
+}
+
+/// List webhook endpoints
+pub fn list_webhook_endpoints(app_name: &str) -> ListWebhookEndpointsBuilder {
+    ListWebhookEndpointsBuilder::new().app_name(app_name)
+}
+
+/// Get webhook endpoints with subscriptions
+pub fn get_webhook_endpoints_with_subscriptions(app_name: &str) -> GetWebhookEndpointsWithSubscriptionsBuilder {
+    GetWebhookEndpointsWithSubscriptionsBuilder::new(app_name)
+}
+
+/// Create a webhook endpoint
+pub fn create_webhook_endpoint(app_name: &str, url: &str) -> CreateWebhookEndpointBuilder {
+    CreateWebhookEndpointBuilder::new(app_name, url)
+}
+
+/// Update a webhook endpoint
+pub fn update_webhook_endpoint(endpoint_id: &str) -> UpdateWebhookEndpointBuilder {
+    UpdateWebhookEndpointBuilder::new(endpoint_id)
+}
+
+/// Delete a webhook endpoint
+pub fn delete_webhook_endpoint(endpoint_id: &str) -> DeleteWebhookEndpointBuilder {
+    DeleteWebhookEndpointBuilder::new(endpoint_id)
+}
+
+/// Trigger a webhook event
+pub fn trigger_webhook_event(app_name: &str, event_name: &str, payload: Value) -> TriggerWebhookEventBuilder {
+    TriggerWebhookEventBuilder::new(app_name, event_name, payload)
+}
+
+/// Batch trigger webhook events
+pub fn batch_trigger_webhook_events(app_name: &str) -> BatchTriggerWebhookEventsBuilder {
+    BatchTriggerWebhookEventsBuilder::new(app_name)
+}
+
+/// List webhook deliveries
+pub fn list_webhook_deliveries(app_name: &str) -> GetWebhookDeliveriesBuilder {
+    GetWebhookDeliveriesBuilder::new(app_name)
+}
+
+/// Get webhook delivery details
+pub fn get_webhook_delivery_details(delivery_id: &str) -> GetWebhookDeliveryDetailsBuilder {
+    GetWebhookDeliveryDetailsBuilder::new(delivery_id)
+}
+
+/// Replay webhook deliveries
+pub fn replay_webhook_deliveries(app_name: &str) -> ReplayWebhookDeliveriesBuilder {
+    ReplayWebhookDeliveriesBuilder::new(app_name)
+}
+
+/// Reactivate a webhook endpoint
+pub fn reactivate_webhook_endpoint(endpoint_id: &str) -> ReactivateWebhookEndpointBuilder {
+    ReactivateWebhookEndpointBuilder::new(endpoint_id)
+}
+
+/// Test a webhook endpoint
+pub fn test_webhook_endpoint(app_name: &str, endpoint_id: &str, event_name: &str) -> TestWebhookEndpointBuilder {
+    TestWebhookEndpointBuilder::new(app_name, endpoint_id, event_name)
+}
+
+/// Get webhook stats
+pub fn get_webhook_stats(app_name: &str) -> GetWebhookStatsBuilder {
+    GetWebhookStatsBuilder::new(app_name)
+}
+
+/// Get webhook timeseries
+pub fn get_webhook_timeseries(app_name: &str, interval: &str) -> GetWebhookTimeseriesBuilder {
+    GetWebhookTimeseriesBuilder::new(app_name, interval)
+}
+
 /// Get webhook analytics
-pub async fn get_webhook_analytics(
-    app_name: &str,
-    start_date: Option<&str>,
-    end_date: Option<&str>,
-) -> Result<AnalyticsResult> {
-    let config = get_config();
-    let client = get_client();
-    let mut url = format!("{}/webhooks/apps/{}/analytics", config.base_url, app_name);
-    
-    // Build query parameters
-    let mut query_params = Vec::new();
-    if let Some(start) = start_date {
-        query_params.push(format!("start_date={}", urlencoding::encode(start)));
-    }
-    if let Some(end) = end_date {
-        query_params.push(format!("end_date={}", urlencoding::encode(end)));
-    }
-    
-    if !query_params.is_empty() {
-        url.push('?');
-        url.push_str(&query_params.join("&"));
-    }
-    
-    let response = client.get(&url).send().await?;
-    
-    if response.status().is_success() {
-        let analytics: AnalyticsResult = response.json().await?;
-        Ok(analytics)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to get webhook analytics: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
-    }
+pub fn get_webhook_analytics(app_name: &str) -> GetWebhookAnalyticsBuilder {
+    GetWebhookAnalyticsBuilder::new(app_name)
 }
