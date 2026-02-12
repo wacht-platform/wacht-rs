@@ -12,25 +12,19 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct UpdateAiToolRequest {
+pub struct UpdateAiExecutionContextRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    pub title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub description: Option<String>,
+    pub system_instructions: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub tool_type: Option<String>,
+    pub context_group: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub configuration: Option<Value>,
+    pub status: Option<String>,
 }
 
-impl UpdateAiToolRequest {
-    pub fn new() -> UpdateAiToolRequest {
-        UpdateAiToolRequest {
-            name: None,
-            description: None,
-            tool_type: None,
-            configuration: None,
-        }
+impl UpdateAiExecutionContextRequest {
+    pub fn new() -> UpdateAiExecutionContextRequest {
+        UpdateAiExecutionContextRequest::default()
     }
 }
-

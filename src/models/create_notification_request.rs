@@ -2,47 +2,67 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use crate::models::{CallToAction, NotificationSeverity};
 
+/// Request to create a notification
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CreateNotificationRequest {
-    #[serde(rename = "user_id")]
-    pub user_id: String,
+    /// Single user ID (deprecated in favor of user_ids)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<String>,
+    /// Multiple user IDs for bulk notification
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_ids: Option<Vec<String>>,
+    /// Organization ID for org-wide notifications
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_id: Option<String>,
+    /// Workspace ID for workspace-wide notifications
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
     pub title: String,
     pub body: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "action_url")]
-    pub action_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "action_label")]
-    pub action_label: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ctas: Option<Vec<CallToAction>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub severity: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<HashMap<String, serde_json::Value>>,
+    /// Expiration time in hours
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(rename = "expires_hours")]
-    pub expires_hours: Option<i64>,
+    pub expires_in_hours: Option<i32>,
 }
 
 impl CreateNotificationRequest {
-    pub fn new(user_id: String, title: String, body: String) -> Self {
+    pub fn new(title: String, body: String) -> Self {
         Self {
-            user_id,
+            user_id: None,
+            user_ids: None,
+            organization_id: None,
+            workspace_id: None,
             title,
             body,
-            action_url: None,
-            action_label: None,
             ctas: None,
             severity: None,
             metadata: None,
-            expires_hours: None,
+            expires_in_hours: None,
         }
     }
 
-    pub fn with_action(mut self, url: String, label: Option<String>) -> Self {
-        self.action_url = Some(url);
-        self.action_label = label;
+    pub fn with_user_id(mut self, user_id: String) -> Self {
+        self.user_id = Some(user_id);
+        self
+    }
+
+    pub fn with_user_ids(mut self, user_ids: Vec<String>) -> Self {
+        self.user_ids = Some(user_ids);
+        self
+    }
+
+    pub fn with_organization_id(mut self, organization_id: String) -> Self {
+        self.organization_id = Some(organization_id);
+        self
+    }
+
+    pub fn with_workspace_id(mut self, workspace_id: String) -> Self {
+        self.workspace_id = Some(workspace_id);
         self
     }
 
@@ -66,8 +86,8 @@ impl CreateNotificationRequest {
         self
     }
 
-    pub fn with_expires_hours(mut self, hours: i64) -> Self {
-        self.expires_hours = Some(hours);
+    pub fn with_expires_in_hours(mut self, hours: i32) -> Self {
+        self.expires_in_hours = Some(hours);
         self
     }
 }

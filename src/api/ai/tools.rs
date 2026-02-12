@@ -105,7 +105,7 @@ pub struct CreateToolBuilder {
 impl CreateToolBuilder {
     pub fn new() -> Self {
         Self {
-            request: CreateAiToolRequest::new("".to_string(), "".to_string(), crate::models::AiToolConfiguration::default()),
+            request: CreateAiToolRequest::new("".to_string(), "".to_string(), serde_json::Value::Object(serde_json::Map::new())),
         }
     }
 

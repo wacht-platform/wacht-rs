@@ -1,6 +1,18 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+/// Custom signing key configuration
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CustomSigningKey {
+    /// Whether the custom signing key is enabled
+    pub enabled: bool,
+    /// The key value
+    pub key: String,
+    /// The algorithm used for signing
+    pub algorithm: String,
+}
+
+/// Request to update a JWT template
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UpdateJwtTemplateRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -15,12 +27,6 @@ pub struct UpdateJwtTemplateRequest {
     pub template: Option<Value>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct CustomSigningKey {
-    pub key_id: String,
-    pub key_value: String,
-}
-
 impl UpdateJwtTemplateRequest {
     pub fn new() -> UpdateJwtTemplateRequest {
         UpdateJwtTemplateRequest {
@@ -32,4 +38,3 @@ impl UpdateJwtTemplateRequest {
         }
     }
 }
-

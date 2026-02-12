@@ -2,8 +2,8 @@ use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
     models::{
-        AuthenticationSettings, B2BSettings, DisplaySettings,
-        DeploymentRestrictions, JwtTemplate, CreateJwtTemplateRequest,
+        AuthenticationSettings, DeploymentB2bSettingsUpdates, DisplaySettings,
+        DeploymentRestrictionsUpdates, JwtTemplate, CreateJwtTemplateRequest,
         UpdateJwtTemplateRequest, EmailTemplate, SocialConnection,
         ImageUploadResponse, SmtpConfigRequest, SmtpConfigResponse, SmtpVerifyResponse,
         PaginatedResponse,
@@ -30,9 +30,9 @@ pub struct DeploymentSettingsResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ui_settings: Option<DisplaySettings>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub b2b_settings: Option<B2BSettings>,
+    pub b2b_settings: Option<DeploymentB2bSettingsUpdates>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub restrictions: Option<DeploymentRestrictions>,
+    pub restrictions: Option<DeploymentRestrictionsUpdates>,
 }
 
 /// Builder for fetching deployment settings
@@ -172,11 +172,11 @@ impl UpdateDisplaySettingsBuilder {
 /// Builder for updating B2B settings
 pub struct UpdateB2BSettingsBuilder {
     client: Option<reqwest::Client>,
-    settings: B2BSettings,
+    settings: DeploymentB2bSettingsUpdates,
 }
 
 impl UpdateB2BSettingsBuilder {
-    pub fn new(settings: B2BSettings) -> Self {
+    pub fn new(settings: DeploymentB2bSettingsUpdates) -> Self {
         Self {
             client: None,
             settings,
@@ -216,11 +216,11 @@ impl UpdateB2BSettingsBuilder {
 /// Builder for updating deployment restrictions
 pub struct UpdateDeploymentRestrictionsBuilder {
     client: Option<reqwest::Client>,
-    restrictions: DeploymentRestrictions,
+    restrictions: DeploymentRestrictionsUpdates,
 }
 
 impl UpdateDeploymentRestrictionsBuilder {
-    pub fn new(restrictions: DeploymentRestrictions) -> Self {
+    pub fn new(restrictions: DeploymentRestrictionsUpdates) -> Self {
         Self {
             client: None,
             restrictions,
@@ -832,11 +832,11 @@ pub fn update_display_settings(settings: DisplaySettings) -> UpdateDisplaySettin
     UpdateDisplaySettingsBuilder::new(settings)
 }
 
-pub fn update_b2b_settings(settings: B2BSettings) -> UpdateB2BSettingsBuilder {
+pub fn update_b2b_settings(settings: DeploymentB2bSettingsUpdates) -> UpdateB2BSettingsBuilder {
     UpdateB2BSettingsBuilder::new(settings)
 }
 
-pub fn update_deployment_restrictions(restrictions: DeploymentRestrictions) -> UpdateDeploymentRestrictionsBuilder {
+pub fn update_deployment_restrictions(restrictions: DeploymentRestrictionsUpdates) -> UpdateDeploymentRestrictionsBuilder {
     UpdateDeploymentRestrictionsBuilder::new(restrictions)
 }
 

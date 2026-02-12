@@ -21,10 +21,14 @@ pub struct GatewayCheckResponse {
     pub key_id: i64,
     pub deployment_id: i64,
     pub app_id: i64,
-    pub app_name: String,
+    pub app_slug: String,
     pub key_name: String,
     pub permissions: Vec<String>,
     pub metadata: Value,
+    pub organization_id: Option<i64>,
+    pub workspace_id: Option<i64>,
+    pub organization_membership_id: Option<i64>,
+    pub workspace_membership_id: Option<i64>,
     pub rate_limits: Vec<RateLimitInfo>,
     pub retry_after: Option<u32>,
 }
@@ -50,10 +54,16 @@ pub async fn verify_request(api_key: &str, identifier: &str) -> Result<GatewayCh
         let key_id = parse_header_i64(&response_headers, "x-wacht-key-id")?;
         let deployment_id = parse_header_i64(&response_headers, "x-wacht-deployment-id")?;
         let app_id = parse_header_i64(&response_headers, "x-wacht-app-id")?;
-        let app_name = parse_header_string(&response_headers, "x-wacht-app-name")?;
+        let app_slug = parse_header_string(&response_headers, "x-wacht-app-slug")?;
         let key_name = parse_header_string(&response_headers, "x-wacht-key-name")?;
         let permissions = parse_header_json(&response_headers, "x-wacht-permissions")?;
         let metadata = parse_header_json(&response_headers, "x-wacht-metadata")?;
+        let organization_id = parse_header_i64_optional(&response_headers, "x-wacht-organization-id");
+        let workspace_id = parse_header_i64_optional(&response_headers, "x-wacht-workspace-id");
+        let organization_membership_id =
+            parse_header_i64_optional(&response_headers, "x-wacht-organization-membership-id");
+        let workspace_membership_id =
+            parse_header_i64_optional(&response_headers, "x-wacht-workspace-membership-id");
 
         let rate_limits = parse_rate_limit_headers(&response_headers);
 
@@ -71,10 +81,14 @@ pub async fn verify_request(api_key: &str, identifier: &str) -> Result<GatewayCh
             key_id,
             deployment_id,
             app_id,
-            app_name,
+            app_slug,
             key_name,
             permissions,
             metadata,
+            organization_id,
+            workspace_id,
+            organization_membership_id,
+            workspace_membership_id,
             rate_limits,
             retry_after,
         })
@@ -94,6 +108,13 @@ fn parse_header_i64(headers: &HeaderMap, key: &str) -> Result<i64> {
         .and_then(|v| v.to_str().ok())
         .and_then(|s| s.parse().ok())
         .ok_or_else(|| Error::InvalidRequest(format!("Missing or invalid header: {key}")))
+}
+
+fn parse_header_i64_optional(headers: &HeaderMap, key: &str) -> Option<i64> {
+    headers
+        .get(key)
+        .and_then(|v| v.to_str().ok())
+        .and_then(|s| s.parse().ok())
 }
 
 fn parse_header_string(headers: &HeaderMap, key: &str) -> Result<String> {

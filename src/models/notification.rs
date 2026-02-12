@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use chrono::{DateTime, Utc};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -29,23 +28,23 @@ pub struct Notification {
     pub is_read: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "read_at")]
-    pub read_at: Option<DateTime<Utc>>,
+    pub read_at: Option<String>,
     #[serde(rename = "is_archived")]
     pub is_archived: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "archived_at")]
-    pub archived_at: Option<DateTime<Utc>>,
+    pub archived_at: Option<String>,
     // Metadata
     #[serde(skip_serializing_if = "Option::is_none")]
     pub metadata: Option<HashMap<String, serde_json::Value>>,
     // Timestamps
     #[serde(rename = "created_at")]
-    pub created_at: DateTime<Utc>,
+    pub created_at: String,
     #[serde(rename = "updated_at")]
-    pub updated_at: DateTime<Utc>,
+    pub updated_at: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "expires_at")]
-    pub expires_at: Option<DateTime<Utc>>,
+    pub expires_at: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -64,4 +63,3 @@ pub struct CallToAction {
     pub label: String,
     pub payload: String,
 }
-

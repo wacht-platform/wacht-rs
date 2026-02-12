@@ -19,28 +19,34 @@ pub struct OauthCredentials {
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
-pub struct SocialConnection {
-    #[serde(rename = "provider", skip_serializing_if = "Option::is_none")]
-    pub provider: Option<Provider>,
-    #[serde(rename = "enabled", skip_serializing_if = "Option::is_none")]
-    pub enabled: Option<bool>,
-    #[serde(rename = "user_defined_scopes", skip_serializing_if = "Option::is_none")]
-    pub user_defined_scopes: Option<Vec<String>>,
+pub struct DeploymentSocialConnection {
+    #[serde(rename = "id")]
+    pub id: String,
+    #[serde(rename = "created_at")]
+    pub created_at: String,
+    #[serde(rename = "updated_at")]
+    pub updated_at: String,
+    #[serde(rename = "provider")]
+    pub provider: String,
+    #[serde(rename = "enabled")]
+    pub enabled: bool,
     #[serde(rename = "credentials", skip_serializing_if = "Option::is_none")]
     pub credentials: Option<OauthCredentials>,
 }
 
-impl SocialConnection {
-    pub fn new() -> SocialConnection {
-        SocialConnection {
-            provider: None,
-            enabled: None,
-            user_defined_scopes: None,
+impl DeploymentSocialConnection {
+    pub fn new() -> DeploymentSocialConnection {
+        DeploymentSocialConnection {
+            id: String::new(),
+            created_at: String::new(),
+            updated_at: String::new(),
+            provider: String::new(),
+            enabled: false,
             credentials: None,
         }
     }
 }
-///
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub enum Provider {
     #[serde(rename = "x_oauth")]
@@ -69,3 +75,26 @@ impl Default for Provider {
     }
 }
 
+// Legacy SocialConnection model for backwards compatibility
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SocialConnection {
+    #[serde(rename = "provider", skip_serializing_if = "Option::is_none")]
+    pub provider: Option<Provider>,
+    #[serde(rename = "enabled", skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    #[serde(rename = "user_defined_scopes", skip_serializing_if = "Option::is_none")]
+    pub user_defined_scopes: Option<Vec<String>>,
+    #[serde(rename = "credentials", skip_serializing_if = "Option::is_none")]
+    pub credentials: Option<OauthCredentials>,
+}
+
+impl SocialConnection {
+    pub fn new() -> SocialConnection {
+        SocialConnection {
+            provider: None,
+            enabled: None,
+            user_defined_scopes: None,
+            credentials: None,
+        }
+    }
+}

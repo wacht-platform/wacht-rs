@@ -90,7 +90,8 @@ pub struct CreateWebhookAppRequest {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_active: Option<bool>,
-    pub events: Vec<WebhookEventDefinition>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_catalog_slug: Option<String>,
 }
 
 /// Update a webhook app
@@ -100,12 +101,14 @@ pub struct UpdateWebhookAppRequest {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_active: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_catalog_slug: Option<String>,
 }
 
 /// Create a webhook endpoint
 #[derive(Debug, Serialize)]
 pub struct CreateWebhookEndpointRequest {
-    pub app_name: String,
+    pub app_slug: String,
     pub url: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
@@ -147,7 +150,7 @@ pub struct UpdateWebhookEndpointRequest {
 /// Trigger a webhook event
 #[derive(Debug, Serialize)]
 pub struct TriggerWebhookEventRequest {
-    pub app_name: String,
+    pub app_slug: String,
     pub event_name: String,
     pub payload: Value,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -175,6 +178,7 @@ pub struct TestWebhookEndpointResponse {
 #[derive(Debug, Deserialize)]
 pub struct WebhookApp {
     pub deployment_id: String,
+    pub app_slug: String,
     pub name: String,
     pub description: Option<String>,
     pub signing_secret: String,
@@ -188,17 +192,16 @@ pub struct WebhookApp {
 pub struct WebhookDelivery {
     pub deployment_id: String,
     pub delivery_id: String,
-    pub app_name: String,
+    pub app_slug: String,
     pub endpoint_id: String,
-    pub endpoint_url: String,
+
     pub event_name: String,
     pub status: String,
     pub http_status_code: Option<i32>,
     pub response_time_ms: Option<i32>,
     pub attempt_number: i32,
     pub max_attempts: i32,
-    pub error_message: Option<String>,
-    pub filtered_reason: Option<String>,
+
     pub timestamp: DateTime<Utc>,
 }
 
@@ -207,17 +210,16 @@ pub struct WebhookDelivery {
 pub struct WebhookDeliveryDetails {
     pub deployment_id: String,
     pub delivery_id: String,
-    pub app_name: String,
+    pub app_slug: String,
     pub endpoint_id: String,
-    pub endpoint_url: String,
+
     pub event_name: String,
     pub status: String,
     pub http_status_code: Option<i32>,
     pub response_time_ms: Option<i32>,
     pub attempt_number: i32,
     pub max_attempts: i32,
-    pub error_message: Option<String>,
-    pub filtered_reason: Option<String>,
+
     pub payload_s3_key: String,
     pub response_body: Option<String>,
     pub response_headers: Option<Value>,
@@ -271,7 +273,7 @@ pub struct FailureReason {
 pub struct WebhookEndpoint {
     pub id: String,
     pub deployment_id: String,
-    pub app_name: String,
+    pub app_slug: String,
     pub url: String,
     pub description: Option<String>,
     pub headers: Option<Value>,
@@ -283,6 +285,7 @@ pub struct WebhookEndpoint {
     pub last_failure_at: Option<DateTime<Utc>>,
     pub auto_disabled: bool,
     pub auto_disabled_at: Option<DateTime<Utc>>,
+    pub rate_limit_config: Option<Value>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     #[serde(default)]
@@ -293,7 +296,7 @@ pub struct WebhookEndpoint {
 pub struct WebhookEndpointSubscription {
     pub endpoint_id: String,
     pub deployment_id: String,
-    pub app_name: String,
+    pub app_slug: String,
     pub event_name: String,
     pub filter_rules: Option<Value>,
     pub created_at: DateTime<Utc>,
@@ -317,7 +320,7 @@ pub struct WebhookEventDefinition {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WebhookAppEvent {
     pub deployment_id: String,
-    pub app_name: String,
+    pub app_slug: String,
     pub event_name: String,
     pub description: Option<String>,
     pub schema: Option<Value>,
@@ -418,7 +421,7 @@ impl CreateWebhookAppBuilder {
                 name: name.to_string(),
                 description: None,
                 is_active: None,
-                events: Vec::new(),
+                event_catalog_slug: None,
             },
         }
     }
@@ -433,13 +436,8 @@ impl CreateWebhookAppBuilder {
         self
     }
 
-    pub fn events(mut self, events: Vec<WebhookEventDefinition>) -> Self {
-        self.request.events = events;
-        self
-    }
-
-    pub fn add_event(mut self, event: WebhookEventDefinition) -> Self {
-        self.request.events.push(event);
+    pub fn event_catalog_slug(mut self, slug: &str) -> Self {
+        self.request.event_catalog_slug = Some(slug.to_string());
         self
     }
 
@@ -471,6 +469,7 @@ pub struct UpdateWebhookAppBuilder {
     app_name: String,
     description: Option<String>,
     is_active: Option<bool>,
+    event_catalog_slug: Option<String>,
 }
 
 impl UpdateWebhookAppBuilder {
@@ -479,6 +478,7 @@ impl UpdateWebhookAppBuilder {
             app_name: app_name.to_string(),
             description: None,
             is_active: None,
+            event_catalog_slug: None,
         }
     }
 
@@ -492,6 +492,11 @@ impl UpdateWebhookAppBuilder {
         self
     }
 
+    pub fn event_catalog_slug(mut self, slug: &str) -> Self {
+        self.event_catalog_slug = Some(slug.to_string());
+        self
+    }
+
     pub async fn send(self) -> Result<WebhookApp> {
         let config = get_config();
         let client = get_client();
@@ -500,6 +505,7 @@ impl UpdateWebhookAppBuilder {
         let request = UpdateWebhookAppRequest {
             description: self.description,
             is_active: self.is_active,
+            event_catalog_slug: self.event_catalog_slug,
         };
 
         let response = client.patch(&url).json(&request).send().await?;
@@ -816,7 +822,7 @@ impl GetWebhookEndpointsWithSubscriptionsBuilder {
 
 /// Builder for create_webhook_endpoint
 pub struct CreateWebhookEndpointBuilder {
-    app_name: String,
+    app_slug: String,
     url: String,
     description: Option<String>,
     headers: Option<Value>,
@@ -826,9 +832,9 @@ pub struct CreateWebhookEndpointBuilder {
 }
 
 impl CreateWebhookEndpointBuilder {
-    pub fn new(app_name: &str, url: &str) -> Self {
+    pub fn new(app_slug: &str, url: &str) -> Self {
         Self {
-            app_name: app_name.to_string(),
+            app_slug: app_slug.to_string(),
             url: url.to_string(),
             description: None,
             headers: None,
@@ -882,7 +888,7 @@ impl CreateWebhookEndpointBuilder {
         let url = format!("{}/webhooks/endpoints", config.base_url);
 
         let request = CreateWebhookEndpointRequest {
-            app_name: self.app_name,
+            app_slug: self.app_slug,
             url: self.url,
             description: self.description,
             headers: self.headers,
@@ -1036,16 +1042,16 @@ impl DeleteWebhookEndpointBuilder {
 
 /// Builder for trigger_webhook_event
 pub struct TriggerWebhookEventBuilder {
-    app_name: String,
+    app_slug: String,
     event_name: String,
     payload: Value,
     filter_context: Option<Value>,
 }
 
 impl TriggerWebhookEventBuilder {
-    pub fn new(app_name: &str, event_name: &str, payload: Value) -> Self {
+    pub fn new(app_slug: &str, event_name: &str, payload: Value) -> Self {
         Self {
-            app_name: app_name.to_string(),
+            app_slug: app_slug.to_string(),
             event_name: event_name.to_string(),
             payload,
             filter_context: None,
@@ -1060,10 +1066,10 @@ impl TriggerWebhookEventBuilder {
     pub async fn send(self) -> Result<TriggerWebhookEventResponse> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/webhooks/apps/{}/trigger", config.base_url, self.app_name);
+        let url = format!("{}/webhooks/apps/{}/trigger", config.base_url, self.app_slug);
 
         let request = TriggerWebhookEventRequest {
-            app_name: self.app_name.clone(),
+            app_slug: self.app_slug.clone(),
             event_name: self.event_name,
             payload: self.payload,
             filter_context: self.filter_context,
@@ -1095,87 +1101,7 @@ pub struct WebhookEventTrigger {
     pub filter_context: Option<Value>,
 }
 
-/// Batch trigger webhook events request
-#[derive(Debug, Serialize)]
-pub struct BatchTriggerWebhookEventsRequest {
-    pub app_name: String,
-    pub events: Vec<WebhookEventTrigger>,
-}
 
-/// Batch trigger response
-#[derive(Debug, Deserialize)]
-pub struct BatchTriggerWebhookEventsResponse {
-    pub data: Vec<TriggerWebhookEventResponse>,
-    #[serde(default)]
-    pub limit: Option<i32>,
-    #[serde(default)]
-    pub offset: Option<i32>,
-    pub has_more: bool,
-}
-
-/// Builder for batch_trigger_webhook_events
-pub struct BatchTriggerWebhookEventsBuilder {
-    app_name: String,
-    events: Vec<WebhookEventTrigger>,
-}
-
-impl BatchTriggerWebhookEventsBuilder {
-    pub fn new(app_name: &str) -> Self {
-        Self {
-            app_name: app_name.to_string(),
-            events: Vec::new(),
-        }
-    }
-
-    pub fn events(mut self, events: Vec<WebhookEventTrigger>) -> Self {
-        self.events = events;
-        self
-    }
-
-    pub fn add_event(mut self, event_name: &str, payload: Value) -> Self {
-        self.events.push(WebhookEventTrigger {
-            event_name: event_name.to_string(),
-            payload,
-            filter_context: None,
-        });
-        self
-    }
-
-    pub fn add_event_with_filter(mut self, event_name: &str, payload: Value, filter_context: Value) -> Self {
-        self.events.push(WebhookEventTrigger {
-            event_name: event_name.to_string(),
-            payload,
-            filter_context: Some(filter_context),
-        });
-        self
-    }
-
-    pub async fn send(self) -> Result<Vec<TriggerWebhookEventResponse>> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/webhooks/apps/{}/trigger/batch", config.base_url, self.app_name);
-
-        let request = BatchTriggerWebhookEventsRequest {
-            app_name: self.app_name,
-            events: self.events,
-        };
-
-        let response = client.post(&url).json(&request).send().await?;
-
-        if response.status().is_success() {
-            let result: BatchTriggerWebhookEventsResponse = response.json().await?;
-            Ok(result.data)
-        } else {
-            let status = response.status();
-            let error_text = response.text().await.unwrap_or_default();
-            Err(Error::Api {
-                status,
-                message: format!("Failed to batch trigger webhook events: {error_text}"),
-                details: serde_json::from_str(&error_text).ok(),
-            })
-        }
-    }
-}
 
 /// Builder for get_webhook_deliveries
 pub struct GetWebhookDeliveriesBuilder {
@@ -1799,9 +1725,6 @@ pub fn trigger_webhook_event(app_name: &str, event_name: &str, payload: Value) -
 }
 
 /// Batch trigger webhook events
-pub fn batch_trigger_webhook_events(app_name: &str) -> BatchTriggerWebhookEventsBuilder {
-    BatchTriggerWebhookEventsBuilder::new(app_name)
-}
 
 /// List webhook deliveries
 pub fn list_webhook_deliveries(app_name: &str) -> GetWebhookDeliveriesBuilder {

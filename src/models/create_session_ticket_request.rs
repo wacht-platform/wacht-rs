@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// Request to create a session ticket
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CreateSessionTicketRequest {
     pub ticket_type: String,
@@ -9,10 +10,12 @@ pub struct CreateSessionTicketRequest {
     pub agent_ids: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context_group: Option<String>,
+    /// Expiration time in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expires_at: Option<i64>,
+    pub expires_in: Option<u64>,
 }
 
+/// Response containing the session ticket
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SessionTicketResponse {
     pub ticket: String,

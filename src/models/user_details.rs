@@ -9,11 +9,13 @@ pub enum SchemaVersion {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub enum SecondFactorPolicy {
-    None,
+    #[serde(rename = "disabled")]
+    Disabled,
+    #[serde(rename = "optional")]
     Optional,
-    Enforced,
+    #[serde(rename = "required")]
+    Required,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -61,20 +63,23 @@ pub struct SocialConnection {
     pub created_at: String,
     pub updated_at: String,
     pub user_id: String,
-    pub connection_type: String,
-    pub provider_user_id: String,
-    pub provider_email: Option<String>,
-    pub provider_name: Option<String>,
+    pub user_email_address_id: String,
+    pub provider: String,
+    pub email_address: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Segment {
     pub id: String,
-    pub created_at: String,
-    pub updated_at: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<String>,
+    pub deployment_id: String,
     pub name: String,
-    pub description: Option<String>,
-    pub rules: Vec<serde_json::Value>,
+    pub r#type: String, // "organization", "workspace", or "user"
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

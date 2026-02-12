@@ -10,11 +10,13 @@ use serde_json::Value;
 /// Create an API auth app
 #[derive(Debug, Serialize)]
 pub struct CreateApiAuthAppRequest {
+    pub app_slug: String,
     pub name: String,
+    pub key_prefix: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rate_limits: Option<Vec<RateLimit>>,
+    pub rate_limit_scheme_slug: Option<String>,
 }
 
 /// Update an API auth app
@@ -23,20 +25,25 @@ pub struct UpdateApiAuthAppRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_prefix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_active: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rate_limits: Option<Vec<RateLimit>>,
+    pub rate_limit_scheme_slug: Option<String>,
 }
 
 /// Create an API key
 #[derive(Debug, Serialize)]
 pub struct CreateApiKeyRequest {
     pub name: String,
-    pub key_prefix: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub permissions: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_membership_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace_membership_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -91,7 +98,9 @@ pub struct RateLimit {
 pub struct ApiAuthApp {
     pub id: String,
     pub deployment_id: String,
+    pub app_slug: String,
     pub name: String,
+    pub key_prefix: String,
     pub description: Option<String>,
     pub is_active: bool,
     pub rate_limits: Vec<RateLimit>,
@@ -105,11 +114,18 @@ pub struct ApiKey {
     pub id: String,
     pub app_id: String,
     pub deployment_id: String,
+    pub app_slug: String,
     pub name: String,
     pub key_prefix: String,
     pub key_suffix: String,
     pub permissions: Vec<String>,
+    pub org_role_permissions: Vec<String>,
+    pub workspace_role_permissions: Vec<String>,
     pub metadata: serde_json::Value,
+    pub organization_id: Option<String>,
+    pub workspace_id: Option<String>,
+    pub organization_membership_id: Option<String>,
+    pub workspace_membership_id: Option<String>,
     pub expires_at: Option<DateTime<Utc>>,
     pub last_used_at: Option<DateTime<Utc>>,
     pub is_active: bool,
