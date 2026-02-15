@@ -1,4 +1,3 @@
-
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
@@ -11,9 +10,6 @@ pub struct CreateSegmentRequest {
 
 impl CreateSegmentRequest {
     pub fn new(name: String, segment_type: String) -> CreateSegmentRequest {
-        CreateSegmentRequest {
-            name,
-            segment_type,
-        }
+        CreateSegmentRequest { name, segment_type }
     }
 }

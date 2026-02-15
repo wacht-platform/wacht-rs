@@ -5,7 +5,7 @@
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{UserPhone, AddPhoneRequest, UpdatePhoneRequest},
+    models::{AddPhoneRequest, UpdatePhoneRequest, UserPhone},
 };
 
 /// Builder for adding a phone to a user
@@ -67,7 +67,10 @@ impl UpdatePhoneBuilder {
     pub async fn send(self) -> Result<UserPhone> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/users/{}/phones/{}", config.base_url, self.user_id, self.phone_id);
+        let url = format!(
+            "{}/users/{}/phones/{}",
+            config.base_url, self.user_id, self.phone_id
+        );
 
         let response = client.patch(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -86,7 +89,11 @@ impl UpdatePhoneBuilder {
 }
 
 /// Update a user phone using builder pattern
-pub fn update_phone(user_id: &str, phone_id: &str, request: UpdatePhoneRequest) -> UpdatePhoneBuilder {
+pub fn update_phone(
+    user_id: &str,
+    phone_id: &str,
+    request: UpdatePhoneRequest,
+) -> UpdatePhoneBuilder {
     UpdatePhoneBuilder::new(user_id, phone_id, request)
 }
 
@@ -107,7 +114,10 @@ impl DeletePhoneBuilder {
     pub async fn send(self) -> Result<()> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/users/{}/phones/{}", config.base_url, self.user_id, self.phone_id);
+        let url = format!(
+            "{}/users/{}/phones/{}",
+            config.base_url, self.user_id, self.phone_id
+        );
 
         let response = client.delete(&url).send().await?;
         let status = response.status();

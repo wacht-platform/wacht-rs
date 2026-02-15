@@ -34,9 +34,15 @@ pub struct OrganizationMember {
     pub last_name: String,
     #[serde(rename = "username", skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
-    #[serde(rename = "primary_email_address", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "primary_email_address",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub primary_email_address: Option<String>,
-    #[serde(rename = "primary_phone_number", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "primary_phone_number",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub primary_phone_number: Option<String>,
     #[serde(rename = "user_created_at")]
     pub user_created_at: String,
@@ -61,4 +67,3 @@ impl OrganizationMember {
         }
     }
 }
-

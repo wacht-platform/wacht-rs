@@ -46,6 +46,9 @@ impl DeleteSocialConnectionBuilder {
 }
 
 /// Delete a user's social connection using builder pattern
-pub fn delete_social_connection(user_id: &str, connection_id: &str) -> DeleteSocialConnectionBuilder {
+pub fn delete_social_connection(
+    user_id: &str,
+    connection_id: &str,
+) -> DeleteSocialConnectionBuilder {
     DeleteSocialConnectionBuilder::new(user_id, connection_id)
 }

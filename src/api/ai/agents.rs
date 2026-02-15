@@ -283,7 +283,10 @@ impl FetchAgentDetailsBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to get agent details {}: {error_body}", self.agent_id),
+                message: format!(
+                    "Failed to get agent details {}: {error_body}",
+                    self.agent_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -303,7 +306,10 @@ pub fn create_agent(request: CreateAiAgentRequest) -> CreateAgentBuilder {
     CreateAgentBuilder::new(request)
 }
 
-pub fn update_agent(agent_id: impl Into<String>, request: UpdateAiAgentRequest) -> UpdateAgentBuilder {
+pub fn update_agent(
+    agent_id: impl Into<String>,
+    request: UpdateAiAgentRequest,
+) -> UpdateAgentBuilder {
     UpdateAgentBuilder::new(agent_id, request)
 }
 

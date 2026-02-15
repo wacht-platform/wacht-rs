@@ -2,7 +2,7 @@ use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
     models::{
-        AgentIntegration, CreateAgentIntegrationRequest, UpdateAgentIntegrationRequest, ListOptions,
+        AgentIntegration, CreateAgentIntegrationRequest, ListOptions, UpdateAgentIntegrationRequest,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -42,7 +42,10 @@ impl ListAgentIntegrationsBuilder {
     pub async fn send(self) -> Result<AgentIntegrationListResponse> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/agents/{}/integrations", config.base_url, &*self.agent_id);
+        let url = format!(
+            "{}/ai/agents/{}/integrations",
+            config.base_url, &*self.agent_id
+        );
 
         let mut request = client.get(&url);
 
@@ -59,7 +62,10 @@ impl ListAgentIntegrationsBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to list integrations for agent {}: {}", &*self.agent_id, error_body),
+                message: format!(
+                    "Failed to list integrations for agent {}: {}",
+                    &*self.agent_id, error_body
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -90,7 +96,10 @@ impl CreateAgentIntegrationBuilder {
     pub async fn send(self) -> Result<AgentIntegration> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/agents/{}/integrations", config.base_url, &*self.agent_id);
+        let url = format!(
+            "{}/ai/agents/{}/integrations",
+            config.base_url, &*self.agent_id
+        );
 
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -101,7 +110,10 @@ impl CreateAgentIntegrationBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to create integration for agent {}: {}", &*self.agent_id, error_body),
+                message: format!(
+                    "Failed to create integration for agent {}: {}",
+                    &*self.agent_id, error_body
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -126,7 +138,10 @@ impl GetAgentIntegrationBuilder {
     pub async fn send(self) -> Result<AgentIntegration> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/agents/{}/integrations/{}", config.base_url, &*self.agent_id, &*self.integration_id);
+        let url = format!(
+            "{}/ai/agents/{}/integrations/{}",
+            config.base_url, &*self.agent_id, &*self.integration_id
+        );
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -137,7 +152,10 @@ impl GetAgentIntegrationBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to get integration {} for agent {}: {}", &*self.integration_id, &*self.agent_id, error_body),
+                message: format!(
+                    "Failed to get integration {} for agent {}: {}",
+                    &*self.integration_id, &*self.agent_id, error_body
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -170,7 +188,10 @@ impl UpdateAgentIntegrationBuilder {
     pub async fn send(self) -> Result<AgentIntegration> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/agents/{}/integrations/{}", config.base_url, &*self.agent_id, &*self.integration_id);
+        let url = format!(
+            "{}/ai/agents/{}/integrations/{}",
+            config.base_url, &*self.agent_id, &*self.integration_id
+        );
 
         let response = client.patch(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -181,7 +202,10 @@ impl UpdateAgentIntegrationBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to update integration {} for agent {}: {}", &*self.integration_id, &*self.agent_id, error_body),
+                message: format!(
+                    "Failed to update integration {} for agent {}: {}",
+                    &*self.integration_id, &*self.agent_id, error_body
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -206,7 +230,10 @@ impl DeleteAgentIntegrationBuilder {
     pub async fn send(self) -> Result<()> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/agents/{}/integrations/{}", config.base_url, &*self.agent_id, &*self.integration_id);
+        let url = format!(
+            "{}/ai/agents/{}/integrations/{}",
+            config.base_url, &*self.agent_id, &*self.integration_id
+        );
 
         let response = client.delete(&url).send().await?;
         let status = response.status();
@@ -217,7 +244,10 @@ impl DeleteAgentIntegrationBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to delete integration {} for agent {}: {}", &*self.integration_id, &*self.agent_id, error_body),
+                message: format!(
+                    "Failed to delete integration {} for agent {}: {}",
+                    &*self.integration_id, &*self.agent_id, error_body
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -265,10 +295,7 @@ pub async fn update_agent_integration(
         .await
 }
 
-pub async fn delete_agent_integration(
-    agent_id: &str,
-    integration_id: &str,
-) -> Result<()> {
+pub async fn delete_agent_integration(agent_id: &str, integration_id: &str) -> Result<()> {
     DeleteAgentIntegrationBuilder::new(agent_id, integration_id)
         .send()
         .await

@@ -13,81 +13,151 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DeploymentB2bSettingsUpdates {
     // Organization/Workspace Enablement
-    #[serde(rename = "organizations_enabled", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "organizations_enabled",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub organizations_enabled: Option<bool>,
 
     #[serde(rename = "workspaces_enabled", skip_serializing_if = "Option::is_none")]
     pub workspaces_enabled: Option<bool>,
 
     // IP Allowlist
-    #[serde(rename = "ip_allowlist_per_org_enabled", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "ip_allowlist_per_org_enabled",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub ip_allowlist_per_org_enabled: Option<bool>,
 
     // Organization Controls
-    #[serde(rename = "allow_users_to_create_orgs", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "allow_users_to_create_orgs",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub allow_users_to_create_orgs: Option<bool>,
 
-    #[serde(rename = "max_allowed_org_members", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "max_allowed_org_members",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub max_allowed_org_members: Option<i64>,
 
     #[serde(rename = "allow_org_deletion", skip_serializing_if = "Option::is_none")]
     pub allow_org_deletion: Option<bool>,
 
-    #[serde(rename = "custom_org_role_enabled", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "custom_org_role_enabled",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub custom_org_role_enabled: Option<bool>,
 
-    #[serde(rename = "default_org_creator_role_id", skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_string_or_number_to_option_i64")]
+    #[serde(
+        rename = "default_org_creator_role_id",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_string_or_number_to_option_i64"
+    )]
     pub default_org_creator_role_id: Option<i64>,
 
-    #[serde(rename = "default_org_member_role_id", skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_string_or_number_to_option_i64")]
+    #[serde(
+        rename = "default_org_member_role_id",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_string_or_number_to_option_i64"
+    )]
     pub default_org_member_role_id: Option<i64>,
 
-    #[serde(rename = "limit_org_creation_per_user", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "limit_org_creation_per_user",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub limit_org_creation_per_user: Option<bool>,
 
-    #[serde(rename = "org_creation_per_user_count", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "org_creation_per_user_count",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub org_creation_per_user_count: Option<i32>,
 
-    #[serde(rename = "organization_permissions", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "organization_permissions",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub organization_permissions: Option<Vec<String>>,
 
     // Workspace Controls
-    #[serde(rename = "max_allowed_workspace_members", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "max_allowed_workspace_members",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub max_allowed_workspace_members: Option<i64>,
 
-    #[serde(rename = "allow_workspace_deletion", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "allow_workspace_deletion",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub allow_workspace_deletion: Option<bool>,
 
-    #[serde(rename = "custom_workspace_role_enabled", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "custom_workspace_role_enabled",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub custom_workspace_role_enabled: Option<bool>,
 
-    #[serde(rename = "default_workspace_creator_role_id", skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_string_or_number_to_option_i64")]
+    #[serde(
+        rename = "default_workspace_creator_role_id",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_string_or_number_to_option_i64"
+    )]
     pub default_workspace_creator_role_id: Option<i64>,
 
-    #[serde(rename = "default_workspace_member_role_id", skip_serializing_if = "Option::is_none", deserialize_with = "deserialize_string_or_number_to_option_i64")]
+    #[serde(
+        rename = "default_workspace_member_role_id",
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_string_or_number_to_option_i64"
+    )]
     pub default_workspace_member_role_id: Option<i64>,
 
-    #[serde(rename = "limit_workspace_creation_per_org", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "limit_workspace_creation_per_org",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub limit_workspace_creation_per_org: Option<bool>,
 
-    #[serde(rename = "workspaces_per_org_count", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "workspaces_per_org_count",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub workspaces_per_org_count: Option<i32>,
 
-    #[serde(rename = "workspace_permissions", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "workspace_permissions",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub workspace_permissions: Option<Vec<String>>,
 
-    #[serde(rename = "ip_allowlist_per_workspace_enabled", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "ip_allowlist_per_workspace_enabled",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub ip_allowlist_per_workspace_enabled: Option<bool>,
 
     // MFA Enforcement
-    #[serde(rename = "enforce_mfa_per_org_enabled", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "enforce_mfa_per_org_enabled",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub enforce_mfa_per_org_enabled: Option<bool>,
 
-    #[serde(rename = "enforce_mfa_per_workspace_enabled", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "enforce_mfa_per_workspace_enabled",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub enforce_mfa_per_workspace_enabled: Option<bool>,
 
     // SSO
-    #[serde(rename = "enterprise_sso_enabled", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "enterprise_sso_enabled",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub enterprise_sso_enabled: Option<bool>,
 }
 

@@ -1,8 +1,7 @@
-
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{PaginatedResponse, Segment, CreateSegmentRequest, UpdateSegmentRequest},
+    models::{CreateSegmentRequest, PaginatedResponse, Segment, UpdateSegmentRequest},
 };
 use serde::{Deserialize, Serialize};
 
@@ -317,7 +316,10 @@ impl AssignSegmentBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to assign entity to segment {}: {error_body}", self.segment_id),
+                message: format!(
+                    "Failed to assign entity to segment {}: {error_body}",
+                    self.segment_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -359,7 +361,10 @@ impl RemoveSegmentBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to remove entity from segment {}: {error_body}", self.segment_id),
+                message: format!(
+                    "Failed to remove entity from segment {}: {error_body}",
+                    self.segment_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -425,11 +430,7 @@ impl GetSegmentDataBuilder {
             filters: Some(final_filters),
         };
 
-        let response = client
-            .post(&url)
-            .json(&request)
-            .send()
-            .await?;
+        let response = client.post(&url).json(&request).send().await?;
         let status = response.status();
 
         if status.is_success() {
@@ -470,12 +471,16 @@ pub async fn delete_segment(segment_id: &str) -> Result<()> {
 
 /// Assign entity to segment
 pub async fn assign_segment(segment_id: &str, entity_id: &str) -> Result<()> {
-    AssignSegmentBuilder::new(segment_id, entity_id).send().await
+    AssignSegmentBuilder::new(segment_id, entity_id)
+        .send()
+        .await
 }
 
 /// Remove entity from segment
 pub async fn remove_segment(segment_id: &str, entity_id: &str) -> Result<()> {
-    RemoveSegmentBuilder::new(segment_id, entity_id).send().await
+    RemoveSegmentBuilder::new(segment_id, entity_id)
+        .send()
+        .await
 }
 
 /// Get segment data

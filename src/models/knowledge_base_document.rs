@@ -41,7 +41,10 @@ pub struct AiKnowledgeBaseDocument {
     #[serde(rename = "knowledge_base_id")]
     pub knowledge_base_id: String,
     /// Processing metadata
-    #[serde(rename = "processing_metadata", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "processing_metadata",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub processing_metadata: Option<Value>,
 }
 

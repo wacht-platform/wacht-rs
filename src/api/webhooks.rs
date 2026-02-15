@@ -1,7 +1,7 @@
 use crate::{
+    Result,
     client::{get_client, get_config},
     error::Error,
-    Result,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -573,7 +573,10 @@ impl RotateWebhookSecretBuilder {
     pub async fn send(self) -> Result<WebhookApp> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/webhooks/apps/{}/rotate-secret", config.base_url, self.app_name);
+        let url = format!(
+            "{}/webhooks/apps/{}/rotate-secret",
+            config.base_url, self.app_name
+        );
 
         let response = client.post(&url).send().await?;
 
@@ -767,7 +770,10 @@ impl GetWebhookEndpointsWithSubscriptionsBuilder {
     pub async fn send(self) -> Result<PaginatedEndpointsResponse> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/webhooks/apps/{}/endpoints", config.base_url, self.app_name);
+        let url = format!(
+            "{}/webhooks/apps/{}/endpoints",
+            config.base_url, self.app_name
+        );
 
         let mut options = ListWebhookEndpointsQuery::default();
         options.include_inactive = self.include_inactive;
@@ -786,19 +792,25 @@ impl GetWebhookEndpointsWithSubscriptionsBuilder {
             let response_data: EndpointsResponse = response.json().await?;
 
             // Convert WebhookEndpoint to WebhookEndpointWithSubscriptions
-            let endpoints_with_subs: Vec<WebhookEndpointWithSubscriptions> = response_data.data.into_iter().map(|mut endpoint| {
-                let subscribed_events = endpoint.subscriptions.iter()
-                    .map(|sub| sub.event_name.clone())
-                    .collect();
+            let endpoints_with_subs: Vec<WebhookEndpointWithSubscriptions> = response_data
+                .data
+                .into_iter()
+                .map(|mut endpoint| {
+                    let subscribed_events = endpoint
+                        .subscriptions
+                        .iter()
+                        .map(|sub| sub.event_name.clone())
+                        .collect();
 
-                // Clear subscriptions from endpoint to avoid duplication
-                endpoint.subscriptions.clear();
+                    // Clear subscriptions from endpoint to avoid duplication
+                    endpoint.subscriptions.clear();
 
-                WebhookEndpointWithSubscriptions {
-                    endpoint,
-                    subscribed_events,
-                }
-            }).collect();
+                    WebhookEndpointWithSubscriptions {
+                        endpoint,
+                        subscribed_events,
+                    }
+                })
+                .collect();
 
             let count = endpoints_with_subs.len();
             Ok(PaginatedEndpointsResponse {
@@ -813,7 +825,9 @@ impl GetWebhookEndpointsWithSubscriptionsBuilder {
             let error_text = response.text().await.unwrap_or_default();
             Err(Error::Api {
                 status,
-                message: format!("Failed to get webhook endpoints with subscriptions: {error_text}"),
+                message: format!(
+                    "Failed to get webhook endpoints with subscriptions: {error_text}"
+                ),
                 details: serde_json::from_str(&error_text).ok(),
             })
         }
@@ -978,7 +992,10 @@ impl UpdateWebhookEndpointBuilder {
     pub async fn send(self) -> Result<WebhookEndpoint> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/webhooks/endpoints/{}", config.base_url, self.endpoint_id);
+        let url = format!(
+            "{}/webhooks/endpoints/{}",
+            config.base_url, self.endpoint_id
+        );
 
         let request = UpdateWebhookEndpointRequest {
             url: self.url,
@@ -1022,7 +1039,10 @@ impl DeleteWebhookEndpointBuilder {
     pub async fn send(self) -> Result<()> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/webhooks/endpoints/{}", config.base_url, self.endpoint_id);
+        let url = format!(
+            "{}/webhooks/endpoints/{}",
+            config.base_url, self.endpoint_id
+        );
 
         let response = client.delete(&url).send().await?;
 
@@ -1066,7 +1086,10 @@ impl TriggerWebhookEventBuilder {
     pub async fn send(self) -> Result<TriggerWebhookEventResponse> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/webhooks/apps/{}/trigger", config.base_url, self.app_slug);
+        let url = format!(
+            "{}/webhooks/apps/{}/trigger",
+            config.base_url, self.app_slug
+        );
 
         let request = TriggerWebhookEventRequest {
             app_slug: self.app_slug.clone(),
@@ -1100,8 +1123,6 @@ pub struct WebhookEventTrigger {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub filter_context: Option<Value>,
 }
-
-
 
 /// Builder for get_webhook_deliveries
 pub struct GetWebhookDeliveriesBuilder {
@@ -1167,7 +1188,10 @@ impl GetWebhookDeliveriesBuilder {
     pub async fn send(self) -> Result<GetWebhookDeliveriesResponse> {
         let config = get_config();
         let client = get_client();
-        let mut url = format!("{}/webhooks/apps/{}/deliveries", config.base_url, self.app_name);
+        let mut url = format!(
+            "{}/webhooks/apps/{}/deliveries",
+            config.base_url, self.app_name
+        );
 
         let mut params = Vec::new();
         if let Some(id) = self.endpoint_id {
@@ -1240,7 +1264,10 @@ impl GetWebhookDeliveryDetailsBuilder {
     pub async fn send(self) -> Result<WebhookDeliveryDetails> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/webhooks/deliveries/{}", config.base_url, self.delivery_id);
+        let url = format!(
+            "{}/webhooks/deliveries/{}",
+            config.base_url, self.delivery_id
+        );
 
         let response = client.get(&url).send().await?;
 
@@ -1270,15 +1297,11 @@ pub struct ReplayWebhookDeliveriesBuilder {
 pub enum ReplayWebhookDeliveriesRequest {
     ByIds {
         delivery_ids: Vec<String>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        include_successful: Option<bool>,
     },
     ByDateRange {
         start_date: DateTime<Utc>,
         #[serde(skip_serializing_if = "Option::is_none")]
         end_date: Option<DateTime<Utc>>,
-        #[serde(skip_serializing_if = "Option::is_none")]
-        include_successful: Option<bool>,
     },
 }
 
@@ -1288,24 +1311,23 @@ impl ReplayWebhookDeliveriesBuilder {
             app_name: app_name.to_string(),
             request: ReplayWebhookDeliveriesRequest::ByIds {
                 delivery_ids: Vec::new(),
-                include_successful: None,
             },
         }
     }
 
-    pub fn by_ids(mut self, delivery_ids: Vec<String>, include_successful: bool) -> Self {
-        self.request = ReplayWebhookDeliveriesRequest::ByIds {
-            delivery_ids,
-            include_successful: Some(include_successful),
-        };
+    pub fn by_ids(mut self, delivery_ids: Vec<String>) -> Self {
+        self.request = ReplayWebhookDeliveriesRequest::ByIds { delivery_ids };
         self
     }
 
-    pub fn by_date_range(mut self, start_date: DateTime<Utc>, end_date: Option<DateTime<Utc>>, include_successful: bool) -> Self {
+    pub fn by_date_range(
+        mut self,
+        start_date: DateTime<Utc>,
+        end_date: Option<DateTime<Utc>>,
+    ) -> Self {
         self.request = ReplayWebhookDeliveriesRequest::ByDateRange {
             start_date,
             end_date,
-            include_successful: Some(include_successful),
         };
         self
     }
@@ -1313,7 +1335,10 @@ impl ReplayWebhookDeliveriesBuilder {
     pub async fn send(self) -> Result<ReplayWebhookDeliveriesResponse> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/webhooks/apps/{}/deliveries/replay", config.base_url, self.app_name);
+        let url = format!(
+            "{}/webhooks/apps/{}/deliveries/replay",
+            config.base_url, self.app_name
+        );
 
         let response = client.post(&url).json(&self.request).send().await?;
 
@@ -1353,7 +1378,10 @@ impl ReactivateWebhookEndpointBuilder {
     pub async fn send(self) -> Result<ReactivateEndpointResponse> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/webhooks/endpoints/{}/reactivate", config.base_url, self.endpoint_id);
+        let url = format!(
+            "{}/webhooks/endpoints/{}/reactivate",
+            config.base_url, self.endpoint_id
+        );
 
         let response = client.post(&url).send().await?;
 
@@ -1404,7 +1432,10 @@ impl TestWebhookEndpointBuilder {
     pub async fn send(self) -> Result<TestWebhookEndpointResponse> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/webhooks/apps/{}/endpoints/{}/test", config.base_url, self.app_name, self.endpoint_id);
+        let url = format!(
+            "{}/webhooks/apps/{}/endpoints/{}/test",
+            config.base_url, self.app_name, self.endpoint_id
+        );
 
         let request_body = serde_json::json!({
             "event_name": self.event_name,
@@ -1519,7 +1550,10 @@ impl GetWebhookTimeseriesBuilder {
     pub async fn send(self) -> Result<TimeseriesResult> {
         let config = get_config();
         let client = get_client();
-        let mut url = format!("{}/webhooks/apps/{}/timeseries", config.base_url, self.app_name);
+        let mut url = format!(
+            "{}/webhooks/apps/{}/timeseries",
+            config.base_url, self.app_name
+        );
 
         // Build query parameters
         let mut query_params = Vec::new();
@@ -1589,7 +1623,10 @@ impl GetWebhookAnalyticsBuilder {
     pub async fn send(self) -> Result<AnalyticsResult> {
         let config = get_config();
         let client = get_client();
-        let mut url = format!("{}/webhooks/apps/{}/analytics", config.base_url, self.app_name);
+        let mut url = format!(
+            "{}/webhooks/apps/{}/analytics",
+            config.base_url, self.app_name
+        );
 
         // Build query parameters
         let mut query_params = Vec::new();
@@ -1700,7 +1737,9 @@ pub fn list_webhook_endpoints(app_name: &str) -> ListWebhookEndpointsBuilder {
 }
 
 /// Get webhook endpoints with subscriptions
-pub fn get_webhook_endpoints_with_subscriptions(app_name: &str) -> GetWebhookEndpointsWithSubscriptionsBuilder {
+pub fn get_webhook_endpoints_with_subscriptions(
+    app_name: &str,
+) -> GetWebhookEndpointsWithSubscriptionsBuilder {
     GetWebhookEndpointsWithSubscriptionsBuilder::new(app_name)
 }
 
@@ -1720,7 +1759,11 @@ pub fn delete_webhook_endpoint(endpoint_id: &str) -> DeleteWebhookEndpointBuilde
 }
 
 /// Trigger a webhook event
-pub fn trigger_webhook_event(app_name: &str, event_name: &str, payload: Value) -> TriggerWebhookEventBuilder {
+pub fn trigger_webhook_event(
+    app_name: &str,
+    event_name: &str,
+    payload: Value,
+) -> TriggerWebhookEventBuilder {
     TriggerWebhookEventBuilder::new(app_name, event_name, payload)
 }
 
@@ -1747,7 +1790,11 @@ pub fn reactivate_webhook_endpoint(endpoint_id: &str) -> ReactivateWebhookEndpoi
 }
 
 /// Test a webhook endpoint
-pub fn test_webhook_endpoint(app_name: &str, endpoint_id: &str, event_name: &str) -> TestWebhookEndpointBuilder {
+pub fn test_webhook_endpoint(
+    app_name: &str,
+    endpoint_id: &str,
+    event_name: &str,
+) -> TestWebhookEndpointBuilder {
     TestWebhookEndpointBuilder::new(app_name, endpoint_id, event_name)
 }
 

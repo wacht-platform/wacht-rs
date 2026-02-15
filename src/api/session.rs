@@ -5,7 +5,7 @@
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{CreateSessionTicketRequest, SessionTicketResponse},
+    models::{CreateSessionTicketRequest, SessionTicketResponse, TicketType},
 };
 
 /// Builder for creating a session ticket
@@ -43,3 +43,6 @@ impl CreateTicketBuilder {
 pub fn create(request: CreateSessionTicketRequest) -> CreateTicketBuilder {
     CreateTicketBuilder::new(request)
 }
+
+/// Re-export ticket type for convenience
+pub use crate::models::TicketType;

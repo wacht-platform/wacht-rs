@@ -28,7 +28,9 @@ impl fmt::Display for Error {
             Error::Request(e) => write!(f, "Request error: {e}"),
             Error::Json(e) => write!(f, "JSON error: {e}"),
             Error::Io(e) => write!(f, "IO error: {e}"),
-            Error::Api { status, message, .. } => {
+            Error::Api {
+                status, message, ..
+            } => {
                 write!(f, "API error ({status}): {message}")
             }
             Error::Config(msg) => write!(f, "Configuration error: {msg}"),

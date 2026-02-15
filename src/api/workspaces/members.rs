@@ -5,7 +5,7 @@
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{PaginatedResponse, WorkspaceMember, ListOptions},
+    models::{ListOptions, PaginatedResponse, WorkspaceMember},
 };
 
 pub type WorkspaceMemberListResponse = PaginatedResponse<WorkspaceMember>;
@@ -52,7 +52,10 @@ impl FetchMembersBuilder {
     pub async fn send(self) -> Result<WorkspaceMemberListResponse> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/workspaces/{}/members", config.base_url, self.workspace_id);
+        let url = format!(
+            "{}/workspaces/{}/members",
+            config.base_url, self.workspace_id
+        );
 
         let mut request = client.get(&url);
         request = request.query(&self.options);
@@ -66,7 +69,10 @@ impl FetchMembersBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch members for workspace {}: {}", self.workspace_id, error_body),
+                message: format!(
+                    "Failed to fetch members for workspace {}: {}",
+                    self.workspace_id, error_body
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -97,7 +103,10 @@ impl AddMemberBuilder {
     pub async fn send(self) -> Result<WorkspaceMember> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/workspaces/{}/members", config.base_url, self.workspace_id);
+        let url = format!(
+            "{}/workspaces/{}/members",
+            config.base_url, self.workspace_id
+        );
 
         let payload = serde_json::json!({
             "user_id": self.user_id,
@@ -113,7 +122,10 @@ impl AddMemberBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to add member to workspace {}: {}", self.workspace_id, error_body),
+                message: format!(
+                    "Failed to add member to workspace {}: {}",
+                    self.workspace_id, error_body
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }

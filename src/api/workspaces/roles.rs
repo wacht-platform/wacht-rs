@@ -5,7 +5,7 @@
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{PaginatedResponse, WorkspaceRole, CreateRoleRequest, UpdateRoleRequest},
+    models::{CreateRoleRequest, PaginatedResponse, UpdateRoleRequest, WorkspaceRole},
 };
 
 pub type WorkspaceRoleListResponse = PaginatedResponse<WorkspaceRole>;
@@ -129,7 +129,11 @@ impl UpdateRoleBuilder {
 }
 
 /// Update workspace role using builder pattern
-pub fn update_role(workspace_id: &str, role_id: &str, request: UpdateRoleRequest) -> UpdateRoleBuilder {
+pub fn update_role(
+    workspace_id: &str,
+    role_id: &str,
+    request: UpdateRoleRequest,
+) -> UpdateRoleBuilder {
     UpdateRoleBuilder::new(workspace_id, role_id, request)
 }
 

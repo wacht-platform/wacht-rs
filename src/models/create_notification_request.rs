@@ -1,6 +1,6 @@
+use crate::models::{CallToAction, NotificationSeverity};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::models::{CallToAction, NotificationSeverity};
 
 /// Request to create a notification
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

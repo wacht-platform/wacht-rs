@@ -10,7 +10,10 @@ pub mod roles;
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{Organization, CreateOrganizationRequest, UpdateOrganizationRequest, PaginatedResponse, ListOptions},
+    models::{
+        CreateOrganizationRequest, ListOptions, Organization, PaginatedResponse,
+        UpdateOrganizationRequest,
+    },
 };
 
 pub type OrganizationListResponse = PaginatedResponse<Organization>;
@@ -102,10 +105,16 @@ impl CreateOrganizationBuilder {
             form = form.text("description", description.clone());
         }
         if let Some(public_metadata) = &self.request.public_metadata {
-            form = form.text("public_metadata", serde_json::to_string(public_metadata).unwrap_or_default());
+            form = form.text(
+                "public_metadata",
+                serde_json::to_string(public_metadata).unwrap_or_default(),
+            );
         }
         if let Some(private_metadata) = &self.request.private_metadata {
-            form = form.text("private_metadata", serde_json::to_string(private_metadata).unwrap_or_default());
+            form = form.text(
+                "private_metadata",
+                serde_json::to_string(private_metadata).unwrap_or_default(),
+            );
         }
         if let Some(image_bytes) = &self.request.organization_image {
             let part = reqwest::multipart::Part::bytes(image_bytes.clone())
@@ -205,10 +214,16 @@ impl UpdateOrganizationBuilder {
             form = form.text("description", description.clone());
         }
         if let Some(public_metadata) = &self.request.public_metadata {
-            form = form.text("public_metadata", serde_json::to_string(public_metadata).unwrap_or_default());
+            form = form.text(
+                "public_metadata",
+                serde_json::to_string(public_metadata).unwrap_or_default(),
+            );
         }
         if let Some(private_metadata) = &self.request.private_metadata {
-            form = form.text("private_metadata", serde_json::to_string(private_metadata).unwrap_or_default());
+            form = form.text(
+                "private_metadata",
+                serde_json::to_string(private_metadata).unwrap_or_default(),
+            );
         }
         if let Some(image_bytes) = &self.request.organization_image {
             let part = reqwest::multipart::Part::bytes(image_bytes.clone())
@@ -239,7 +254,10 @@ impl UpdateOrganizationBuilder {
 }
 
 /// Update an organization using builder pattern
-pub fn update_organization(organization_id: &str, request: UpdateOrganizationRequest) -> UpdateOrganizationBuilder {
+pub fn update_organization(
+    organization_id: &str,
+    request: UpdateOrganizationRequest,
+) -> UpdateOrganizationBuilder {
     UpdateOrganizationBuilder::new(organization_id, request)
 }
 
@@ -298,7 +316,10 @@ impl CreateOrganizationWorkspaceBuilder {
     pub async fn send(self) -> Result<crate::models::Workspace> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/organizations/{}/workspaces", config.base_url, self.organization_id);
+        let url = format!(
+            "{}/organizations/{}/workspaces",
+            config.base_url, self.organization_id
+        );
 
         let mut form = reqwest::multipart::Form::new();
         form = form.text("name", self.request.name.clone());
@@ -306,10 +327,16 @@ impl CreateOrganizationWorkspaceBuilder {
             form = form.text("description", description.clone());
         }
         if let Some(public_metadata) = &self.request.public_metadata {
-            form = form.text("public_metadata", serde_json::to_string(public_metadata).unwrap_or_default());
+            form = form.text(
+                "public_metadata",
+                serde_json::to_string(public_metadata).unwrap_or_default(),
+            );
         }
         if let Some(private_metadata) = &self.request.private_metadata {
-            form = form.text("private_metadata", serde_json::to_string(private_metadata).unwrap_or_default());
+            form = form.text(
+                "private_metadata",
+                serde_json::to_string(private_metadata).unwrap_or_default(),
+            );
         }
         if let Some(image_bytes) = &self.request.workspace_image {
             let part = reqwest::multipart::Part::bytes(image_bytes.clone())
@@ -332,7 +359,10 @@ impl CreateOrganizationWorkspaceBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to create workspace under organization: {}", error_body),
+                message: format!(
+                    "Failed to create workspace under organization: {}",
+                    error_body
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -340,6 +370,9 @@ impl CreateOrganizationWorkspaceBuilder {
 }
 
 /// Create a workspace under an organization using builder pattern
-pub fn create_organization_workspace(organization_id: &str, request: crate::models::CreateWorkspaceRequest) -> CreateOrganizationWorkspaceBuilder {
+pub fn create_organization_workspace(
+    organization_id: &str,
+    request: crate::models::CreateWorkspaceRequest,
+) -> CreateOrganizationWorkspaceBuilder {
     CreateOrganizationWorkspaceBuilder::new(organization_id, request)
 }

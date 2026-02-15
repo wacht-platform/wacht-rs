@@ -1,7 +1,7 @@
 use crate::{
+    Result,
     client::{get_client, get_config},
     error::Error,
-    Result,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -281,7 +281,10 @@ impl CreateApiAuthAppBuilder {
 }
 
 /// Update an API auth app
-pub fn update_api_auth_app(app_name: &str, request: UpdateApiAuthAppRequest) -> UpdateApiAuthAppBuilder {
+pub fn update_api_auth_app(
+    app_name: &str,
+    request: UpdateApiAuthAppRequest,
+) -> UpdateApiAuthAppBuilder {
     UpdateApiAuthAppBuilder::new(app_name, request)
 }
 

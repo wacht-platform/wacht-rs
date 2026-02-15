@@ -82,7 +82,10 @@ pub struct SocialConnection {
     pub provider: Option<Provider>,
     #[serde(rename = "enabled", skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
-    #[serde(rename = "user_defined_scopes", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "user_defined_scopes",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub user_defined_scopes: Option<Vec<String>>,
     #[serde(rename = "credentials", skip_serializing_if = "Option::is_none")]
     pub credentials: Option<OauthCredentials>,

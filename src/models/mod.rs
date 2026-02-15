@@ -12,10 +12,10 @@ pub mod ai_tool;
 pub use self::ai_tool::AiTool;
 pub mod ai_tool_config;
 pub use self::ai_tool_config::{
-    AiToolConfiguration, AiToolType, ApiToolConfiguration, PlatformEventToolConfiguration,
-    PlatformFunctionToolConfiguration, InternalToolConfiguration, InternalToolType,
-    UseExternalServiceToolConfiguration, UseExternalServiceToolType, AuthorizationConfiguration,
-    HttpMethod, SchemaField,
+    AiToolConfiguration, AiToolType, ApiToolConfiguration, AuthorizationConfiguration, HttpMethod,
+    InternalToolConfiguration, InternalToolType, PlatformEventToolConfiguration,
+    PlatformFunctionToolConfiguration, SchemaField, UseExternalServiceToolConfiguration,
+    UseExternalServiceToolType,
 };
 pub mod ai_tool_config_parameters_inner;
 pub use self::ai_tool_config_parameters_inner::AiToolConfigParametersInner;
@@ -76,7 +76,7 @@ pub use self::recent_signup::RecentSignup;
 pub mod recent_signup_organization;
 pub use self::recent_signup_organization::RecentSignupOrganization;
 pub mod social_connection;
-pub use self::social_connection::{SocialConnection, OauthCredentials};
+pub use self::social_connection::{OauthCredentials, SocialConnection};
 pub mod update_ai_agent_request;
 pub use self::update_ai_agent_request::UpdateAiAgentRequest;
 pub mod update_ai_knowledge_base_request;
@@ -102,7 +102,11 @@ pub use self::user_invitation::UserInvitation;
 pub mod user;
 pub use self::user::User;
 pub mod user_details;
-pub use self::user_details::{UserDetails, UserEmailAddress, UserPhoneNumber, SocialConnection as UserSocialConnection, Segment as UserSegment, SchemaVersion, SecondFactorPolicy, VerificationStrategy};
+pub use self::user_details::{
+    SchemaVersion, SecondFactorPolicy, Segment as UserSegment,
+    SocialConnection as UserSocialConnection, UserDetails, UserEmailAddress, UserPhoneNumber,
+    VerificationStrategy,
+};
 pub mod user_email;
 pub use self::user_email::UserEmail;
 pub mod user_phone;
@@ -137,9 +141,11 @@ pub use self::add_phone_request::AddPhoneRequest;
 pub mod update_phone_request;
 pub use self::update_phone_request::UpdatePhoneRequest;
 pub mod create_session_ticket_request;
-pub use self::create_session_ticket_request::{CreateSessionTicketRequest, SessionTicketResponse};
+pub use self::create_session_ticket_request::{
+    CreateSessionTicketRequest, SessionTicketResponse, TicketType,
+};
 pub mod notification;
-pub use self::notification::{Notification, NotificationSeverity, CallToAction};
+pub use self::notification::{CallToAction, Notification, NotificationSeverity};
 pub mod create_notification_request;
 pub use self::create_notification_request::CreateNotificationRequest;
 pub mod agent_integration;
@@ -151,4 +157,6 @@ pub use self::update_agent_integration_request::UpdateAgentIntegrationRequest;
 pub mod deployment_ai_settings;
 pub use self::deployment_ai_settings::{DeploymentAiSettings, UpdateDeploymentAiSettingsRequest};
 pub mod execute_agent_request;
-pub use self::execute_agent_request::{ExecuteAgentRequest, ExecuteAgentRequestType, ExecuteAgentResponse, FileData};
+pub use self::execute_agent_request::{
+    ExecuteAgentRequest, ExecuteAgentRequestType, ExecuteAgentResponse, FileData,
+};

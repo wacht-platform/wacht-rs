@@ -5,7 +5,7 @@
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{UserEmail, AddEmailRequest, UpdateEmailRequest},
+    models::{AddEmailRequest, UpdateEmailRequest, UserEmail},
 };
 
 /// Builder for adding an email to a user
@@ -67,7 +67,10 @@ impl UpdateEmailBuilder {
     pub async fn send(self) -> Result<UserEmail> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/users/{}/emails/{}", config.base_url, self.user_id, self.email_id);
+        let url = format!(
+            "{}/users/{}/emails/{}",
+            config.base_url, self.user_id, self.email_id
+        );
 
         let response = client.patch(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -86,7 +89,11 @@ impl UpdateEmailBuilder {
 }
 
 /// Update a user email using builder pattern
-pub fn update_email(user_id: &str, email_id: &str, request: UpdateEmailRequest) -> UpdateEmailBuilder {
+pub fn update_email(
+    user_id: &str,
+    email_id: &str,
+    request: UpdateEmailRequest,
+) -> UpdateEmailBuilder {
     UpdateEmailBuilder::new(user_id, email_id, request)
 }
 
@@ -107,7 +114,10 @@ impl DeleteEmailBuilder {
     pub async fn send(self) -> Result<()> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/users/{}/emails/{}", config.base_url, self.user_id, self.email_id);
+        let url = format!(
+            "{}/users/{}/emails/{}",
+            config.base_url, self.user_id, self.email_id
+        );
 
         let response = client.delete(&url).send().await?;
         let status = response.status();

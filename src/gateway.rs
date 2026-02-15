@@ -1,7 +1,5 @@
-use reqwest::header::{HeaderMap, HeaderValue};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
 
 use crate::error::{Error, Result};
 
@@ -17,7 +15,10 @@ pub struct RateLimitInfo {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GatewayCheckResponse {
+    pub request_id: String,
     pub allowed: bool,
+    pub reason: Option<GatewayDenyReason>,
+    pub blocked_rule: Option<String>,
     pub key_id: i64,
     pub deployment_id: i64,
     pub app_id: i64,
@@ -33,144 +34,127 @@ pub struct GatewayCheckResponse {
     pub retry_after: Option<u32>,
 }
 
-pub async fn verify_request(api_key: &str, identifier: &str) -> Result<GatewayCheckResponse> {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum GatewayDenyReason {
+    PermissionDenied,
+    RateLimited,
+}
+
+#[derive(Debug, Serialize)]
+struct GatewayAuthzCheckRequest {
+    principal: GatewayPrincipal,
+    resource: String,
+    method: String,
+    client_ip: Option<String>,
+    user_agent: Option<String>,
+    required_permissions: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize)]
+struct GatewayPrincipal {
+    #[serde(rename = "type")]
+    principal_type: &'static str,
+    value: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct GatewayAuthzCheckEnvelope {
+    request_id: String,
+    allowed: bool,
+    reason: Option<GatewayDenyReason>,
+    blocked_rule: Option<String>,
+    identity: Option<GatewayIdentity>,
+    permissions: Vec<String>,
+    metadata: Option<Value>,
+    rate_limits: Vec<RateLimitInfo>,
+    retry_after: Option<u32>,
+}
+
+#[derive(Debug, Deserialize)]
+struct GatewayIdentity {
+    key_id: String,
+    deployment_id: String,
+    app_id: String,
+    app_slug: String,
+    key_name: String,
+    organization_id: Option<String>,
+    workspace_id: Option<String>,
+    organization_membership_id: Option<String>,
+    workspace_membership_id: Option<String>,
+}
+
+pub async fn verify_request(
+    api_key: &str,
+    method: &str,
+    resource: &str,
+) -> Result<GatewayCheckResponse> {
     let client = reqwest::Client::new();
-    let url = format!("{GATEWAY_URL}/check/{identifier}");
+    let url = format!("{GATEWAY_URL}/v1/authz/check");
+    let payload = GatewayAuthzCheckRequest {
+        principal: GatewayPrincipal {
+            principal_type: "api_key",
+            value: api_key.to_string(),
+        },
+        resource: resource.to_string(),
+        method: method.to_string(),
+        client_ip: None,
+        user_agent: None,
+        required_permissions: None,
+    };
 
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        "X-API-Key",
-        HeaderValue::from_str(api_key).map_err(|_| Error::InvalidRequest("Invalid API key format".to_string()))?,
-    );
-
-    let response = client.get(&url).headers(headers).send().await?;
+    let response = client.post(&url).json(&payload).send().await?;
 
     let status = response.status();
-    let response_headers = response.headers().clone();
-
-    if status.is_success() || status.as_u16() == 429 {
-        let allowed = status.is_success();
-
-        let key_id = parse_header_i64(&response_headers, "x-wacht-key-id")?;
-        let deployment_id = parse_header_i64(&response_headers, "x-wacht-deployment-id")?;
-        let app_id = parse_header_i64(&response_headers, "x-wacht-app-id")?;
-        let app_slug = parse_header_string(&response_headers, "x-wacht-app-slug")?;
-        let key_name = parse_header_string(&response_headers, "x-wacht-key-name")?;
-        let permissions = parse_header_json(&response_headers, "x-wacht-permissions")?;
-        let metadata = parse_header_json(&response_headers, "x-wacht-metadata")?;
-        let organization_id = parse_header_i64_optional(&response_headers, "x-wacht-organization-id");
-        let workspace_id = parse_header_i64_optional(&response_headers, "x-wacht-workspace-id");
-        let organization_membership_id =
-            parse_header_i64_optional(&response_headers, "x-wacht-organization-membership-id");
-        let workspace_membership_id =
-            parse_header_i64_optional(&response_headers, "x-wacht-workspace-membership-id");
-
-        let rate_limits = parse_rate_limit_headers(&response_headers);
-
-        let retry_after = if !allowed {
-            response_headers
-                .get("retry-after")
-                .and_then(|v| v.to_str().ok())
-                .and_then(|s| s.parse().ok())
-        } else {
-            None
-        };
+    let body = response.text().await?;
+    if status.is_success() {
+        let parsed: GatewayAuthzCheckEnvelope = serde_json::from_str(&body)?;
+        let identity = parsed.identity.ok_or_else(|| {
+            Error::InvalidRequest("Missing identity in gateway response".to_string())
+        })?;
 
         Ok(GatewayCheckResponse {
-            allowed,
-            key_id,
-            deployment_id,
-            app_id,
-            app_slug,
-            key_name,
-            permissions,
-            metadata,
-            organization_id,
-            workspace_id,
-            organization_membership_id,
-            workspace_membership_id,
-            rate_limits,
-            retry_after,
+            request_id: parsed.request_id,
+            allowed: parsed.allowed,
+            reason: parsed.reason,
+            blocked_rule: parsed.blocked_rule,
+            key_id: parse_i64_field(&identity.key_id, "key_id")?,
+            deployment_id: parse_i64_field(&identity.deployment_id, "deployment_id")?,
+            app_id: parse_i64_field(&identity.app_id, "app_id")?,
+            app_slug: identity.app_slug,
+            key_name: identity.key_name,
+            permissions: parsed.permissions,
+            metadata: parsed.metadata.unwrap_or(Value::Object(Default::default())),
+            organization_id: parse_optional_i64_field(identity.organization_id, "organization_id")?,
+            workspace_id: parse_optional_i64_field(identity.workspace_id, "workspace_id")?,
+            organization_membership_id: parse_optional_i64_field(
+                identity.organization_membership_id,
+                "organization_membership_id",
+            )?,
+            workspace_membership_id: parse_optional_i64_field(
+                identity.workspace_membership_id,
+                "workspace_membership_id",
+            )?,
+            rate_limits: parsed.rate_limits,
+            retry_after: parsed.retry_after,
         })
     } else {
-        let error_body = response.text().await?;
         Err(Error::Api {
             status,
-            message: error_body.clone(),
-            details: serde_json::from_str(&error_body).ok(),
+            message: body.clone(),
+            details: serde_json::from_str(&body).ok(),
         })
     }
 }
 
-fn parse_header_i64(headers: &HeaderMap, key: &str) -> Result<i64> {
-    headers
-        .get(key)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.parse().ok())
-        .ok_or_else(|| Error::InvalidRequest(format!("Missing or invalid header: {key}")))
+fn parse_i64_field(input: &str, field: &str) -> Result<i64> {
+    input
+        .parse::<i64>()
+        .map_err(|_| Error::InvalidRequest(format!("Invalid field {field}: expected i64 string")))
 }
 
-fn parse_header_i64_optional(headers: &HeaderMap, key: &str) -> Option<i64> {
-    headers
-        .get(key)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|s| s.parse().ok())
-}
-
-fn parse_header_string(headers: &HeaderMap, key: &str) -> Result<String> {
-    headers
-        .get(key)
-        .and_then(|v| v.to_str().ok())
-        .map(|s| s.to_string())
-        .ok_or_else(|| Error::InvalidRequest(format!("Missing or invalid header: {key}")))
-}
-
-fn parse_header_json<T: serde::de::DeserializeOwned>(headers: &HeaderMap, key: &str) -> Result<T> {
-    let json_str = parse_header_string(headers, key)?;
-    serde_json::from_str(&json_str).map_err(|e| Error::InvalidRequest(format!("Failed to parse JSON from header {key}: {e}")))
-}
-
-fn parse_rate_limit_headers(headers: &HeaderMap) -> Vec<RateLimitInfo> {
-    let mut limits_map: HashMap<u64, RateLimitInfo> = HashMap::new();
-
-    for (key, value) in headers.iter() {
-        let key_str = key.as_str();
-        if key_str.starts_with("x-ratelimit-") && key_str.ends_with("s-limit") {
-            if let Some(window_str) = key_str.strip_prefix("x-ratelimit-").and_then(|s| s.strip_suffix("s-limit")) {
-                if let Ok(window) = window_str.parse::<u64>() {
-                    if let Ok(limit_str) = value.to_str() {
-                        if let Ok(limit) = limit_str.parse::<u32>() {
-                        let remaining_key = format!("x-ratelimit-{window}s-remaining");
-                        let reset_key = format!("x-ratelimit-{window}s-reset");
-
-                        let remaining = headers
-                            .get(&remaining_key)
-                            .and_then(|v| v.to_str().ok())
-                            .and_then(|s| s.parse().ok())
-                            .unwrap_or(0);
-
-                        let reset = headers
-                            .get(&reset_key)
-                            .and_then(|v| v.to_str().ok())
-                            .and_then(|s| s.parse().ok());
-
-                        limits_map.insert(
-                            window,
-                            RateLimitInfo {
-                                window_seconds: window,
-                                limit,
-                                remaining,
-                                reset,
-                            },
-                        );
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    let mut limits: Vec<RateLimitInfo> = limits_map.into_values().collect();
-    limits.sort_by_key(|l| l.window_seconds);
-    limits
+fn parse_optional_i64_field(input: Option<String>, field: &str) -> Result<Option<i64>> {
+    input
+        .map(|value| parse_i64_field(&value, field))
+        .transpose()
 }

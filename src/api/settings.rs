@@ -2,11 +2,10 @@ use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
     models::{
-        AuthenticationSettings, DeploymentB2bSettingsUpdates, DisplaySettings,
-        DeploymentRestrictionsUpdates, JwtTemplate, CreateJwtTemplateRequest,
-        UpdateJwtTemplateRequest, EmailTemplate, SocialConnection,
-        ImageUploadResponse, SmtpConfigRequest, SmtpConfigResponse, SmtpVerifyResponse,
-        PaginatedResponse,
+        AuthenticationSettings, CreateJwtTemplateRequest, DeploymentB2bSettingsUpdates,
+        DeploymentRestrictionsUpdates, DisplaySettings, EmailTemplate, ImageUploadResponse,
+        JwtTemplate, PaginatedResponse, SmtpConfigRequest, SmtpConfigResponse, SmtpVerifyResponse,
+        SocialConnection, UpdateJwtTemplateRequest,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -386,7 +385,10 @@ impl UpdateJwtTemplateBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to update JWT template {}: {error_body}", self.template_id),
+                message: format!(
+                    "Failed to update JWT template {}: {error_body}",
+                    self.template_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -430,7 +432,10 @@ impl DeleteJwtTemplateBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to delete JWT template {}: {error_body}", self.template_id),
+                message: format!(
+                    "Failed to delete JWT template {}: {error_body}",
+                    self.template_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -597,7 +602,10 @@ impl FetchEmailTemplateBuilder {
         } else {
             get_client()
         };
-        let url = format!("{}/settings/email-templates/{}", config.base_url, self.template_name);
+        let url = format!(
+            "{}/settings/email-templates/{}",
+            config.base_url, self.template_name
+        );
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -608,7 +616,10 @@ impl FetchEmailTemplateBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch email template {}: {error_body}", self.template_name),
+                message: format!(
+                    "Failed to fetch email template {}: {error_body}",
+                    self.template_name
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -643,7 +654,10 @@ impl UpdateEmailTemplateBuilder {
         } else {
             get_client()
         };
-        let url = format!("{}/settings/email-templates/{}", config.base_url, self.template_name);
+        let url = format!(
+            "{}/settings/email-templates/{}",
+            config.base_url, self.template_name
+        );
 
         let response = client.patch(&url).json(&self.template).send().await?;
         let status = response.status();
@@ -654,7 +668,10 @@ impl UpdateEmailTemplateBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to update email template {}: {error_body}", self.template_name),
+                message: format!(
+                    "Failed to update email template {}: {error_body}",
+                    self.template_name
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -797,13 +814,9 @@ impl UploadImageBuilder {
             .file_name(self.file_name)
             .mime_str(mime_type)?;
 
-        let form = reqwest::multipart::Form::new()
-            .part("file", part);
+        let form = reqwest::multipart::Form::new().part("file", part);
 
-        let response = client.post(&url)
-            .multipart(form)
-            .send()
-            .await?;
+        let response = client.post(&url).multipart(form).send().await?;
         let status = response.status();
 
         if status.is_success() {
@@ -824,7 +837,9 @@ pub fn fetch_deployment_settings() -> FetchDeploymentSettingsBuilder {
     FetchDeploymentSettingsBuilder::new()
 }
 
-pub fn update_authentication_settings(settings: AuthenticationSettings) -> UpdateAuthenticationSettingsBuilder {
+pub fn update_authentication_settings(
+    settings: AuthenticationSettings,
+) -> UpdateAuthenticationSettingsBuilder {
     UpdateAuthenticationSettingsBuilder::new(settings)
 }
 
@@ -836,7 +851,9 @@ pub fn update_b2b_settings(settings: DeploymentB2bSettingsUpdates) -> UpdateB2BS
     UpdateB2BSettingsBuilder::new(settings)
 }
 
-pub fn update_deployment_restrictions(restrictions: DeploymentRestrictionsUpdates) -> UpdateDeploymentRestrictionsBuilder {
+pub fn update_deployment_restrictions(
+    restrictions: DeploymentRestrictionsUpdates,
+) -> UpdateDeploymentRestrictionsBuilder {
     UpdateDeploymentRestrictionsBuilder::new(restrictions)
 }
 
@@ -848,7 +865,10 @@ pub fn create_jwt_template(request: CreateJwtTemplateRequest) -> CreateJwtTempla
     CreateJwtTemplateBuilder::new(request)
 }
 
-pub fn update_jwt_template(template_id: &str, request: UpdateJwtTemplateRequest) -> UpdateJwtTemplateBuilder {
+pub fn update_jwt_template(
+    template_id: &str,
+    request: UpdateJwtTemplateRequest,
+) -> UpdateJwtTemplateBuilder {
     UpdateJwtTemplateBuilder::new(template_id, request)
 }
 
@@ -872,7 +892,10 @@ pub fn fetch_email_template(template_name: &str) -> FetchEmailTemplateBuilder {
     FetchEmailTemplateBuilder::new(template_name)
 }
 
-pub fn update_email_template(template_name: &str, template: EmailTemplate) -> UpdateEmailTemplateBuilder {
+pub fn update_email_template(
+    template_name: &str,
+    template: EmailTemplate,
+) -> UpdateEmailTemplateBuilder {
     UpdateEmailTemplateBuilder::new(template_name, template)
 }
 
@@ -884,6 +907,10 @@ pub fn upsert_social_connection(connection: SocialConnection) -> UpsertSocialCon
     UpsertSocialConnectionBuilder::new(connection)
 }
 
-pub fn upload_image(image_type: &str, file_content: Vec<u8>, file_name: String) -> UploadImageBuilder {
+pub fn upload_image(
+    image_type: &str,
+    file_content: Vec<u8>,
+    file_name: String,
+) -> UploadImageBuilder {
     UploadImageBuilder::new(image_type, file_content, file_name)
 }

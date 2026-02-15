@@ -1,7 +1,10 @@
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{PaginatedResponse, AiExecutionContext, CreateAiExecutionContextRequest, ExecuteAgentRequest, ExecuteAgentResponse},
+    models::{
+        AiExecutionContext, CreateAiExecutionContextRequest, ExecuteAgentRequest,
+        ExecuteAgentResponse, PaginatedResponse,
+    },
 };
 use serde::{Deserialize, Serialize};
 
@@ -280,7 +283,10 @@ async fn execute_agent_with_context_id_and_request(
 ) -> Result<ExecuteAgentResponse> {
     let config = get_config();
     let client = get_client();
-    let url = format!("{}/ai/execution-contexts/{}/execute", config.base_url, context_id);
+    let url = format!(
+        "{}/ai/execution-contexts/{}/execute",
+        config.base_url, context_id
+    );
 
     let response = client.post(&url).json(&request).send().await?;
     let status = response.status();
@@ -308,11 +314,16 @@ pub fn update_execution_context_builder(id: impl Into<String>) -> UpdateExecutio
 }
 
 /// Convenience function to create an execution context using builder pattern
-pub fn create_execution_context_with_request_builder(request: CreateAiExecutionContextRequest) -> CreateExecutionContextBuilder {
+pub fn create_execution_context_with_request_builder(
+    request: CreateAiExecutionContextRequest,
+) -> CreateExecutionContextBuilder {
     CreateExecutionContextBuilder::new(request)
 }
 
 /// Convenience function to execute an agent using builder pattern
-pub fn execute_agent_builder(context_id: impl Into<String>, request: ExecuteAgentRequest) -> ExecuteAgentBuilder {
+pub fn execute_agent_builder(
+    context_id: impl Into<String>,
+    request: ExecuteAgentRequest,
+) -> ExecuteAgentBuilder {
     ExecuteAgentBuilder::new(context_id, request)
 }

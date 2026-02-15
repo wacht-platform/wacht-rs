@@ -11,7 +11,10 @@ pub mod social_connections;
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{PaginatedResponse, User, CreateUserRequest, UpdateUserRequest, UpdatePasswordRequest, UserDetails, ListOptions},
+    models::{
+        CreateUserRequest, ListOptions, PaginatedResponse, UpdatePasswordRequest,
+        UpdateUserRequest, User, UserDetails,
+    },
 };
 
 /// Builder for fetching users
@@ -114,7 +117,10 @@ impl CreateUserBuilder {
         if let Some(password) = &self.request.password {
             form = form.text("password", password.clone());
         }
-        form = form.text("skip_password_check", self.request.skip_password_check.to_string());
+        form = form.text(
+            "skip_password_check",
+            self.request.skip_password_check.to_string(),
+        );
 
         let response = client.post(&url).multipart(form).send().await?;
         let status = response.status();
@@ -207,10 +213,16 @@ impl UpdateUserBuilder {
             form = form.text("username", username.clone());
         }
         if let Some(public_metadata) = &self.request.public_metadata {
-            form = form.text("public_metadata", serde_json::to_string(public_metadata).unwrap_or_default());
+            form = form.text(
+                "public_metadata",
+                serde_json::to_string(public_metadata).unwrap_or_default(),
+            );
         }
         if let Some(private_metadata) = &self.request.private_metadata {
-            form = form.text("private_metadata", serde_json::to_string(private_metadata).unwrap_or_default());
+            form = form.text(
+                "private_metadata",
+                serde_json::to_string(private_metadata).unwrap_or_default(),
+            );
         }
 
         let response = client.patch(&url).multipart(form).send().await?;

@@ -20,9 +20,6 @@ pub struct CreateRoleRequest {
 
 impl CreateRoleRequest {
     pub fn new(name: String, permissions: Vec<String>) -> CreateRoleRequest {
-        CreateRoleRequest {
-            name,
-            permissions,
-        }
+        CreateRoleRequest { name, permissions }
     }
 }

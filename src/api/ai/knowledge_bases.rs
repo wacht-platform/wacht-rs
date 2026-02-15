@@ -2,8 +2,8 @@ use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
     models::{
-        AiKnowledgeBase, CreateAiKnowledgeBaseRequest,
-        KnowledgeBaseDocument, PaginatedResponse, UpdateAiKnowledgeBaseRequest,
+        AiKnowledgeBase, CreateAiKnowledgeBaseRequest, KnowledgeBaseDocument, PaginatedResponse,
+        UpdateAiKnowledgeBaseRequest,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -106,7 +106,10 @@ impl FetchKnowledgeBaseBuilder {
     pub async fn send(self) -> Result<AiKnowledgeBase> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/knowledge-bases/{}", config.base_url, self.knowledge_base_id);
+        let url = format!(
+            "{}/ai/knowledge-bases/{}",
+            config.base_url, self.knowledge_base_id
+        );
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -117,7 +120,10 @@ impl FetchKnowledgeBaseBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to get knowledge base {}: {error_body}", self.knowledge_base_id),
+                message: format!(
+                    "Failed to get knowledge base {}: {error_body}",
+                    self.knowledge_base_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -141,7 +147,10 @@ impl UpdateKnowledgeBaseBuilder {
     pub async fn send(self) -> Result<AiKnowledgeBase> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/knowledge-bases/{}", config.base_url, self.knowledge_base_id);
+        let url = format!(
+            "{}/ai/knowledge-bases/{}",
+            config.base_url, self.knowledge_base_id
+        );
 
         let response = client.patch(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -152,7 +161,10 @@ impl UpdateKnowledgeBaseBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to update knowledge base {}: {error_body}", self.knowledge_base_id),
+                message: format!(
+                    "Failed to update knowledge base {}: {error_body}",
+                    self.knowledge_base_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -174,7 +186,10 @@ impl DeleteKnowledgeBaseBuilder {
     pub async fn send(self) -> Result<()> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/knowledge-bases/{}", config.base_url, self.knowledge_base_id);
+        let url = format!(
+            "{}/ai/knowledge-bases/{}",
+            config.base_url, self.knowledge_base_id
+        );
 
         let response = client.delete(&url).send().await?;
         let status = response.status();
@@ -185,7 +200,10 @@ impl DeleteKnowledgeBaseBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to delete knowledge base {}: {error_body}", self.knowledge_base_id),
+                message: format!(
+                    "Failed to delete knowledge base {}: {error_body}",
+                    self.knowledge_base_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -207,7 +225,10 @@ impl FetchDocumentsBuilder {
     pub async fn send(self) -> Result<PaginatedResponse<KnowledgeBaseDocument>> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/knowledge-bases/{}/documents", config.base_url, self.knowledge_base_id);
+        let url = format!(
+            "{}/ai/knowledge-bases/{}/documents",
+            config.base_url, self.knowledge_base_id
+        );
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -218,7 +239,10 @@ impl FetchDocumentsBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to list documents for knowledge base {}: {error_body}", self.knowledge_base_id),
+                message: format!(
+                    "Failed to list documents for knowledge base {}: {error_body}",
+                    self.knowledge_base_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -244,18 +268,16 @@ impl UploadDocumentBuilder {
     pub async fn send(self) -> Result<KnowledgeBaseDocument> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/knowledge-bases/{}/documents", config.base_url, self.knowledge_base_id);
+        let url = format!(
+            "{}/ai/knowledge-bases/{}/documents",
+            config.base_url, self.knowledge_base_id
+        );
 
-        let part = reqwest::multipart::Part::bytes(self.file_content)
-            .file_name(self.file_name);
+        let part = reqwest::multipart::Part::bytes(self.file_content).file_name(self.file_name);
 
-        let form = reqwest::multipart::Form::new()
-            .part("file", part);
+        let form = reqwest::multipart::Form::new().part("file", part);
 
-        let response = client.post(&url)
-            .multipart(form)
-            .send()
-            .await?;
+        let response = client.post(&url).multipart(form).send().await?;
         let status = response.status();
 
         if status.is_success() {
@@ -264,7 +286,10 @@ impl UploadDocumentBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to upload document to knowledge base {}: {error_body}", self.knowledge_base_id),
+                message: format!(
+                    "Failed to upload document to knowledge base {}: {error_body}",
+                    self.knowledge_base_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -288,7 +313,10 @@ impl DeleteDocumentBuilder {
     pub async fn send(self) -> Result<()> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/ai/knowledge-bases/{}/documents/{}", config.base_url, self.knowledge_base_id, self.document_id);
+        let url = format!(
+            "{}/ai/knowledge-bases/{}/documents/{}",
+            config.base_url, self.knowledge_base_id, self.document_id
+        );
 
         let response = client.delete(&url).send().await?;
         let status = response.status();
@@ -299,7 +327,10 @@ impl DeleteDocumentBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to delete document {} from knowledge base {}: {error_body}", self.document_id, self.knowledge_base_id),
+                message: format!(
+                    "Failed to delete document {} from knowledge base {}: {error_body}",
+                    self.document_id, self.knowledge_base_id
+                ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
@@ -307,7 +338,9 @@ impl DeleteDocumentBuilder {
 }
 
 /// Convenience function for list knowledge bases (deprecated - use builder pattern)
-pub async fn fetch_knowledge_bases(options: Option<ListKnowledgeBasesOptions>) -> Result<PaginatedResponse<AiKnowledgeBase>> {
+pub async fn fetch_knowledge_bases(
+    options: Option<ListKnowledgeBasesOptions>,
+) -> Result<PaginatedResponse<AiKnowledgeBase>> {
     FetchKnowledgeBasesBuilder::new()
         .options(options.unwrap_or_default())
         .send()
@@ -315,49 +348,65 @@ pub async fn fetch_knowledge_bases(options: Option<ListKnowledgeBasesOptions>) -
 }
 
 /// Convenience function for create knowledge base (deprecated - use builder pattern)
-pub async fn create_knowledge_base(request: CreateAiKnowledgeBaseRequest) -> Result<AiKnowledgeBase> {
+pub async fn create_knowledge_base(
+    request: CreateAiKnowledgeBaseRequest,
+) -> Result<AiKnowledgeBase> {
     CreateKnowledgeBaseBuilder::new(request).send().await
 }
 
 /// Convenience function for fetch knowledge base (deprecated - use builder pattern)
 pub async fn fetch_knowledge_base(knowledge_base_id: &str) -> Result<AiKnowledgeBase> {
-    FetchKnowledgeBaseBuilder::new(knowledge_base_id).send().await
+    FetchKnowledgeBaseBuilder::new(knowledge_base_id)
+        .send()
+        .await
 }
 
 /// Convenience function for update knowledge base (deprecated - use builder pattern)
-pub async fn update_knowledge_base(knowledge_base_id: &str, request: UpdateAiKnowledgeBaseRequest) -> Result<AiKnowledgeBase> {
-    UpdateKnowledgeBaseBuilder::new(knowledge_base_id, request).send().await
+pub async fn update_knowledge_base(
+    knowledge_base_id: &str,
+    request: UpdateAiKnowledgeBaseRequest,
+) -> Result<AiKnowledgeBase> {
+    UpdateKnowledgeBaseBuilder::new(knowledge_base_id, request)
+        .send()
+        .await
 }
 
 /// Convenience function for delete knowledge base (deprecated - use builder pattern)
 pub async fn delete_knowledge_base(knowledge_base_id: &str) -> Result<()> {
-    DeleteKnowledgeBaseBuilder::new(knowledge_base_id).send().await
+    DeleteKnowledgeBaseBuilder::new(knowledge_base_id)
+        .send()
+        .await
 }
 
 /// Convenience function for fetch documents (deprecated - use builder pattern)
-pub async fn fetch_documents(knowledge_base_id: &str) -> Result<PaginatedResponse<KnowledgeBaseDocument>> {
+pub async fn fetch_documents(
+    knowledge_base_id: &str,
+) -> Result<PaginatedResponse<KnowledgeBaseDocument>> {
     FetchDocumentsBuilder::new(knowledge_base_id).send().await
 }
 
 /// Convenience function for upload document (deprecated - use builder pattern)
-pub async fn upload_document(knowledge_base_id: &str, file_content: Vec<u8>, file_name: String) -> Result<KnowledgeBaseDocument> {
-    UploadDocumentBuilder::new(knowledge_base_id, file_content, file_name).send().await
+pub async fn upload_document(
+    knowledge_base_id: &str,
+    file_content: Vec<u8>,
+    file_name: String,
+) -> Result<KnowledgeBaseDocument> {
+    UploadDocumentBuilder::new(knowledge_base_id, file_content, file_name)
+        .send()
+        .await
 }
 
 /// Convenience function for delete document (deprecated - use builder pattern)
 pub async fn delete_document(knowledge_base_id: &str, document_id: &str) -> Result<()> {
-    DeleteDocumentBuilder::new(knowledge_base_id, document_id).send().await
+    DeleteDocumentBuilder::new(knowledge_base_id, document_id)
+        .send()
+        .await
 }
 
 pub mod builders {
     pub use super::{
-        FetchKnowledgeBasesBuilder,
-        CreateKnowledgeBaseBuilder,
-        FetchKnowledgeBaseBuilder,
-        UpdateKnowledgeBaseBuilder,
-        DeleteKnowledgeBaseBuilder,
-        FetchDocumentsBuilder,
-        UploadDocumentBuilder,
-        DeleteDocumentBuilder,
+        CreateKnowledgeBaseBuilder, DeleteDocumentBuilder, DeleteKnowledgeBaseBuilder,
+        FetchDocumentsBuilder, FetchKnowledgeBaseBuilder, FetchKnowledgeBasesBuilder,
+        UpdateKnowledgeBaseBuilder, UploadDocumentBuilder,
     };
 }

@@ -10,7 +10,9 @@ pub mod roles;
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{Workspace, CreateWorkspaceRequest, UpdateWorkspaceRequest, PaginatedResponse, ListOptions},
+    models::{
+        CreateWorkspaceRequest, ListOptions, PaginatedResponse, UpdateWorkspaceRequest, Workspace,
+    },
 };
 
 pub type WorkspaceListResponse = PaginatedResponse<Workspace>;
@@ -102,10 +104,16 @@ impl CreateWorkspaceBuilder {
             form = form.text("description", description.clone());
         }
         if let Some(public_metadata) = &self.request.public_metadata {
-            form = form.text("public_metadata", serde_json::to_string(public_metadata).unwrap_or_default());
+            form = form.text(
+                "public_metadata",
+                serde_json::to_string(public_metadata).unwrap_or_default(),
+            );
         }
         if let Some(private_metadata) = &self.request.private_metadata {
-            form = form.text("private_metadata", serde_json::to_string(private_metadata).unwrap_or_default());
+            form = form.text(
+                "private_metadata",
+                serde_json::to_string(private_metadata).unwrap_or_default(),
+            );
         }
         if let Some(image_bytes) = &self.request.workspace_image {
             let part = reqwest::multipart::Part::bytes(image_bytes.clone())
@@ -205,10 +213,16 @@ impl UpdateWorkspaceBuilder {
             form = form.text("description", description.clone());
         }
         if let Some(public_metadata) = &self.request.public_metadata {
-            form = form.text("public_metadata", serde_json::to_string(public_metadata).unwrap_or_default());
+            form = form.text(
+                "public_metadata",
+                serde_json::to_string(public_metadata).unwrap_or_default(),
+            );
         }
         if let Some(private_metadata) = &self.request.private_metadata {
-            form = form.text("private_metadata", serde_json::to_string(private_metadata).unwrap_or_default());
+            form = form.text(
+                "private_metadata",
+                serde_json::to_string(private_metadata).unwrap_or_default(),
+            );
         }
         if let Some(image_bytes) = &self.request.workspace_image {
             let part = reqwest::multipart::Part::bytes(image_bytes.clone())
@@ -239,7 +253,10 @@ impl UpdateWorkspaceBuilder {
 }
 
 /// Update a workspace using builder pattern
-pub fn update_workspace(workspace_id: &str, request: UpdateWorkspaceRequest) -> UpdateWorkspaceBuilder {
+pub fn update_workspace(
+    workspace_id: &str,
+    request: UpdateWorkspaceRequest,
+) -> UpdateWorkspaceBuilder {
     UpdateWorkspaceBuilder::new(workspace_id, request)
 }
 

@@ -25,7 +25,10 @@ pub struct DeploymentRestrictionsUpdates {
     pub block_subaddresses: Option<bool>,
 
     /// Block disposable email services (guerrillamail, etc.)
-    #[serde(rename = "block_disposable_emails", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "block_disposable_emails",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub block_disposable_emails: Option<bool>,
 
     /// Block VOIP phones (Google Voice, Skype, etc.)
@@ -33,7 +36,10 @@ pub struct DeploymentRestrictionsUpdates {
     pub block_voip_numbers: Option<bool>,
 
     /// Country restrictions (nested object)
-    #[serde(rename = "country_restrictions", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "country_restrictions",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub country_restrictions: Option<CountryRestrictions>,
 
     /// Keywords to block in emails
@@ -41,11 +47,17 @@ pub struct DeploymentRestrictionsUpdates {
     pub banned_keywords: Option<Vec<String>>,
 
     /// Email addresses to allow (NOT domains!)
-    #[serde(rename = "allowlisted_resources", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "allowlisted_resources",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub allowlisted_resources: Option<Vec<String>>,
 
     /// Email addresses to block (NOT domains!)
-    #[serde(rename = "blocklisted_resources", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "blocklisted_resources",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub blocklisted_resources: Option<Vec<String>>,
 
     /// Sign up mode: public, restricted, or waitlist
@@ -53,20 +65,35 @@ pub struct DeploymentRestrictionsUpdates {
     pub sign_up_mode: Option<DeploymentRestrictionsSignUpMode>,
 
     /// Collect names on waitlist signup
-    #[serde(rename = "waitlist_collect_names", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "waitlist_collect_names",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub waitlist_collect_names: Option<bool>,
 
     // Session settings (moved to restrictions)
-    #[serde(rename = "multi_session_support", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "multi_session_support",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub multi_session_support: Option<MultiSessionSupport>,
 
-    #[serde(rename = "session_token_lifetime", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "session_token_lifetime",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub session_token_lifetime: Option<i64>,
 
-    #[serde(rename = "session_validity_period", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "session_validity_period",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub session_validity_period: Option<i64>,
 
-    #[serde(rename = "session_inactive_timeout", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "session_inactive_timeout",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub session_inactive_timeout: Option<i64>,
 }
 

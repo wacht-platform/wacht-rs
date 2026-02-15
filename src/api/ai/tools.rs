@@ -19,7 +19,10 @@ pub struct ListToolsOptions {
 
 /// List all AI tools (async function)
 pub async fn list_tools(options: Option<ListToolsOptions>) -> Result<PaginatedResponse<AiTool>> {
-    ListToolsBuilder::new().with_options(options.unwrap_or_default()).send().await
+    ListToolsBuilder::new()
+        .with_options(options.unwrap_or_default())
+        .send()
+        .await
 }
 
 /// Builder for listing AI tools
@@ -105,7 +108,11 @@ pub struct CreateToolBuilder {
 impl CreateToolBuilder {
     pub fn new() -> Self {
         Self {
-            request: CreateAiToolRequest::new("".to_string(), "".to_string(), serde_json::Value::Object(serde_json::Map::new())),
+            request: CreateAiToolRequest::new(
+                "".to_string(),
+                "".to_string(),
+                serde_json::Value::Object(serde_json::Map::new()),
+            ),
         }
     }
 
@@ -180,7 +187,11 @@ impl FetchToolBuilder {
 
 /// Update an AI tool (async function)
 pub async fn update_tool(tool_id: &str, request: UpdateAiToolRequest) -> Result<AiTool> {
-    UpdateToolBuilder::new().tool_id(tool_id).request(request).send().await
+    UpdateToolBuilder::new()
+        .tool_id(tool_id)
+        .request(request)
+        .send()
+        .await
 }
 
 /// Builder for updating AI tools

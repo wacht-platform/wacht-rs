@@ -5,7 +5,7 @@
 use crate::{
     client::{get_client, get_config},
     error::{Error, Result},
-    models::{PaginatedResponse, OrganizationRole, CreateRoleRequest, UpdateRoleRequest},
+    models::{CreateRoleRequest, OrganizationRole, PaginatedResponse, UpdateRoleRequest},
 };
 
 pub type OrganizationRoleListResponse = PaginatedResponse<OrganizationRole>;
@@ -25,7 +25,10 @@ impl FetchRolesBuilder {
     pub async fn send(self) -> Result<OrganizationRoleListResponse> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/organizations/{}/roles", config.base_url, self.organization_id);
+        let url = format!(
+            "{}/organizations/{}/roles",
+            config.base_url, self.organization_id
+        );
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -65,7 +68,10 @@ impl CreateRoleBuilder {
     pub async fn send(self) -> Result<OrganizationRole> {
         let config = get_config();
         let client = get_client();
-        let url = format!("{}/organizations/{}/roles", config.base_url, self.organization_id);
+        let url = format!(
+            "{}/organizations/{}/roles",
+            config.base_url, self.organization_id
+        );
 
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -129,7 +135,11 @@ impl UpdateRoleBuilder {
 }
 
 /// Update organization role using builder pattern
-pub fn update_role(organization_id: &str, role_id: &str, request: UpdateRoleRequest) -> UpdateRoleBuilder {
+pub fn update_role(
+    organization_id: &str,
+    role_id: &str,
+    request: UpdateRoleRequest,
+) -> UpdateRoleBuilder {
     UpdateRoleBuilder::new(organization_id, role_id, request)
 }
 

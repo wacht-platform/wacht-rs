@@ -61,13 +61,6 @@ impl WachtConfig {
     }
 }
 
-pub(crate) struct GlobalClient {
-    config: WachtConfig,
-    client: Arc<Client>,
-    headers: HeaderMap,
-}
-
-// Global client with lazy initialization using OnceLock for thread safety
 static GLOBAL_CONFIG: OnceLock<WachtConfig> = OnceLock::new();
 static GLOBAL_HEADERS: OnceLock<HeaderMap> = OnceLock::new();
 
@@ -100,9 +93,11 @@ pub async fn init_from_env() -> Result<(), Box<dyn std::error::Error>> {
 /// Creates a new client per-call to avoid cross-runtime issues
 /// Panics if init() hasn't been called
 pub fn get_client() -> Client {
-    let config = GLOBAL_CONFIG.get()
+    let config = GLOBAL_CONFIG
+        .get()
         .expect("Wacht SDK not initialized. Call init() first");
-    let headers = GLOBAL_HEADERS.get()
+    let headers = GLOBAL_HEADERS
+        .get()
         .expect("Wacht SDK not initialized. Call init() first");
 
     ClientBuilder::new()
@@ -118,7 +113,8 @@ pub fn get_client() -> Client {
 /// Get the current configuration
 /// Panics if init() hasn't been called
 pub fn get_config() -> WachtConfig {
-    GLOBAL_CONFIG.get()
+    GLOBAL_CONFIG
+        .get()
         .expect("Wacht SDK not initialized. Call init() first")
         .clone()
 }
@@ -130,7 +126,8 @@ pub fn is_initialized() -> bool {
 
 /// Get the public key if one is configured
 pub fn get_public_signing_key() -> Option<String> {
-    GLOBAL_CONFIG.get()
+    GLOBAL_CONFIG
+        .get()
         .and_then(|config| config.public_signing_key.clone())
 }
 

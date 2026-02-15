@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// Recent signup from analytics
 #[derive(Debug, Clone, Serialize, Deserialize)]
