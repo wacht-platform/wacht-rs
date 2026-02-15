@@ -1,7 +1,7 @@
 use crate::{
+    Result,
     client::{get_client, get_config},
     error::Error,
-    Result,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -10,11 +10,13 @@ use serde_json::Value;
 /// Create an API auth app
 #[derive(Debug, Serialize)]
 pub struct CreateApiAuthAppRequest {
+    pub app_slug: String,
     pub name: String,
+    pub key_prefix: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rate_limits: Option<Vec<RateLimit>>,
+    pub rate_limit_scheme_slug: Option<String>,
 }
 
 /// Update an API auth app
@@ -23,20 +25,25 @@ pub struct UpdateApiAuthAppRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub key_prefix: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_active: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rate_limits: Option<Vec<RateLimit>>,
+    pub rate_limit_scheme_slug: Option<String>,
 }
 
 /// Create an API key
 #[derive(Debug, Serialize)]
 pub struct CreateApiKeyRequest {
     pub name: String,
-    pub key_prefix: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub permissions: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_membership_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace_membership_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub expires_at: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -91,7 +98,9 @@ pub struct RateLimit {
 pub struct ApiAuthApp {
     pub id: String,
     pub deployment_id: String,
+    pub app_slug: String,
     pub name: String,
+    pub key_prefix: String,
     pub description: Option<String>,
     pub is_active: bool,
     pub rate_limits: Vec<RateLimit>,
@@ -105,11 +114,18 @@ pub struct ApiKey {
     pub id: String,
     pub app_id: String,
     pub deployment_id: String,
+    pub app_slug: String,
     pub name: String,
     pub key_prefix: String,
     pub key_suffix: String,
     pub permissions: Vec<String>,
+    pub org_role_permissions: Vec<String>,
+    pub workspace_role_permissions: Vec<String>,
     pub metadata: serde_json::Value,
+    pub organization_id: Option<String>,
+    pub workspace_id: Option<String>,
+    pub organization_membership_id: Option<String>,
+    pub workspace_membership_id: Option<String>,
     pub expires_at: Option<DateTime<Utc>>,
     pub last_used_at: Option<DateTime<Utc>>,
     pub is_active: bool,
@@ -141,222 +157,371 @@ pub struct ListApiKeysResponse {
 }
 
 /// Get a single API auth app by name
-pub async fn get_api_auth_app(app_name: &str) -> Result<ApiAuthApp> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/api-auth/apps/{}", config.base_url, app_name);
+pub fn get_api_auth_app(app_name: &str) -> GetApiAuthAppBuilder {
+    GetApiAuthAppBuilder::new(app_name)
+}
 
-    let response = client.get(&url).send().await?;
+/// Builder for get_api_auth_app
+pub struct GetApiAuthAppBuilder {
+    app_name: String,
+}
 
-    if response.status().is_success() {
-        let app = response.json().await?;
-        Ok(app)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to get API auth app: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+impl GetApiAuthAppBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<ApiAuthApp> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/api-auth/apps/{}", config.base_url, self.app_name);
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let app = response.json().await?;
+            Ok(app)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to get API auth app: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
 /// List API auth apps
-pub async fn list_api_auth_apps(
-    include_inactive: Option<bool>,
-) -> Result<Vec<ApiAuthApp>> {
-    let config = get_config();
-    let client = get_client();
-    let mut url = format!("{}/api-auth/apps", config.base_url);
+pub fn list_api_auth_apps() -> ListApiAuthAppsBuilder {
+    ListApiAuthAppsBuilder::new()
+}
 
-    if let Some(inactive) = include_inactive {
-        url.push_str(&format!("?include_inactive={inactive}"));
+/// Builder for list_api_auth_apps
+pub struct ListApiAuthAppsBuilder {
+    include_inactive: Option<bool>,
+}
+
+impl ListApiAuthAppsBuilder {
+    pub fn new() -> Self {
+        Self {
+            include_inactive: None,
+        }
     }
 
-    let response = client.get(&url).send().await?;
+    pub fn include_inactive(mut self, include_inactive: bool) -> Self {
+        self.include_inactive = Some(include_inactive);
+        self
+    }
 
-    if response.status().is_success() {
-        let response_data: ListApiAuthAppsResponse = response.json().await?;
-        Ok(response_data.apps)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to list API auth apps: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+    pub async fn send(self) -> Result<Vec<ApiAuthApp>> {
+        let config = get_config();
+        let client = get_client();
+        let mut url = format!("{}/api-auth/apps", config.base_url);
+
+        if let Some(inactive) = self.include_inactive {
+            url.push_str(&format!("?include_inactive={inactive}"));
+        }
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let response_data: ListApiAuthAppsResponse = response.json().await?;
+            Ok(response_data.apps)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to list API auth apps: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
 /// Create an API auth app
-pub async fn create_api_auth_app(
+pub fn create_api_auth_app(request: CreateApiAuthAppRequest) -> CreateApiAuthAppBuilder {
+    CreateApiAuthAppBuilder::new(request)
+}
+
+/// Builder for create_api_auth_app
+pub struct CreateApiAuthAppBuilder {
     request: CreateApiAuthAppRequest,
-) -> Result<ApiAuthApp> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/api-auth/apps", config.base_url);
+}
 
-    let response = client.post(&url).json(&request).send().await?;
+impl CreateApiAuthAppBuilder {
+    pub fn new(request: CreateApiAuthAppRequest) -> Self {
+        Self { request }
+    }
 
-    if response.status().is_success() {
-        let app = response.json().await?;
-        Ok(app)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to create API auth app: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+    pub async fn send(self) -> Result<ApiAuthApp> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/api-auth/apps", config.base_url);
+
+        let response = client.post(&url).json(&self.request).send().await?;
+
+        if response.status().is_success() {
+            let app = response.json().await?;
+            Ok(app)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to create API auth app: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
 /// Update an API auth app
-pub async fn update_api_auth_app(
+pub fn update_api_auth_app(
     app_name: &str,
     request: UpdateApiAuthAppRequest,
-) -> Result<ApiAuthApp> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/api-auth/apps/{}", config.base_url, app_name);
+) -> UpdateApiAuthAppBuilder {
+    UpdateApiAuthAppBuilder::new(app_name, request)
+}
 
-    let response = client.patch(&url).json(&request).send().await?;
+/// Builder for update_api_auth_app
+pub struct UpdateApiAuthAppBuilder {
+    app_name: String,
+    request: UpdateApiAuthAppRequest,
+}
 
-    if response.status().is_success() {
-        let app = response.json().await?;
-        Ok(app)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to update API auth app: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+impl UpdateApiAuthAppBuilder {
+    pub fn new(app_name: &str, request: UpdateApiAuthAppRequest) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            request,
+        }
+    }
+
+    pub async fn send(self) -> Result<ApiAuthApp> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/api-auth/apps/{}", config.base_url, self.app_name);
+
+        let response = client.patch(&url).json(&self.request).send().await?;
+
+        if response.status().is_success() {
+            let app = response.json().await?;
+            Ok(app)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to update API auth app: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
 /// Delete an API auth app
-pub async fn delete_api_auth_app(app_name: &str) -> Result<()> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/api-auth/apps/{}", config.base_url, app_name);
+pub fn delete_api_auth_app(app_name: &str) -> DeleteApiAuthAppBuilder {
+    DeleteApiAuthAppBuilder::new(app_name)
+}
 
-    let response = client.delete(&url).send().await?;
+/// Builder for delete_api_auth_app
+pub struct DeleteApiAuthAppBuilder {
+    app_name: String,
+}
 
-    if response.status().is_success() {
-        Ok(())
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to delete API auth app: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+impl DeleteApiAuthAppBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<()> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/api-auth/apps/{}", config.base_url, self.app_name);
+
+        let response = client.delete(&url).send().await?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to delete API auth app: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
 /// List API keys for an app
-pub async fn list_api_keys(
-    app_name: &str,
-    include_inactive: Option<bool>,
-) -> Result<Vec<ApiKey>> {
-    let config = get_config();
-    let client = get_client();
-    let mut url = format!("{}/api-auth/apps/{}/keys", config.base_url, app_name);
+pub fn list_api_keys(app_name: &str) -> ListApiKeysBuilder {
+    ListApiKeysBuilder::new(app_name)
+}
 
-    if let Some(inactive) = include_inactive {
-        url.push_str(&format!("?include_inactive={inactive}"));
+/// Builder for list_api_keys
+pub struct ListApiKeysBuilder {
+    app_name: String,
+    include_inactive: Option<bool>,
+}
+
+impl ListApiKeysBuilder {
+    pub fn new(app_name: &str) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            include_inactive: None,
+        }
     }
 
-    let response = client.get(&url).send().await?;
+    pub fn include_inactive(mut self, include_inactive: bool) -> Self {
+        self.include_inactive = Some(include_inactive);
+        self
+    }
 
-    if response.status().is_success() {
-        let response_data: ListApiKeysResponse = response.json().await?;
-        Ok(response_data.keys)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to list API keys: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+    pub async fn send(self) -> Result<Vec<ApiKey>> {
+        let config = get_config();
+        let client = get_client();
+        let mut url = format!("{}/api-auth/apps/{}/keys", config.base_url, self.app_name);
+
+        if let Some(inactive) = self.include_inactive {
+            url.push_str(&format!("?include_inactive={inactive}"));
+        }
+
+        let response = client.get(&url).send().await?;
+
+        if response.status().is_success() {
+            let response_data: ListApiKeysResponse = response.json().await?;
+            Ok(response_data.keys)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to list API keys: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
 /// Create an API key
-pub async fn create_api_key(
-    app_name: &str,
+pub fn create_api_key(app_name: &str, request: CreateApiKeyRequest) -> CreateApiKeyBuilder {
+    CreateApiKeyBuilder::new(app_name, request)
+}
+
+/// Builder for create_api_key
+pub struct CreateApiKeyBuilder {
+    app_name: String,
     request: CreateApiKeyRequest,
-) -> Result<ApiKeyWithSecret> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/api-auth/apps/{}/keys", config.base_url, app_name);
+}
 
-    let response = client.post(&url).json(&request).send().await?;
+impl CreateApiKeyBuilder {
+    pub fn new(app_name: &str, request: CreateApiKeyRequest) -> Self {
+        Self {
+            app_name: app_name.to_string(),
+            request,
+        }
+    }
 
-    if response.status().is_success() {
-        let key = response.json().await?;
-        Ok(key)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to create API key: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+    pub async fn send(self) -> Result<ApiKeyWithSecret> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/api-auth/apps/{}/keys", config.base_url, self.app_name);
+
+        let response = client.post(&url).json(&self.request).send().await?;
+
+        if response.status().is_success() {
+            let key = response.json().await?;
+            Ok(key)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to create API key: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
 /// Revoke an API key
-pub async fn revoke_api_key(
+pub fn revoke_api_key(request: RevokeApiKeyRequest) -> RevokeApiKeyBuilder {
+    RevokeApiKeyBuilder::new(request)
+}
+
+/// Builder for revoke_api_key
+pub struct RevokeApiKeyBuilder {
     request: RevokeApiKeyRequest,
-) -> Result<()> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/api-auth/keys/revoke", config.base_url);
+}
 
-    let response = client.post(&url).json(&request).send().await?;
+impl RevokeApiKeyBuilder {
+    pub fn new(request: RevokeApiKeyRequest) -> Self {
+        Self { request }
+    }
 
-    if response.status().is_success() {
-        Ok(())
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to revoke API key: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+    pub async fn send(self) -> Result<()> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/api-auth/keys/revoke", config.base_url);
+
+        let response = client.post(&url).json(&self.request).send().await?;
+
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to revoke API key: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }
 
 /// Rotate an API key
-pub async fn rotate_api_key(
+pub fn rotate_api_key(request: RotateApiKeyRequest) -> RotateApiKeyBuilder {
+    RotateApiKeyBuilder::new(request)
+}
+
+/// Builder for rotate_api_key
+pub struct RotateApiKeyBuilder {
     request: RotateApiKeyRequest,
-) -> Result<ApiKeyWithSecret> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/api-auth/keys/rotate", config.base_url);
+}
 
-    let response = client.post(&url).json(&request).send().await?;
+impl RotateApiKeyBuilder {
+    pub fn new(request: RotateApiKeyRequest) -> Self {
+        Self { request }
+    }
 
-    if response.status().is_success() {
-        let key = response.json().await?;
-        Ok(key)
-    } else {
-        let status = response.status();
-        let error_text = response.text().await.unwrap_or_default();
-        Err(Error::Api {
-            status,
-            message: format!("Failed to rotate API key: {error_text}"),
-            details: serde_json::from_str(&error_text).ok(),
-        })
+    pub async fn send(self) -> Result<ApiKeyWithSecret> {
+        let config = get_config();
+        let client = get_client();
+        let url = format!("{}/api-auth/keys/rotate", config.base_url);
+
+        let response = client.post(&url).json(&self.request).send().await?;
+
+        if response.status().is_success() {
+            let key = response.json().await?;
+            Ok(key)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(Error::Api {
+                status,
+                message: format!("Failed to rotate API key: {error_text}"),
+                details: serde_json::from_str(&error_text).ok(),
+            })
+        }
     }
 }

@@ -155,9 +155,12 @@ let is_alive = ping().await?;
 - `settings`: Platform settings
 - `tools`: AI tools management
 - `users`: User management
-- `workflows`: AI workflow management
 - `workspaces`: Workspace management
 - `deployments`: Deployment management
+- `webhooks`: Webhook management
+- `segments`: User segments management
+- `notifications`: Notification management
+- `integrations`: Agent integrations management
 
 ## Error Handling
 

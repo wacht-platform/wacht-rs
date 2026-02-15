@@ -13,7 +13,7 @@ pub mod permission_layer;
 // Core auth types
 #[cfg(feature = "axum")]
 pub use auth::{
-    extract_auth_context, require_permission_middleware, AuthConfig, AuthContext, PermissionScope,
+    AuthConfig, AuthContext, PermissionScope, extract_auth_context, require_permission_middleware,
 };
 
 // Authentication layer

@@ -2,6 +2,8 @@ pub mod add_organization_member_request;
 pub use self::add_organization_member_request::AddOrganizationMemberRequest;
 pub mod ai_agent;
 pub use self::ai_agent::AiAgent;
+pub mod paginated;
+pub use self::paginated::PaginatedResponse;
 pub mod ai_execution_context;
 pub use self::ai_execution_context::AiExecutionContext;
 pub mod ai_knowledge_base;
@@ -10,29 +12,19 @@ pub mod ai_tool;
 pub use self::ai_tool::AiTool;
 pub mod ai_tool_config;
 pub use self::ai_tool_config::{
-    AiToolConfiguration, AiToolType, ApiToolConfiguration, PlatformEventToolConfiguration,
-    PlatformFunctionToolConfiguration, InternalToolConfiguration, InternalToolType,
-    UseExternalServiceToolConfiguration, UseExternalServiceToolType, AuthorizationConfiguration,
-    HttpMethod, SchemaField,
+    AiToolConfiguration, AiToolType, ApiToolConfiguration, AuthorizationConfiguration, HttpMethod,
+    InternalToolConfiguration, InternalToolType, PlatformEventToolConfiguration,
+    PlatformFunctionToolConfiguration, SchemaField, UseExternalServiceToolConfiguration,
+    UseExternalServiceToolType,
 };
 pub mod ai_tool_config_parameters_inner;
 pub use self::ai_tool_config_parameters_inner::AiToolConfigParametersInner;
-pub mod ai_workflow;
-pub use self::ai_workflow::{AiWorkflow, WorkflowConfiguration};
-pub mod ai_workflow_definition;
-pub use self::ai_workflow_definition::{
-    WorkflowDefinition, WorkflowNode, NodePosition, WorkflowNodeType, WorkflowNodeData,
-    WorkflowEdge, TriggerNodeConfig, ErrorHandlerNodeConfig, LLMCallNodeConfig, ResponseFormat,
-    SwitchNodeConfig, SwitchCase, ToolCallNodeConfig, UserInputNodeConfig, UserInputType,
-};
-pub mod ai_workflow_steps_inner;
-pub use self::ai_workflow_steps_inner::AiWorkflowStepsInner;
 pub mod analytics_stats;
 pub use self::analytics_stats::AnalyticsStats;
 pub mod authentication_settings;
 pub use self::authentication_settings::AuthenticationSettings;
 pub mod b2_b_settings;
-pub use self::b2_b_settings::B2BSettings;
+pub use self::b2_b_settings::DeploymentB2bSettingsUpdates;
 pub mod create_ai_agent_request;
 pub use self::create_ai_agent_request::CreateAiAgentRequest;
 pub mod create_ai_execution_context_request;
@@ -41,10 +33,8 @@ pub mod create_ai_knowledge_base_request;
 pub use self::create_ai_knowledge_base_request::CreateAiKnowledgeBaseRequest;
 pub mod create_ai_tool_request;
 pub use self::create_ai_tool_request::CreateAiToolRequest;
-pub mod create_ai_workflow_request;
-pub use self::create_ai_workflow_request::CreateAiWorkflowRequest;
 pub mod create_jwt_template_request;
-pub use self::create_jwt_template_request::CreateJwtTemplateRequest;
+pub use self::create_jwt_template_request::{CreateJwtTemplateRequest, CustomSigningKey};
 pub mod create_organization_request;
 pub use self::create_organization_request::CreateOrganizationRequest;
 pub mod create_role_request;
@@ -54,25 +44,23 @@ pub use self::create_user_request::CreateUserRequest;
 pub mod create_workspace_request;
 pub use self::create_workspace_request::CreateWorkspaceRequest;
 pub mod deployment_restrictions;
-pub use self::deployment_restrictions::DeploymentRestrictions;
+pub use self::deployment_restrictions::DeploymentRestrictionsUpdates;
 pub mod display_settings;
 pub use self::display_settings::DisplaySettings;
 pub mod email_template;
 pub use self::email_template::EmailTemplate;
-pub mod generate_token_request;
-pub use self::generate_token_request::GenerateTokenRequest;
-pub mod generate_token_response;
-pub use self::generate_token_response::GenerateTokenResponse;
 pub mod image_upload_response;
 pub use self::image_upload_response::ImageUploadResponse;
 pub mod invite_user_request;
 pub use self::invite_user_request::InviteUserRequest;
+pub mod list_options;
+pub use self::list_options::ListOptions;
 pub mod jwt_template;
 pub use self::jwt_template::JwtTemplate;
 pub mod jwt_claims;
 pub use self::jwt_claims::JwtClaims;
 pub mod knowledge_base_document;
-pub use self::knowledge_base_document::KnowledgeBaseDocument;
+pub use self::knowledge_base_document::AiKnowledgeBaseDocument as KnowledgeBaseDocument;
 pub mod knowledge_base_search_result;
 pub use self::knowledge_base_search_result::KnowledgeBaseSearchResult;
 pub mod knowledge_base_search_result_results_inner;
@@ -88,15 +76,13 @@ pub use self::recent_signup::RecentSignup;
 pub mod recent_signup_organization;
 pub use self::recent_signup_organization::RecentSignupOrganization;
 pub mod social_connection;
-pub use self::social_connection::SocialConnection;
+pub use self::social_connection::{OauthCredentials, SocialConnection};
 pub mod update_ai_agent_request;
 pub use self::update_ai_agent_request::UpdateAiAgentRequest;
 pub mod update_ai_knowledge_base_request;
 pub use self::update_ai_knowledge_base_request::UpdateAiKnowledgeBaseRequest;
 pub mod update_ai_tool_request;
 pub use self::update_ai_tool_request::UpdateAiToolRequest;
-pub mod update_ai_workflow_request;
-pub use self::update_ai_workflow_request::UpdateAiWorkflowRequest;
 pub mod update_jwt_template_request;
 pub use self::update_jwt_template_request::UpdateJwtTemplateRequest;
 pub mod update_organization_member_request;
@@ -111,10 +97,16 @@ pub mod update_user_request;
 pub use self::update_user_request::UpdateUserRequest;
 pub mod update_workspace_request;
 pub use self::update_workspace_request::UpdateWorkspaceRequest;
+pub mod user_invitation;
+pub use self::user_invitation::UserInvitation;
 pub mod user;
 pub use self::user::User;
 pub mod user_details;
-pub use self::user_details::{UserDetails, UserEmailAddress, UserPhoneNumber, SocialConnection as UserSocialConnection, Segment as UserSegment, SchemaVersion, SecondFactorPolicy, VerificationStrategy};
+pub use self::user_details::{
+    SchemaVersion, SecondFactorPolicy, Segment as UserSegment,
+    SocialConnection as UserSocialConnection, UserDetails, UserEmailAddress, UserPhoneNumber,
+    VerificationStrategy,
+};
 pub mod user_email;
 pub use self::user_email::UserEmail;
 pub mod user_phone;
@@ -149,19 +141,22 @@ pub use self::add_phone_request::AddPhoneRequest;
 pub mod update_phone_request;
 pub use self::update_phone_request::UpdatePhoneRequest;
 pub mod create_session_ticket_request;
-pub use self::create_session_ticket_request::{CreateSessionTicketRequest, SessionTicketResponse};
+pub use self::create_session_ticket_request::{
+    CreateSessionTicketRequest, SessionTicketResponse, TicketType,
+};
 pub mod notification;
-pub use self::notification::{Notification, NotificationSeverity, CallToAction};
+pub use self::notification::{CallToAction, Notification, NotificationSeverity};
 pub mod create_notification_request;
 pub use self::create_notification_request::CreateNotificationRequest;
 pub mod agent_integration;
-pub use self::agent_integration::{
-    AgentIntegration, IntegrationType, IntegrationConfig,
-    TeamsConfig, ClickUpConfig, WhatsAppConfig
-};
+pub use self::agent_integration::{AgentIntegration, IntegrationType};
 pub mod create_agent_integration_request;
 pub use self::create_agent_integration_request::CreateAgentIntegrationRequest;
 pub mod update_agent_integration_request;
 pub use self::update_agent_integration_request::UpdateAgentIntegrationRequest;
 pub mod deployment_ai_settings;
 pub use self::deployment_ai_settings::{DeploymentAiSettings, UpdateDeploymentAiSettingsRequest};
+pub mod execute_agent_request;
+pub use self::execute_agent_request::{
+    ExecuteAgentRequest, ExecuteAgentRequestType, ExecuteAgentResponse, FileData,
+};

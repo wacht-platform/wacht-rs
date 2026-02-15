@@ -238,8 +238,15 @@ impl Default for AuthenticationSettings {
             first_name: IndividualAuthSettings::default(),
             last_name: IndividualAuthSettings::default(),
             password: PasswordSettings::default(),
-            magic_link: Some(EmailLinkSettings { enabled: true, require_same_device: false }),
-            passkey: Some(PasskeySettings { enabled: false, prompt_registration_on_auth: false, allow_autofill: false }),
+            magic_link: Some(EmailLinkSettings {
+                enabled: true,
+                require_same_device: false,
+            }),
+            passkey: Some(PasskeySettings {
+                enabled: false,
+                prompt_registration_on_auth: false,
+                allow_autofill: false,
+            }),
             auth_factors_enabled: AuthFactorsEnabled::default(),
             verification_policy: VerificationPolicy::default(),
             second_factor_policy: None,
@@ -252,4 +259,3 @@ impl Default for AuthenticationSettings {
         }
     }
 }
-

@@ -1,6 +1,6 @@
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct JwtClaims {

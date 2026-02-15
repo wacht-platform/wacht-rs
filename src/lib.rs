@@ -16,11 +16,12 @@ pub mod middleware;
 pub mod models;
 
 // Re-export commonly used types
-pub use client::{get_public_signing_key, init, init_from_env, is_initialized, WachtConfig};
+pub use client::{WachtConfig, get_public_signing_key, init, init_from_env, is_initialized};
 pub use error::{Error, Result};
+pub use models::PaginatedResponse;
 
 // Re-export the API modules for easy access
 pub use api::{
-    agents, analytics, api_keys, deployments, execution_context, health, knowledge_bases,
-    notifications, organizations, settings, tools, users, webhooks, workflows, workspaces,
+    ai, ai_settings, analytics, api_keys, deployments, health, integrations, notifications,
+    organizations, segments, settings, users, webhooks, workspaces,
 };
