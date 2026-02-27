@@ -1,3 +1,4 @@
+use base64::{Engine as _, engine::general_purpose};
 use reqwest::{
     Client, ClientBuilder,
     header::{AUTHORIZATION, HeaderMap, HeaderValue},
@@ -5,6 +6,7 @@ use reqwest::{
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
+use url::Url;
 
 #[derive(Debug, Clone)]
 pub struct Auth {
@@ -42,8 +44,16 @@ impl WachtConfig {
 
     pub fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
         let token = std::env::var("WACHT_API_KEY").map_err(|_| "WACHT_API_KEY must be set")?;
-        let frontend_host =
-            std::env::var("WACHT_FRONTEND_HOST").map_err(|_| "WACHT_FRONTEND_HOST must be set")?;
+        let frontend_host = std::env::var("WACHT_FRONTEND_HOST")
+            .ok()
+            .or_else(|| {
+                std::env::var("WACHT_PUBLISHABLE_KEY")
+                    .ok()
+                    .and_then(|pk| parse_frontend_api_url_from_publishable_key(&pk))
+            })
+            .ok_or(
+                "Either WACHT_FRONTEND_HOST or WACHT_PUBLISHABLE_KEY must be set",
+            )?;
 
         let mut config = Self::new(token, frontend_host);
 
@@ -58,6 +68,27 @@ impl WachtConfig {
         self.public_signing_key = Some(fetch_public_key(&self.frontend_url).await?);
         Ok(self)
     }
+}
+
+fn parse_frontend_api_url_from_publishable_key(publishable_key: &str) -> Option<String> {
+    let encoded = publishable_key
+        .strip_prefix("pk_test_")
+        .or_else(|| publishable_key.strip_prefix("pk_live_"))?;
+
+    if encoded.is_empty() {
+        return None;
+    }
+
+    let decoded = general_purpose::STANDARD
+        .decode(encoded)
+        .or_else(|_| general_purpose::URL_SAFE.decode(encoded))
+        .or_else(|_| general_purpose::URL_SAFE_NO_PAD.decode(encoded))
+        .ok()?;
+
+    let decoded = String::from_utf8(decoded).ok()?;
+    let url = Url::parse(&decoded).ok()?;
+
+    Some(url.origin().ascii_serialization())
 }
 
 static GLOBAL_CONFIG: OnceLock<WachtConfig> = OnceLock::new();
