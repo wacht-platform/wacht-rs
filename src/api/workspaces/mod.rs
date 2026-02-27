@@ -6,9 +6,8 @@
 pub mod members;
 pub mod roles;
 
-// Core workspace functions
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{
         CreateWorkspaceRequest, ListOptions, PaginatedResponse, UpdateWorkspaceRequest, Workspace,
@@ -17,14 +16,59 @@ use crate::{
 
 pub type WorkspaceListResponse = PaginatedResponse<Workspace>;
 
+#[derive(Debug, Clone)]
+pub struct WorkspacesApi {
+    client: WachtClient,
+}
+
+impl WorkspacesApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn fetch_workspaces(&self) -> FetchWorkspacesBuilder {
+        FetchWorkspacesBuilder::new(self.client.clone())
+    }
+
+    pub fn create_workspace(&self, request: CreateWorkspaceRequest) -> CreateWorkspaceBuilder {
+        CreateWorkspaceBuilder::new(self.client.clone(), request)
+    }
+
+    pub fn fetch_workspace(&self, workspace_id: &str) -> FetchWorkspaceBuilder {
+        FetchWorkspaceBuilder::new(self.client.clone(), workspace_id)
+    }
+
+    pub fn update_workspace(
+        &self,
+        workspace_id: &str,
+        request: UpdateWorkspaceRequest,
+    ) -> UpdateWorkspaceBuilder {
+        UpdateWorkspaceBuilder::new(self.client.clone(), workspace_id, request)
+    }
+
+    pub fn delete_workspace(&self, workspace_id: &str) -> DeleteWorkspaceBuilder {
+        DeleteWorkspaceBuilder::new(self.client.clone(), workspace_id)
+    }
+
+    pub fn members(&self) -> members::WorkspaceMembersApi {
+        members::WorkspaceMembersApi::new(self.client.clone())
+    }
+
+    pub fn roles(&self) -> roles::WorkspaceRolesApi {
+        roles::WorkspaceRolesApi::new(self.client.clone())
+    }
+}
+
 /// Builder for fetching workspaces
 pub struct FetchWorkspacesBuilder {
+    client: WachtClient,
     options: ListOptions,
 }
 
 impl FetchWorkspacesBuilder {
-    pub fn new() -> Self {
+    pub fn new(client: WachtClient) -> Self {
         Self {
+            client,
             options: ListOptions::default(),
         }
     }
@@ -55,9 +99,8 @@ impl FetchWorkspacesBuilder {
     }
 
     pub async fn send(self) -> Result<WorkspaceListResponse> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/workspaces", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/workspaces", self.client.config().base_url);
 
         let mut request = client.get(&url);
         request = request.query(&self.options);
@@ -71,32 +114,27 @@ impl FetchWorkspacesBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch workspaces: {}", error_body),
+                message: format!("Failed to fetch workspaces: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// List all workspaces using builder pattern
-pub fn fetch_workspaces() -> FetchWorkspacesBuilder {
-    FetchWorkspacesBuilder::new()
-}
-
 /// Builder for creating a workspace
 pub struct CreateWorkspaceBuilder {
+    client: WachtClient,
     request: CreateWorkspaceRequest,
 }
 
 impl CreateWorkspaceBuilder {
-    pub fn new(request: CreateWorkspaceRequest) -> Self {
-        Self { request }
+    pub fn new(client: WachtClient, request: CreateWorkspaceRequest) -> Self {
+        Self { client, request }
     }
 
     pub async fn send(self) -> Result<Workspace> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/workspaces", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/workspaces", self.client.config().base_url);
 
         let mut form = reqwest::multipart::Form::new();
         form = form.text("name", self.request.name.clone());
@@ -121,7 +159,7 @@ impl CreateWorkspaceBuilder {
                 .mime_str("image/jpeg")
                 .map_err(|e| Error::Api {
                     status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("Failed to create multipart: {}", e),
+                    message: format!("Failed to create multipart: {e}"),
                     details: None,
                 })?;
             form = form.part("workspace_image", part);
@@ -136,34 +174,30 @@ impl CreateWorkspaceBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to create workspace: {}", error_body),
+                message: format!("Failed to create workspace: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Create a new workspace using builder pattern
-pub fn create_workspace(request: CreateWorkspaceRequest) -> CreateWorkspaceBuilder {
-    CreateWorkspaceBuilder::new(request)
-}
-
 /// Builder for fetching a workspace
 pub struct FetchWorkspaceBuilder {
+    client: WachtClient,
     workspace_id: String,
 }
 
 impl FetchWorkspaceBuilder {
-    pub fn new(workspace_id: &str) -> Self {
+    pub fn new(client: WachtClient, workspace_id: &str) -> Self {
         Self {
+            client,
             workspace_id: workspace_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<Workspace> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/workspaces/{}", config.base_url, self.workspace_id);
+        let client = self.client.http_client();
+        let url = format!("{}/workspaces/{}", self.client.config().base_url, self.workspace_id);
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -174,36 +208,32 @@ impl FetchWorkspaceBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch workspace: {}", error_body),
+                message: format!("Failed to fetch workspace: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Fetch workspace details using builder pattern
-pub fn fetch_workspace(workspace_id: &str) -> FetchWorkspaceBuilder {
-    FetchWorkspaceBuilder::new(workspace_id)
-}
-
 /// Builder for updating a workspace
 pub struct UpdateWorkspaceBuilder {
+    client: WachtClient,
     workspace_id: String,
     request: UpdateWorkspaceRequest,
 }
 
 impl UpdateWorkspaceBuilder {
-    pub fn new(workspace_id: &str, request: UpdateWorkspaceRequest) -> Self {
+    pub fn new(client: WachtClient, workspace_id: &str, request: UpdateWorkspaceRequest) -> Self {
         Self {
+            client,
             workspace_id: workspace_id.to_string(),
             request,
         }
     }
 
     pub async fn send(self) -> Result<Workspace> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/workspaces/{}", config.base_url, self.workspace_id);
+        let client = self.client.http_client();
+        let url = format!("{}/workspaces/{}", self.client.config().base_url, self.workspace_id);
 
         let mut form = reqwest::multipart::Form::new();
         if let Some(name) = &self.request.name {
@@ -230,7 +260,7 @@ impl UpdateWorkspaceBuilder {
                 .mime_str("image/jpeg")
                 .map_err(|e| Error::Api {
                     status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("Failed to create multipart: {}", e),
+                    message: format!("Failed to create multipart: {e}"),
                     details: None,
                 })?;
             form = form.part("workspace_image", part);
@@ -245,37 +275,30 @@ impl UpdateWorkspaceBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to update workspace: {}", error_body),
+                message: format!("Failed to update workspace: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Update a workspace using builder pattern
-pub fn update_workspace(
-    workspace_id: &str,
-    request: UpdateWorkspaceRequest,
-) -> UpdateWorkspaceBuilder {
-    UpdateWorkspaceBuilder::new(workspace_id, request)
-}
-
 /// Builder for deleting a workspace
 pub struct DeleteWorkspaceBuilder {
+    client: WachtClient,
     workspace_id: String,
 }
 
 impl DeleteWorkspaceBuilder {
-    pub fn new(workspace_id: &str) -> Self {
+    pub fn new(client: WachtClient, workspace_id: &str) -> Self {
         Self {
+            client,
             workspace_id: workspace_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/workspaces/{}", config.base_url, self.workspace_id);
+        let client = self.client.http_client();
+        let url = format!("{}/workspaces/{}", self.client.config().base_url, self.workspace_id);
 
         let response = client.delete(&url).send().await?;
         let status = response.status();
@@ -286,14 +309,9 @@ impl DeleteWorkspaceBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to delete workspace: {}", error_body),
+                message: format!("Failed to delete workspace: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
-}
-
-/// Delete a workspace using builder pattern
-pub fn delete_workspace(workspace_id: &str) -> DeleteWorkspaceBuilder {
-    DeleteWorkspaceBuilder::new(workspace_id)
 }

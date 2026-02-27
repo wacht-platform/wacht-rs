@@ -3,25 +3,40 @@
 //! Handles session tickets for authentication using builder pattern.
 
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
-    models::{CreateSessionTicketRequest, SessionTicketResponse, TicketType},
+    models::{CreateSessionTicketRequest, SessionTicketResponse},
 };
+
+#[derive(Debug, Clone)]
+pub struct SessionApi {
+    client: WachtClient,
+}
+
+impl SessionApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn create(&self, request: CreateSessionTicketRequest) -> CreateTicketBuilder {
+        CreateTicketBuilder::new(self.client.clone(), request)
+    }
+}
 
 /// Builder for creating a session ticket
 pub struct CreateTicketBuilder {
+    client: WachtClient,
     request: CreateSessionTicketRequest,
 }
 
 impl CreateTicketBuilder {
-    pub fn new(request: CreateSessionTicketRequest) -> Self {
-        Self { request }
+    pub fn new(client: WachtClient, request: CreateSessionTicketRequest) -> Self {
+        Self { client, request }
     }
 
     pub async fn send(self) -> Result<SessionTicketResponse> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/session/tickets", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/session/tickets", self.client.config().base_url);
 
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -32,16 +47,11 @@ impl CreateTicketBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to create session ticket: {}", error_body),
+                message: format!("Failed to create session ticket: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
-}
-
-/// Create a session ticket for a user using builder pattern
-pub fn create(request: CreateSessionTicketRequest) -> CreateTicketBuilder {
-    CreateTicketBuilder::new(request)
 }
 
 /// Re-export ticket type for convenience

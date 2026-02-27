@@ -1,6 +1,6 @@
 use crate::{
     Result,
-    client::{get_client, get_config},
+    client::WachtClient,
     error::Error,
 };
 use chrono::{DateTime, Utc};
@@ -332,27 +332,191 @@ struct EventsResponse {
     events: Vec<WebhookAppEvent>,
 }
 
+#[derive(Debug, Clone)]
+pub struct WebhooksApi {
+    client: WachtClient,
+}
+
+impl WebhooksApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn list_webhook_apps(&self) -> ListWebhookAppsBuilder {
+        let mut b = ListWebhookAppsBuilder::new();
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn get_webhook_app(&self, app_name: &str) -> GetWebhookAppBuilder {
+        let mut b = GetWebhookAppBuilder::new(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn create_webhook_app(&self, name: &str) -> CreateWebhookAppBuilder {
+        let mut b = CreateWebhookAppBuilder::new(name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn update_webhook_app(&self, app_name: &str) -> UpdateWebhookAppBuilder {
+        let mut b = UpdateWebhookAppBuilder::new(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn delete_webhook_app(&self, app_name: &str) -> DeleteWebhookAppBuilder {
+        let mut b = DeleteWebhookAppBuilder::new(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn rotate_webhook_secret(&self, app_name: &str) -> RotateWebhookSecretBuilder {
+        let mut b = RotateWebhookSecretBuilder::new(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn get_webhook_events(&self, app_name: &str) -> GetWebhookEventsBuilder {
+        let mut b = GetWebhookEventsBuilder::new(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn list_webhook_endpoints(&self, app_name: &str) -> ListWebhookEndpointsBuilder {
+        let mut b = ListWebhookEndpointsBuilder::new().app_name(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn get_webhook_endpoints_with_subscriptions(
+        &self,
+        app_name: &str,
+    ) -> GetWebhookEndpointsWithSubscriptionsBuilder {
+        let mut b = GetWebhookEndpointsWithSubscriptionsBuilder::new(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn create_webhook_endpoint(
+        &self,
+        app_name: &str,
+        url: &str,
+    ) -> CreateWebhookEndpointBuilder {
+        let mut b = CreateWebhookEndpointBuilder::new(app_name, url);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn update_webhook_endpoint(&self, endpoint_id: &str) -> UpdateWebhookEndpointBuilder {
+        let mut b = UpdateWebhookEndpointBuilder::new(endpoint_id);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn delete_webhook_endpoint(&self, endpoint_id: &str) -> DeleteWebhookEndpointBuilder {
+        let mut b = DeleteWebhookEndpointBuilder::new(endpoint_id);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn trigger_webhook_event(
+        &self,
+        app_name: &str,
+        event_name: &str,
+        payload: Value,
+    ) -> TriggerWebhookEventBuilder {
+        let mut b = TriggerWebhookEventBuilder::new(app_name, event_name, payload);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn list_webhook_deliveries(&self, app_name: &str) -> GetWebhookDeliveriesBuilder {
+        let mut b = GetWebhookDeliveriesBuilder::new(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn get_webhook_delivery_details(&self, delivery_id: &str) -> GetWebhookDeliveryDetailsBuilder {
+        let mut b = GetWebhookDeliveryDetailsBuilder::new(delivery_id);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn replay_webhook_deliveries(&self, app_name: &str) -> ReplayWebhookDeliveriesBuilder {
+        let mut b = ReplayWebhookDeliveriesBuilder::new(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn reactivate_webhook_endpoint(
+        &self,
+        endpoint_id: &str,
+    ) -> ReactivateWebhookEndpointBuilder {
+        let mut b = ReactivateWebhookEndpointBuilder::new(endpoint_id);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn test_webhook_endpoint(
+        &self,
+        app_name: &str,
+        endpoint_id: &str,
+        event_name: &str,
+    ) -> TestWebhookEndpointBuilder {
+        let mut b = TestWebhookEndpointBuilder::new(app_name, endpoint_id, event_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn get_webhook_stats(&self, app_name: &str) -> GetWebhookStatsBuilder {
+        let mut b = GetWebhookStatsBuilder::new(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn get_webhook_timeseries(
+        &self,
+        app_name: &str,
+        interval: &str,
+    ) -> GetWebhookTimeseriesBuilder {
+        let mut b = GetWebhookTimeseriesBuilder::new(app_name, interval);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+
+    pub fn get_webhook_analytics(&self, app_name: &str) -> GetWebhookAnalyticsBuilder {
+        let mut b = GetWebhookAnalyticsBuilder::new(app_name);
+        b.sdk = Some(self.client.clone());
+        b
+    }
+}
+
 /// Builder for list_webhook_apps
 pub struct ListWebhookAppsBuilder {
+    sdk: Option<WachtClient>,
     include_inactive: Option<bool>,
 }
 
 /// Builder for get_webhook_app
 pub struct GetWebhookAppBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
 }
 
 impl GetWebhookAppBuilder {
     pub fn new(app_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<WebhookApp> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/webhooks/apps/{}", config.base_url, self.app_name);
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
+        let url = format!("{}/webhooks/apps/{}", sdk.config().base_url, self.app_name);
 
         let response = client.get(&url).send().await?;
 
@@ -374,6 +538,7 @@ impl GetWebhookAppBuilder {
 impl ListWebhookAppsBuilder {
     pub fn new() -> Self {
         Self {
+            sdk: None,
             include_inactive: None,
         }
     }
@@ -384,9 +549,9 @@ impl ListWebhookAppsBuilder {
     }
 
     pub async fn send(self) -> Result<Vec<WebhookApp>> {
-        let config = get_config();
-        let client = get_client();
-        let mut url = format!("{}/webhooks/apps", config.base_url);
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
+        let mut url = format!("{}/webhooks/apps", sdk.config().base_url);
 
         if let Some(inactive) = self.include_inactive {
             url.push_str(&format!("?include_inactive={inactive}"));
@@ -411,12 +576,14 @@ impl ListWebhookAppsBuilder {
 
 /// Builder for create_webhook_app
 pub struct CreateWebhookAppBuilder {
+    sdk: Option<WachtClient>,
     request: CreateWebhookAppRequest,
 }
 
 impl CreateWebhookAppBuilder {
     pub fn new(name: &str) -> Self {
         Self {
+            sdk: None,
             request: CreateWebhookAppRequest {
                 name: name.to_string(),
                 description: None,
@@ -442,9 +609,9 @@ impl CreateWebhookAppBuilder {
     }
 
     pub async fn send(self) -> Result<WebhookApp> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/webhooks/apps", config.base_url);
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
+        let url = format!("{}/webhooks/apps", sdk.config().base_url);
 
         let response = client.post(&url).json(&self.request).send().await?;
 
@@ -466,6 +633,7 @@ impl CreateWebhookAppBuilder {
 /// Create a webhook app (legacy function for backward compatibility)
 /// Builder for update_webhook_app
 pub struct UpdateWebhookAppBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
     description: Option<String>,
     is_active: Option<bool>,
@@ -475,6 +643,7 @@ pub struct UpdateWebhookAppBuilder {
 impl UpdateWebhookAppBuilder {
     pub fn new(app_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
             description: None,
             is_active: None,
@@ -498,9 +667,9 @@ impl UpdateWebhookAppBuilder {
     }
 
     pub async fn send(self) -> Result<WebhookApp> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/webhooks/apps/{}", config.base_url, self.app_name);
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
+        let url = format!("{}/webhooks/apps/{}", sdk.config().base_url, self.app_name);
 
         let request = UpdateWebhookAppRequest {
             description: self.description,
@@ -527,20 +696,22 @@ impl UpdateWebhookAppBuilder {
 
 /// Builder for delete_webhook_app
 pub struct DeleteWebhookAppBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
 }
 
 impl DeleteWebhookAppBuilder {
     pub fn new(app_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/webhooks/apps/{}", config.base_url, self.app_name);
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
+        let url = format!("{}/webhooks/apps/{}", sdk.config().base_url, self.app_name);
 
         let response = client.delete(&url).send().await?;
 
@@ -560,22 +731,24 @@ impl DeleteWebhookAppBuilder {
 
 /// Delete a webhook app (legacy function for backward compatibility)
 pub struct RotateWebhookSecretBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
 }
 
 impl RotateWebhookSecretBuilder {
     pub fn new(app_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<WebhookApp> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let url = format!(
             "{}/webhooks/apps/{}/rotate-secret",
-            config.base_url, self.app_name
+            sdk.config().base_url, self.app_name
         );
 
         let response = client.post(&url).send().await?;
@@ -597,20 +770,22 @@ impl RotateWebhookSecretBuilder {
 
 /// Rotate webhook secret (legacy function for backward compatibility)
 pub struct GetWebhookEventsBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
 }
 
 impl GetWebhookEventsBuilder {
     pub fn new(app_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<Vec<WebhookAppEvent>> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/webhooks/apps/{}/events", config.base_url, self.app_name);
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
+        let url = format!("{}/webhooks/apps/{}/events", sdk.config().base_url, self.app_name);
 
         let response = client.get(&url).send().await?;
 
@@ -651,6 +826,7 @@ pub struct PaginatedEndpointsResponse {
 
 /// Builder for list_webhook_endpoints
 pub struct ListWebhookEndpointsBuilder {
+    sdk: Option<WachtClient>,
     app_name: Option<String>,
     include_inactive: Option<bool>,
     limit: Option<i32>,
@@ -660,6 +836,7 @@ pub struct ListWebhookEndpointsBuilder {
 impl ListWebhookEndpointsBuilder {
     pub fn new() -> Self {
         Self {
+            sdk: None,
             app_name: None,
             include_inactive: None,
             limit: None,
@@ -688,11 +865,11 @@ impl ListWebhookEndpointsBuilder {
     }
 
     pub async fn send(self) -> Result<Vec<WebhookEndpoint>> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
 
         if let Some(app_name) = &self.app_name {
-            let mut url = format!("{}/webhooks/apps/{}/endpoints", config.base_url, app_name);
+            let mut url = format!("{}/webhooks/apps/{}/endpoints", sdk.config().base_url, app_name);
 
             let mut params = Vec::new();
             if let Some(inactive) = self.include_inactive {
@@ -736,6 +913,7 @@ impl ListWebhookEndpointsBuilder {
 
 /// Builder for get_webhook_endpoints_with_subscriptions
 pub struct GetWebhookEndpointsWithSubscriptionsBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
     include_inactive: Option<bool>,
     limit: Option<i32>,
@@ -745,6 +923,7 @@ pub struct GetWebhookEndpointsWithSubscriptionsBuilder {
 impl GetWebhookEndpointsWithSubscriptionsBuilder {
     pub fn new(app_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
             include_inactive: None,
             limit: None,
@@ -768,11 +947,11 @@ impl GetWebhookEndpointsWithSubscriptionsBuilder {
     }
 
     pub async fn send(self) -> Result<PaginatedEndpointsResponse> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let url = format!(
             "{}/webhooks/apps/{}/endpoints",
-            config.base_url, self.app_name
+            sdk.config().base_url, self.app_name
         );
 
         let mut options = ListWebhookEndpointsQuery::default();
@@ -836,6 +1015,7 @@ impl GetWebhookEndpointsWithSubscriptionsBuilder {
 
 /// Builder for create_webhook_endpoint
 pub struct CreateWebhookEndpointBuilder {
+    sdk: Option<WachtClient>,
     app_slug: String,
     url: String,
     description: Option<String>,
@@ -848,6 +1028,7 @@ pub struct CreateWebhookEndpointBuilder {
 impl CreateWebhookEndpointBuilder {
     pub fn new(app_slug: &str, url: &str) -> Self {
         Self {
+            sdk: None,
             app_slug: app_slug.to_string(),
             url: url.to_string(),
             description: None,
@@ -897,9 +1078,9 @@ impl CreateWebhookEndpointBuilder {
     }
 
     pub async fn send(self) -> Result<WebhookEndpoint> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/webhooks/endpoints", config.base_url);
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
+        let url = format!("{}/webhooks/endpoints", sdk.config().base_url);
 
         let request = CreateWebhookEndpointRequest {
             app_slug: self.app_slug,
@@ -930,6 +1111,7 @@ impl CreateWebhookEndpointBuilder {
 
 /// Builder for update_webhook_endpoint
 pub struct UpdateWebhookEndpointBuilder {
+    sdk: Option<WachtClient>,
     endpoint_id: String,
     url: Option<String>,
     description: Option<String>,
@@ -943,6 +1125,7 @@ pub struct UpdateWebhookEndpointBuilder {
 impl UpdateWebhookEndpointBuilder {
     pub fn new(endpoint_id: &str) -> Self {
         Self {
+            sdk: None,
             endpoint_id: endpoint_id.to_string(),
             url: None,
             description: None,
@@ -990,11 +1173,11 @@ impl UpdateWebhookEndpointBuilder {
     }
 
     pub async fn send(self) -> Result<WebhookEndpoint> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let url = format!(
             "{}/webhooks/endpoints/{}",
-            config.base_url, self.endpoint_id
+            sdk.config().base_url, self.endpoint_id
         );
 
         let request = UpdateWebhookEndpointRequest {
@@ -1026,22 +1209,24 @@ impl UpdateWebhookEndpointBuilder {
 
 /// Builder for delete_webhook_endpoint
 pub struct DeleteWebhookEndpointBuilder {
+    sdk: Option<WachtClient>,
     endpoint_id: String,
 }
 
 impl DeleteWebhookEndpointBuilder {
     pub fn new(endpoint_id: &str) -> Self {
         Self {
+            sdk: None,
             endpoint_id: endpoint_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let url = format!(
             "{}/webhooks/endpoints/{}",
-            config.base_url, self.endpoint_id
+            sdk.config().base_url, self.endpoint_id
         );
 
         let response = client.delete(&url).send().await?;
@@ -1062,6 +1247,7 @@ impl DeleteWebhookEndpointBuilder {
 
 /// Builder for trigger_webhook_event
 pub struct TriggerWebhookEventBuilder {
+    sdk: Option<WachtClient>,
     app_slug: String,
     event_name: String,
     payload: Value,
@@ -1071,6 +1257,7 @@ pub struct TriggerWebhookEventBuilder {
 impl TriggerWebhookEventBuilder {
     pub fn new(app_slug: &str, event_name: &str, payload: Value) -> Self {
         Self {
+            sdk: None,
             app_slug: app_slug.to_string(),
             event_name: event_name.to_string(),
             payload,
@@ -1084,11 +1271,11 @@ impl TriggerWebhookEventBuilder {
     }
 
     pub async fn send(self) -> Result<TriggerWebhookEventResponse> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let url = format!(
             "{}/webhooks/apps/{}/trigger",
-            config.base_url, self.app_slug
+            sdk.config().base_url, self.app_slug
         );
 
         let request = TriggerWebhookEventRequest {
@@ -1126,6 +1313,7 @@ pub struct WebhookEventTrigger {
 
 /// Builder for get_webhook_deliveries
 pub struct GetWebhookDeliveriesBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
     endpoint_id: Option<i64>,
     event_name: Option<String>,
@@ -1139,6 +1327,7 @@ pub struct GetWebhookDeliveriesBuilder {
 impl GetWebhookDeliveriesBuilder {
     pub fn new(app_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
             endpoint_id: None,
             event_name: None,
@@ -1186,11 +1375,11 @@ impl GetWebhookDeliveriesBuilder {
     }
 
     pub async fn send(self) -> Result<GetWebhookDeliveriesResponse> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let mut url = format!(
             "{}/webhooks/apps/{}/deliveries",
-            config.base_url, self.app_name
+            sdk.config().base_url, self.app_name
         );
 
         let mut params = Vec::new();
@@ -1251,22 +1440,24 @@ pub struct GetWebhookDeliveriesResponse {
 
 /// Builder for get_webhook_delivery_details
 pub struct GetWebhookDeliveryDetailsBuilder {
+    sdk: Option<WachtClient>,
     delivery_id: String,
 }
 
 impl GetWebhookDeliveryDetailsBuilder {
     pub fn new(delivery_id: &str) -> Self {
         Self {
+            sdk: None,
             delivery_id: delivery_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<WebhookDeliveryDetails> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let url = format!(
             "{}/webhooks/deliveries/{}",
-            config.base_url, self.delivery_id
+            sdk.config().base_url, self.delivery_id
         );
 
         let response = client.get(&url).send().await?;
@@ -1288,6 +1479,7 @@ impl GetWebhookDeliveryDetailsBuilder {
 
 /// Builder for replay_webhook_deliveries
 pub struct ReplayWebhookDeliveriesBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
     request: ReplayWebhookDeliveriesRequest,
 }
@@ -1308,6 +1500,7 @@ pub enum ReplayWebhookDeliveriesRequest {
 impl ReplayWebhookDeliveriesBuilder {
     pub fn new(app_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
             request: ReplayWebhookDeliveriesRequest::ByIds {
                 delivery_ids: Vec::new(),
@@ -1333,11 +1526,11 @@ impl ReplayWebhookDeliveriesBuilder {
     }
 
     pub async fn send(self) -> Result<ReplayWebhookDeliveriesResponse> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let url = format!(
             "{}/webhooks/apps/{}/deliveries/replay",
-            config.base_url, self.app_name
+            sdk.config().base_url, self.app_name
         );
 
         let response = client.post(&url).json(&self.request).send().await?;
@@ -1365,22 +1558,24 @@ pub struct ReplayWebhookDeliveriesResponse {
 
 /// Builder for reactivate_webhook_endpoint
 pub struct ReactivateWebhookEndpointBuilder {
+    sdk: Option<WachtClient>,
     endpoint_id: String,
 }
 
 impl ReactivateWebhookEndpointBuilder {
     pub fn new(endpoint_id: &str) -> Self {
         Self {
+            sdk: None,
             endpoint_id: endpoint_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<ReactivateEndpointResponse> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let url = format!(
             "{}/webhooks/endpoints/{}/reactivate",
-            config.base_url, self.endpoint_id
+            sdk.config().base_url, self.endpoint_id
         );
 
         let response = client.post(&url).send().await?;
@@ -1408,6 +1603,7 @@ pub struct ReactivateEndpointResponse {
 
 /// Builder for test_webhook_endpoint
 pub struct TestWebhookEndpointBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
     endpoint_id: String,
     event_name: String,
@@ -1417,6 +1613,7 @@ pub struct TestWebhookEndpointBuilder {
 impl TestWebhookEndpointBuilder {
     pub fn new(app_name: &str, endpoint_id: &str, event_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
             endpoint_id: endpoint_id.to_string(),
             event_name: event_name.to_string(),
@@ -1430,11 +1627,11 @@ impl TestWebhookEndpointBuilder {
     }
 
     pub async fn send(self) -> Result<TestWebhookEndpointResponse> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let url = format!(
             "{}/webhooks/apps/{}/endpoints/{}/test",
-            config.base_url, self.app_name, self.endpoint_id
+            sdk.config().base_url, self.app_name, self.endpoint_id
         );
 
         let request_body = serde_json::json!({
@@ -1521,6 +1718,7 @@ pub struct TimeseriesDataPoint {
 
 /// Builder for get_webhook_timeseries
 pub struct GetWebhookTimeseriesBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
     interval: String,
     start_date: Option<String>,
@@ -1530,6 +1728,7 @@ pub struct GetWebhookTimeseriesBuilder {
 impl GetWebhookTimeseriesBuilder {
     pub fn new(app_name: &str, interval: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
             interval: interval.to_string(),
             start_date: None,
@@ -1548,11 +1747,11 @@ impl GetWebhookTimeseriesBuilder {
     }
 
     pub async fn send(self) -> Result<TimeseriesResult> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let mut url = format!(
             "{}/webhooks/apps/{}/timeseries",
-            config.base_url, self.app_name
+            sdk.config().base_url, self.app_name
         );
 
         // Build query parameters
@@ -1589,6 +1788,7 @@ impl GetWebhookTimeseriesBuilder {
 
 /// Builder for get_webhook_analytics
 pub struct GetWebhookAnalyticsBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
     start_date: Option<String>,
     end_date: Option<String>,
@@ -1598,6 +1798,7 @@ pub struct GetWebhookAnalyticsBuilder {
 impl GetWebhookAnalyticsBuilder {
     pub fn new(app_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
             start_date: None,
             end_date: None,
@@ -1621,11 +1822,11 @@ impl GetWebhookAnalyticsBuilder {
     }
 
     pub async fn send(self) -> Result<AnalyticsResult> {
-        let config = get_config();
-        let client = get_client();
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
         let mut url = format!(
             "{}/webhooks/apps/{}/analytics",
-            config.base_url, self.app_name
+            sdk.config().base_url, self.app_name
         );
 
         // Build query parameters
@@ -1664,20 +1865,22 @@ impl GetWebhookAnalyticsBuilder {
 
 /// Builder for get_webhook_stats
 pub struct GetWebhookStatsBuilder {
+    sdk: Option<WachtClient>,
     app_name: String,
 }
 
 impl GetWebhookStatsBuilder {
     pub fn new(app_name: &str) -> Self {
         Self {
+            sdk: None,
             app_name: app_name.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<AnalyticsResult> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/webhooks/apps/{}/stats", config.base_url, self.app_name);
+        let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
+        let client = sdk.http_client();
+        let url = format!("{}/webhooks/apps/{}/stats", sdk.config().base_url, self.app_name);
 
         let response = client.get(&url).send().await?;
 

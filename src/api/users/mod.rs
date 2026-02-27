@@ -7,9 +7,8 @@ pub mod emails;
 pub mod phones;
 pub mod social_connections;
 
-// Core user functions
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{
         CreateUserRequest, ListOptions, PaginatedResponse, UpdatePasswordRequest,
@@ -17,14 +16,67 @@ use crate::{
     },
 };
 
+#[derive(Debug, Clone)]
+pub struct UsersApi {
+    client: WachtClient,
+}
+
+impl UsersApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn fetch_users(&self) -> FetchUsersBuilder {
+        FetchUsersBuilder::new(self.client.clone())
+    }
+
+    pub fn create_user(&self, request: CreateUserRequest) -> CreateUserBuilder {
+        CreateUserBuilder::new(self.client.clone(), request)
+    }
+
+    pub fn fetch_user_details(&self, user_id: &str) -> FetchUserDetailsBuilder {
+        FetchUserDetailsBuilder::new(self.client.clone(), user_id)
+    }
+
+    pub fn update_user(&self, user_id: &str, request: UpdateUserRequest) -> UpdateUserBuilder {
+        UpdateUserBuilder::new(self.client.clone(), user_id, request)
+    }
+
+    pub fn update_password(
+        &self,
+        user_id: &str,
+        request: UpdatePasswordRequest,
+    ) -> UpdatePasswordBuilder {
+        UpdatePasswordBuilder::new(self.client.clone(), user_id, request)
+    }
+
+    pub fn delete_user(&self, user_id: &str) -> DeleteUserBuilder {
+        DeleteUserBuilder::new(self.client.clone(), user_id)
+    }
+
+    pub fn emails(&self) -> emails::UserEmailsApi {
+        emails::UserEmailsApi::new(self.client.clone())
+    }
+
+    pub fn phones(&self) -> phones::UserPhonesApi {
+        phones::UserPhonesApi::new(self.client.clone())
+    }
+
+    pub fn social_connections(&self) -> social_connections::UserSocialConnectionsApi {
+        social_connections::UserSocialConnectionsApi::new(self.client.clone())
+    }
+}
+
 /// Builder for fetching users
 pub struct FetchUsersBuilder {
+    client: WachtClient,
     options: ListOptions,
 }
 
 impl FetchUsersBuilder {
-    pub fn new() -> Self {
+    pub fn new(client: WachtClient) -> Self {
         Self {
+            client,
             options: ListOptions::default(),
         }
     }
@@ -55,9 +107,8 @@ impl FetchUsersBuilder {
     }
 
     pub async fn send(self) -> Result<PaginatedResponse<User>> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/users", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/users", self.client.config().base_url);
 
         let mut request = client.get(&url);
         request = request.query(&self.options);
@@ -71,37 +122,29 @@ impl FetchUsersBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch users: {}", error_body),
+                message: format!("Failed to fetch users: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Fetch all users using builder pattern
-pub fn fetch_users() -> FetchUsersBuilder {
-    FetchUsersBuilder::new()
-}
-
 /// Builder for creating a user
 pub struct CreateUserBuilder {
+    client: WachtClient,
     request: CreateUserRequest,
 }
 
 impl CreateUserBuilder {
-    pub fn new(request: CreateUserRequest) -> Self {
-        Self { request }
+    pub fn new(client: WachtClient, request: CreateUserRequest) -> Self {
+        Self { client, request }
     }
 
     pub async fn send(self) -> Result<User> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/users", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/users", self.client.config().base_url);
 
-        // Convert request to multipart form
         let mut form = reqwest::multipart::Form::new();
-
-        // Add text fields
         form = form.text("first_name", self.request.first_name.clone());
         form = form.text("last_name", self.request.last_name.clone());
 
@@ -131,34 +174,30 @@ impl CreateUserBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to create user: {}", error_body),
+                message: format!("Failed to create user: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Create a new user using builder pattern
-pub fn create_user(request: CreateUserRequest) -> CreateUserBuilder {
-    CreateUserBuilder::new(request)
-}
-
 /// Builder for fetching user details
 pub struct FetchUserDetailsBuilder {
+    client: WachtClient,
     user_id: String,
 }
 
 impl FetchUserDetailsBuilder {
-    pub fn new(user_id: &str) -> Self {
+    pub fn new(client: WachtClient, user_id: &str) -> Self {
         Self {
+            client,
             user_id: user_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<UserDetails> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/users/{}/details", config.base_url, self.user_id);
+        let client = self.client.http_client();
+        let url = format!("{}/users/{}/details", self.client.config().base_url, self.user_id);
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -169,38 +208,33 @@ impl FetchUserDetailsBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch user details: {}", error_body),
+                message: format!("Failed to fetch user details: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Fetch detailed information about a user using builder pattern
-pub fn fetch_user_details(user_id: &str) -> FetchUserDetailsBuilder {
-    FetchUserDetailsBuilder::new(user_id)
-}
-
 /// Builder for updating a user
 pub struct UpdateUserBuilder {
+    client: WachtClient,
     user_id: String,
     request: UpdateUserRequest,
 }
 
 impl UpdateUserBuilder {
-    pub fn new(user_id: &str, request: UpdateUserRequest) -> Self {
+    pub fn new(client: WachtClient, user_id: &str, request: UpdateUserRequest) -> Self {
         Self {
+            client,
             user_id: user_id.to_string(),
             request,
         }
     }
 
     pub async fn send(self) -> Result<User> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/users/{}", config.base_url, self.user_id);
+        let client = self.client.http_client();
+        let url = format!("{}/users/{}", self.client.config().base_url, self.user_id);
 
-        // Convert request to multipart form
         let mut form = reqwest::multipart::Form::new();
 
         if let Some(first_name) = &self.request.first_name {
@@ -234,36 +268,32 @@ impl UpdateUserBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to update user: {}", error_body),
+                message: format!("Failed to update user: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Update a user using builder pattern
-pub fn update_user(user_id: &str, request: UpdateUserRequest) -> UpdateUserBuilder {
-    UpdateUserBuilder::new(user_id, request)
-}
-
 /// Builder for updating user password
 pub struct UpdatePasswordBuilder {
+    client: WachtClient,
     user_id: String,
     request: UpdatePasswordRequest,
 }
 
 impl UpdatePasswordBuilder {
-    pub fn new(user_id: &str, request: UpdatePasswordRequest) -> Self {
+    pub fn new(client: WachtClient, user_id: &str, request: UpdatePasswordRequest) -> Self {
         Self {
+            client,
             user_id: user_id.to_string(),
             request,
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/users/{}/password", config.base_url, self.user_id);
+        let client = self.client.http_client();
+        let url = format!("{}/users/{}/password", self.client.config().base_url, self.user_id);
 
         let response = client.patch(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -274,34 +304,30 @@ impl UpdatePasswordBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to update password: {}", error_body),
+                message: format!("Failed to update password: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Update user password using builder pattern
-pub fn update_password(user_id: &str, request: UpdatePasswordRequest) -> UpdatePasswordBuilder {
-    UpdatePasswordBuilder::new(user_id, request)
-}
-
 /// Builder for deleting a user
 pub struct DeleteUserBuilder {
+    client: WachtClient,
     user_id: String,
 }
 
 impl DeleteUserBuilder {
-    pub fn new(user_id: &str) -> Self {
+    pub fn new(client: WachtClient, user_id: &str) -> Self {
         Self {
+            client,
             user_id: user_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/users/{}", config.base_url, self.user_id);
+        let client = self.client.http_client();
+        let url = format!("{}/users/{}", self.client.config().base_url, self.user_id);
 
         let response = client.delete(&url).send().await?;
         let status = response.status();
@@ -312,14 +338,9 @@ impl DeleteUserBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to delete user: {}", error_body),
+                message: format!("Failed to delete user: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
-}
-
-/// Delete a user using builder pattern
-pub fn delete_user(user_id: &str) -> DeleteUserBuilder {
-    DeleteUserBuilder::new(user_id)
 }

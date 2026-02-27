@@ -7,22 +7,50 @@ pub mod execution_context;
 pub mod knowledge_bases;
 pub mod tools;
 
-// Re-export all public items for convenience
+use crate::client::WachtClient;
+
+#[derive(Debug, Clone)]
+pub struct AiApi {
+    client: WachtClient,
+}
+
+impl AiApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn agents(&self) -> agents::AgentsApi {
+        agents::AgentsApi::new(self.client.clone())
+    }
+
+    pub fn tools(&self) -> tools::ToolsApi {
+        tools::ToolsApi::new(self.client.clone())
+    }
+
+    pub fn knowledge_bases(&self) -> knowledge_bases::KnowledgeBasesApi {
+        knowledge_bases::KnowledgeBasesApi::new(self.client.clone())
+    }
+
+    pub fn execution_contexts(&self) -> execution_context::ExecutionContextsApi {
+        execution_context::ExecutionContextsApi::new(self.client.clone())
+    }
+}
+
 pub use agents::{
     CreateAgentBuilder, DeleteAgentBuilder, FetchAgentBuilder, FetchAgentDetailsBuilder,
-    ListAgentsBuilder, ListAgentsOptions, UpdateAgentBuilder, create_agent, delete_agent,
-    fetch_agent, fetch_agent_details, list_agents, update_agent,
+    ListAgentsBuilder, ListAgentsOptions, UpdateAgentBuilder,
 };
 pub use execution_context::{
-    ExecutionContextListResponse, ListExecutionContextsOptions, UpdateExecutionContextRequest,
-    create_execution_context, execute_agent, fetch_execution_contexts, update_execution_context,
+    CreateExecutionContextBuilder, ExecuteAgentBuilder, ExecutionContextListResponse,
+    ListExecutionContextsBuilder, ListExecutionContextsOptions, UpdateExecutionContextBuilder,
+    UpdateExecutionContextRequest,
 };
 pub use knowledge_bases::{
-    ListKnowledgeBasesOptions, create_knowledge_base, delete_document, delete_knowledge_base,
-    fetch_documents, fetch_knowledge_base, fetch_knowledge_bases, update_knowledge_base,
-    upload_document,
+    ListKnowledgeBasesOptions, builders, CreateKnowledgeBaseBuilder, DeleteDocumentBuilder,
+    DeleteKnowledgeBaseBuilder, FetchDocumentsBuilder, FetchKnowledgeBaseBuilder,
+    FetchKnowledgeBasesBuilder, UpdateKnowledgeBaseBuilder, UploadDocumentBuilder,
 };
 pub use tools::{
     CreateToolBuilder, DeleteToolBuilder, FetchToolBuilder, ListToolsBuilder, ListToolsOptions,
-    UpdateToolBuilder, create_tool, delete_tool, fetch_tool, list_tools, update_tool,
+    UpdateToolBuilder,
 };

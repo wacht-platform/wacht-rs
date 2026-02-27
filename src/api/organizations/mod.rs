@@ -6,9 +6,8 @@
 pub mod members;
 pub mod roles;
 
-// Core organization functions
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{
         CreateOrganizationRequest, ListOptions, Organization, PaginatedResponse,
@@ -18,14 +17,67 @@ use crate::{
 
 pub type OrganizationListResponse = PaginatedResponse<Organization>;
 
+#[derive(Debug, Clone)]
+pub struct OrganizationsApi {
+    client: WachtClient,
+}
+
+impl OrganizationsApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn fetch_organizations(&self) -> FetchOrganizationsBuilder {
+        FetchOrganizationsBuilder::new(self.client.clone())
+    }
+
+    pub fn create_organization(&self, request: CreateOrganizationRequest) -> CreateOrganizationBuilder {
+        CreateOrganizationBuilder::new(self.client.clone(), request)
+    }
+
+    pub fn fetch_organization(&self, organization_id: &str) -> FetchOrganizationBuilder {
+        FetchOrganizationBuilder::new(self.client.clone(), organization_id)
+    }
+
+    pub fn update_organization(
+        &self,
+        organization_id: &str,
+        request: UpdateOrganizationRequest,
+    ) -> UpdateOrganizationBuilder {
+        UpdateOrganizationBuilder::new(self.client.clone(), organization_id, request)
+    }
+
+    pub fn delete_organization(&self, organization_id: &str) -> DeleteOrganizationBuilder {
+        DeleteOrganizationBuilder::new(self.client.clone(), organization_id)
+    }
+
+    pub fn create_organization_workspace(
+        &self,
+        organization_id: &str,
+        request: crate::models::CreateWorkspaceRequest,
+    ) -> CreateOrganizationWorkspaceBuilder {
+        CreateOrganizationWorkspaceBuilder::new(self.client.clone(), organization_id, request)
+    }
+
+    pub fn members(&self) -> members::OrganizationMembersApi {
+        members::OrganizationMembersApi::new(self.client.clone())
+    }
+
+    pub fn roles(&self) -> roles::OrganizationRolesApi {
+        roles::OrganizationRolesApi::new(self.client.clone())
+    }
+}
+
 /// Builder for fetching organizations
 pub struct FetchOrganizationsBuilder {
+    client: WachtClient,
     options: ListOptions,
 }
 
 impl FetchOrganizationsBuilder {
-    pub fn new() -> Self {
+    pub fn new(client: WachtClient) -> Self {
         Self {
+            client,
             options: ListOptions::default(),
         }
     }
@@ -56,9 +108,8 @@ impl FetchOrganizationsBuilder {
     }
 
     pub async fn send(self) -> Result<OrganizationListResponse> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/organizations", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/organizations", self.client.config().base_url);
 
         let mut request = client.get(&url);
         request = request.query(&self.options);
@@ -72,32 +123,27 @@ impl FetchOrganizationsBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch organizations: {}", error_body),
+                message: format!("Failed to fetch organizations: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// List all organizations using builder pattern
-pub fn fetch_organizations() -> FetchOrganizationsBuilder {
-    FetchOrganizationsBuilder::new()
-}
-
 /// Builder for creating an organization
 pub struct CreateOrganizationBuilder {
+    client: WachtClient,
     request: CreateOrganizationRequest,
 }
 
 impl CreateOrganizationBuilder {
-    pub fn new(request: CreateOrganizationRequest) -> Self {
-        Self { request }
+    pub fn new(client: WachtClient, request: CreateOrganizationRequest) -> Self {
+        Self { client, request }
     }
 
     pub async fn send(self) -> Result<Organization> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/organizations", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/organizations", self.client.config().base_url);
 
         let mut form = reqwest::multipart::Form::new();
         form = form.text("name", self.request.name.clone());
@@ -122,7 +168,7 @@ impl CreateOrganizationBuilder {
                 .mime_str("image/jpeg")
                 .map_err(|e| Error::Api {
                     status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("Failed to create multipart: {}", e),
+                    message: format!("Failed to create multipart: {e}"),
                     details: None,
                 })?;
             form = form.part("organization_image", part);
@@ -137,34 +183,34 @@ impl CreateOrganizationBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to create organization: {}", error_body),
+                message: format!("Failed to create organization: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Create a new organization using builder pattern
-pub fn create_organization(request: CreateOrganizationRequest) -> CreateOrganizationBuilder {
-    CreateOrganizationBuilder::new(request)
-}
-
 /// Builder for fetching an organization
 pub struct FetchOrganizationBuilder {
+    client: WachtClient,
     organization_id: String,
 }
 
 impl FetchOrganizationBuilder {
-    pub fn new(organization_id: &str) -> Self {
+    pub fn new(client: WachtClient, organization_id: &str) -> Self {
         Self {
+            client,
             organization_id: organization_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<Organization> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/organizations/{}", config.base_url, self.organization_id);
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/organizations/{}",
+            self.client.config().base_url,
+            self.organization_id
+        );
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -175,36 +221,36 @@ impl FetchOrganizationBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch organization: {}", error_body),
+                message: format!("Failed to fetch organization: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Fetch organization details using builder pattern
-pub fn fetch_organization(organization_id: &str) -> FetchOrganizationBuilder {
-    FetchOrganizationBuilder::new(organization_id)
-}
-
 /// Builder for updating an organization
 pub struct UpdateOrganizationBuilder {
+    client: WachtClient,
     organization_id: String,
     request: UpdateOrganizationRequest,
 }
 
 impl UpdateOrganizationBuilder {
-    pub fn new(organization_id: &str, request: UpdateOrganizationRequest) -> Self {
+    pub fn new(client: WachtClient, organization_id: &str, request: UpdateOrganizationRequest) -> Self {
         Self {
+            client,
             organization_id: organization_id.to_string(),
             request,
         }
     }
 
     pub async fn send(self) -> Result<Organization> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/organizations/{}", config.base_url, self.organization_id);
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/organizations/{}",
+            self.client.config().base_url,
+            self.organization_id
+        );
 
         let mut form = reqwest::multipart::Form::new();
         if let Some(name) = &self.request.name {
@@ -231,7 +277,7 @@ impl UpdateOrganizationBuilder {
                 .mime_str("image/jpeg")
                 .map_err(|e| Error::Api {
                     status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("Failed to create multipart: {}", e),
+                    message: format!("Failed to create multipart: {e}"),
                     details: None,
                 })?;
             form = form.part("organization_image", part);
@@ -246,37 +292,34 @@ impl UpdateOrganizationBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to update organization: {}", error_body),
+                message: format!("Failed to update organization: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Update an organization using builder pattern
-pub fn update_organization(
-    organization_id: &str,
-    request: UpdateOrganizationRequest,
-) -> UpdateOrganizationBuilder {
-    UpdateOrganizationBuilder::new(organization_id, request)
-}
-
 /// Builder for deleting an organization
 pub struct DeleteOrganizationBuilder {
+    client: WachtClient,
     organization_id: String,
 }
 
 impl DeleteOrganizationBuilder {
-    pub fn new(organization_id: &str) -> Self {
+    pub fn new(client: WachtClient, organization_id: &str) -> Self {
         Self {
+            client,
             organization_id: organization_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/organizations/{}", config.base_url, self.organization_id);
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/organizations/{}",
+            self.client.config().base_url,
+            self.organization_id
+        );
 
         let response = client.delete(&url).send().await?;
         let status = response.status();
@@ -287,38 +330,39 @@ impl DeleteOrganizationBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to delete organization: {}", error_body),
+                message: format!("Failed to delete organization: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Delete an organization using builder pattern
-pub fn delete_organization(organization_id: &str) -> DeleteOrganizationBuilder {
-    DeleteOrganizationBuilder::new(organization_id)
-}
-
 /// Builder for creating a workspace under an organization
 pub struct CreateOrganizationWorkspaceBuilder {
+    client: WachtClient,
     organization_id: String,
     request: crate::models::CreateWorkspaceRequest,
 }
 
 impl CreateOrganizationWorkspaceBuilder {
-    pub fn new(organization_id: &str, request: crate::models::CreateWorkspaceRequest) -> Self {
+    pub fn new(
+        client: WachtClient,
+        organization_id: &str,
+        request: crate::models::CreateWorkspaceRequest,
+    ) -> Self {
         Self {
+            client,
             organization_id: organization_id.to_string(),
             request,
         }
     }
 
     pub async fn send(self) -> Result<crate::models::Workspace> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/organizations/{}/workspaces",
-            config.base_url, self.organization_id
+            self.client.config().base_url,
+            self.organization_id
         );
 
         let mut form = reqwest::multipart::Form::new();
@@ -344,7 +388,7 @@ impl CreateOrganizationWorkspaceBuilder {
                 .mime_str("image/jpeg")
                 .map_err(|e| Error::Api {
                     status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("Failed to create multipart: {}", e),
+                    message: format!("Failed to create multipart: {e}"),
                     details: None,
                 })?;
             form = form.part("workspace_image", part);
@@ -359,20 +403,9 @@ impl CreateOrganizationWorkspaceBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!(
-                    "Failed to create workspace under organization: {}",
-                    error_body
-                ),
+                message: format!("Failed to create workspace under organization: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
-}
-
-/// Create a workspace under an organization using builder pattern
-pub fn create_organization_workspace(
-    organization_id: &str,
-    request: crate::models::CreateWorkspaceRequest,
-) -> CreateOrganizationWorkspaceBuilder {
-    CreateOrganizationWorkspaceBuilder::new(organization_id, request)
 }

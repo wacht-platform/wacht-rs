@@ -1,10 +1,9 @@
 use reqwest::{
     Client, ClientBuilder,
-    header::{AUTHORIZATION, HeaderMap, HeaderName, HeaderValue},
+    header::{AUTHORIZATION, HeaderMap, HeaderValue},
 };
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 #[derive(Debug, Clone)]
@@ -63,6 +62,120 @@ impl WachtConfig {
 
 static GLOBAL_CONFIG: OnceLock<WachtConfig> = OnceLock::new();
 static GLOBAL_HEADERS: OnceLock<HeaderMap> = OnceLock::new();
+
+#[derive(Debug)]
+struct WachtClientInner {
+    config: WachtConfig,
+    client: Client,
+}
+
+#[derive(Debug, Clone)]
+pub struct WachtClient {
+    inner: Arc<WachtClientInner>,
+}
+
+impl WachtClient {
+    pub fn new(config: WachtConfig) -> Result<Self, String> {
+        let mut headers = HeaderMap::new();
+        let auth_value = HeaderValue::from_str(&format!("Bearer {}", config.auth.token))
+            .map_err(|_| "Invalid authentication token")?;
+        headers.insert(AUTHORIZATION, auth_value);
+
+        let client = ClientBuilder::new()
+            .timeout(config.timeout)
+            .user_agent(&config.user_agent)
+            .default_headers(headers)
+            .pool_max_idle_per_host(500)
+            .pool_idle_timeout(Duration::from_secs(90))
+            .build()
+            .map_err(|e| format!("Failed to create HTTP client: {e}"))?;
+
+        Ok(Self {
+            inner: Arc::new(WachtClientInner { config, client }),
+        })
+    }
+
+    pub async fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
+        let config = WachtConfig::from_env()?.load_public_key().await?;
+        Self::new(config).map_err(|e| e.into())
+    }
+
+    pub fn config(&self) -> &WachtConfig {
+        &self.inner.config
+    }
+
+    pub fn http_client(&self) -> Client {
+        self.inner.client.clone()
+    }
+
+    pub fn users(&self) -> crate::api::users::UsersApi {
+        crate::api::users::UsersApi::new(self.clone())
+    }
+
+    pub fn organizations(&self) -> crate::api::organizations::OrganizationsApi {
+        crate::api::organizations::OrganizationsApi::new(self.clone())
+    }
+
+    pub fn ai(&self) -> crate::api::ai::AiApi {
+        crate::api::ai::AiApi::new(self.clone())
+    }
+
+    pub fn workspaces(&self) -> crate::api::workspaces::WorkspacesApi {
+        crate::api::workspaces::WorkspacesApi::new(self.clone())
+    }
+
+    pub fn health(&self) -> crate::api::health::HealthApi {
+        crate::api::health::HealthApi::new(self.clone())
+    }
+
+    pub fn analytics(&self) -> crate::api::analytics::AnalyticsApi {
+        crate::api::analytics::AnalyticsApi::new(self.clone())
+    }
+
+    pub fn integrations(&self) -> crate::api::integrations::IntegrationsApi {
+        crate::api::integrations::IntegrationsApi::new(self.clone())
+    }
+
+    pub fn segments(&self) -> crate::api::segments::SegmentsApi {
+        crate::api::segments::SegmentsApi::new(self.clone())
+    }
+
+    pub fn ai_settings(&self) -> crate::api::ai_settings::AiSettingsApi {
+        crate::api::ai_settings::AiSettingsApi::new(self.clone())
+    }
+
+    pub fn settings(&self) -> crate::api::settings::SettingsApi {
+        crate::api::settings::SettingsApi::new(self.clone())
+    }
+
+    pub fn api_keys(&self) -> crate::api::api_keys::ApiKeysApi {
+        crate::api::api_keys::ApiKeysApi::new(self.clone())
+    }
+
+    pub fn waitlist(&self) -> crate::api::waitlist::WaitlistApi {
+        crate::api::waitlist::WaitlistApi::new(self.clone())
+    }
+
+    pub fn invitations(&self) -> crate::api::invitations::InvitationsApi {
+        crate::api::invitations::InvitationsApi::new(self.clone())
+    }
+
+    pub fn notifications(&self) -> crate::api::notifications::NotificationsApi {
+        crate::api::notifications::NotificationsApi::new(self.clone())
+    }
+
+    pub fn session(&self) -> crate::api::session::SessionApi {
+        crate::api::session::SessionApi::new(self.clone())
+    }
+
+    pub fn webhooks(&self) -> crate::api::webhooks::WebhooksApi {
+        crate::api::webhooks::WebhooksApi::new(self.clone())
+    }
+
+    pub fn gateway(&self) -> crate::gateway::GatewayApi {
+        crate::gateway::GatewayApi::new(self.clone())
+    }
+}
 
 /// Initialize the Wacht SDK with configuration
 /// This MUST be called before using any API methods

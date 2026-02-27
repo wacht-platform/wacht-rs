@@ -1,5 +1,5 @@
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{CreateSegmentRequest, PaginatedResponse, Segment, UpdateSegmentRequest},
 };
@@ -7,7 +7,6 @@ use serde::{Deserialize, Serialize};
 
 pub type SegmentListResponse = PaginatedResponse<Segment>;
 
-/// Analyzed entity from segment query
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AnalyzedEntity {
     pub id: String,
@@ -19,7 +18,6 @@ pub struct AnalyzedEntity {
     pub last_name: Option<String>,
 }
 
-/// Filter options for user entities
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct UserFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -30,21 +28,18 @@ pub struct UserFilter {
     pub phone: Option<String>,
 }
 
-/// Filter options for organization entities
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct OrganizationFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 }
 
-/// Filter options for workspace entities
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct WorkspaceFilter {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
 }
 
-/// Filters for segment data query
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct SegmentDataFilters {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -57,7 +52,6 @@ pub struct SegmentDataFilters {
     pub segment_id: Option<String>,
 }
 
-/// Request to get segment data
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GetSegmentDataRequest {
     pub target_type: String,
@@ -65,16 +59,13 @@ pub struct GetSegmentDataRequest {
     pub filters: Option<SegmentDataFilters>,
 }
 
-/// Response from segment data query
 pub type SegmentDataResponse = PaginatedResponse<AnalyzedEntity>;
 
-/// Request to assign entity to segment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AssignSegmentRequest {
     pub entity_id: String,
 }
 
-/// Request to remove entity from segment
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RemoveSegmentRequest {
     pub entity_id: String,
@@ -94,15 +85,73 @@ pub struct ListSegmentsOptions {
     pub sort_order: Option<String>,
 }
 
-/// Builder for listing segments
+#[derive(Debug, Clone)]
+pub struct SegmentsApi {
+    client: WachtClient,
+}
+
+impl SegmentsApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn fetch_segments(&self) -> FetchSegmentsBuilder {
+        FetchSegmentsBuilder::new(self.client.clone())
+    }
+
+    pub fn create_segment(&self, request: CreateSegmentRequest) -> CreateSegmentBuilder {
+        CreateSegmentBuilder::new(self.client.clone(), request)
+    }
+
+    pub fn update_segment(
+        &self,
+        segment_id: impl Into<String>,
+        request: UpdateSegmentRequest,
+    ) -> UpdateSegmentBuilder {
+        UpdateSegmentBuilder::new(self.client.clone(), segment_id, request)
+    }
+
+    pub fn delete_segment(&self, segment_id: impl Into<String>) -> DeleteSegmentBuilder {
+        DeleteSegmentBuilder::new(self.client.clone(), segment_id)
+    }
+
+    pub fn assign_segment(
+        &self,
+        segment_id: impl Into<String>,
+        entity_id: impl Into<String>,
+    ) -> AssignSegmentBuilder {
+        AssignSegmentBuilder::new(self.client.clone(), segment_id, entity_id)
+    }
+
+    pub fn remove_segment(
+        &self,
+        segment_id: impl Into<String>,
+        entity_id: impl Into<String>,
+    ) -> RemoveSegmentBuilder {
+        RemoveSegmentBuilder::new(self.client.clone(), segment_id, entity_id)
+    }
+
+    pub fn get_segment_data(
+        &self,
+        segment_id: impl Into<String>,
+        target_type: impl Into<String>,
+    ) -> GetSegmentDataBuilder {
+        GetSegmentDataBuilder::new(self.client.clone(), segment_id, target_type)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct FetchSegmentsBuilder {
+    client: WachtClient,
     options: Option<ListSegmentsOptions>,
 }
 
 impl FetchSegmentsBuilder {
-    pub fn new() -> Self {
-        Self { options: None }
+    pub fn new(client: WachtClient) -> Self {
+        Self {
+            client,
+            options: None,
+        }
     }
 
     pub fn limit(mut self, limit: i32) -> Self {
@@ -146,14 +195,11 @@ impl FetchSegmentsBuilder {
     }
 
     pub async fn send(self) -> Result<SegmentListResponse> {
-        let options = self.options;
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/segments", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/segments", self.client.config().base_url);
 
         let mut request = client.get(&url);
-
-        if let Some(opts) = options {
+        if let Some(opts) = self.options {
             request = request.query(&opts);
         }
 
@@ -173,27 +219,20 @@ impl FetchSegmentsBuilder {
     }
 }
 
-impl Default for FetchSegmentsBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-/// Builder for creating segments
 #[derive(Debug, Clone)]
 pub struct CreateSegmentBuilder {
+    client: WachtClient,
     request: CreateSegmentRequest,
 }
 
 impl CreateSegmentBuilder {
-    pub fn new(request: CreateSegmentRequest) -> Self {
-        Self { request }
+    pub fn new(client: WachtClient, request: CreateSegmentRequest) -> Self {
+        Self { client, request }
     }
 
     pub async fn send(self) -> Result<Segment> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/segments", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/segments", self.client.config().base_url);
 
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -211,25 +250,29 @@ impl CreateSegmentBuilder {
     }
 }
 
-/// Builder for updating segments
 #[derive(Debug, Clone)]
 pub struct UpdateSegmentBuilder {
+    client: WachtClient,
     segment_id: String,
     request: UpdateSegmentRequest,
 }
 
 impl UpdateSegmentBuilder {
-    pub fn new(segment_id: impl Into<String>, request: UpdateSegmentRequest) -> Self {
+    pub fn new(
+        client: WachtClient,
+        segment_id: impl Into<String>,
+        request: UpdateSegmentRequest,
+    ) -> Self {
         Self {
+            client,
             segment_id: segment_id.into(),
             request,
         }
     }
 
     pub async fn send(self) -> Result<Segment> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/segments/{}", config.base_url, self.segment_id);
+        let client = self.client.http_client();
+        let url = format!("{}/segments/{}", self.client.config().base_url, self.segment_id);
 
         let response = client.patch(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -247,23 +290,23 @@ impl UpdateSegmentBuilder {
     }
 }
 
-/// Builder for deleting segments
 #[derive(Debug, Clone)]
 pub struct DeleteSegmentBuilder {
+    client: WachtClient,
     segment_id: String,
 }
 
 impl DeleteSegmentBuilder {
-    pub fn new(segment_id: impl Into<String>) -> Self {
+    pub fn new(client: WachtClient, segment_id: impl Into<String>) -> Self {
         Self {
+            client,
             segment_id: segment_id.into(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/segments/{}", config.base_url, self.segment_id);
+        let client = self.client.http_client();
+        let url = format!("{}/segments/{}", self.client.config().base_url, self.segment_id);
 
         let response = client.delete(&url).send().await?;
         let status = response.status();
@@ -281,25 +324,29 @@ impl DeleteSegmentBuilder {
     }
 }
 
-/// Builder for assigning entities to segments
 #[derive(Debug, Clone)]
 pub struct AssignSegmentBuilder {
+    client: WachtClient,
     segment_id: String,
     entity_id: String,
 }
 
 impl AssignSegmentBuilder {
-    pub fn new(segment_id: impl Into<String>, entity_id: impl Into<String>) -> Self {
+    pub fn new(
+        client: WachtClient,
+        segment_id: impl Into<String>,
+        entity_id: impl Into<String>,
+    ) -> Self {
         Self {
+            client,
             segment_id: segment_id.into(),
             entity_id: entity_id.into(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/segments/{}/assign", config.base_url, self.segment_id);
+        let client = self.client.http_client();
+        let url = format!("{}/segments/{}/assign", self.client.config().base_url, self.segment_id);
 
         let response = client
             .post(&url)
@@ -326,25 +373,29 @@ impl AssignSegmentBuilder {
     }
 }
 
-/// Builder for removing entities from segments
 #[derive(Debug, Clone)]
 pub struct RemoveSegmentBuilder {
+    client: WachtClient,
     segment_id: String,
     entity_id: String,
 }
 
 impl RemoveSegmentBuilder {
-    pub fn new(segment_id: impl Into<String>, entity_id: impl Into<String>) -> Self {
+    pub fn new(
+        client: WachtClient,
+        segment_id: impl Into<String>,
+        entity_id: impl Into<String>,
+    ) -> Self {
         Self {
+            client,
             segment_id: segment_id.into(),
             entity_id: entity_id.into(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/segments/{}/remove", config.base_url, self.segment_id);
+        let client = self.client.http_client();
+        let url = format!("{}/segments/{}/remove", self.client.config().base_url, self.segment_id);
 
         let response = client
             .post(&url)
@@ -371,17 +422,22 @@ impl RemoveSegmentBuilder {
     }
 }
 
-/// Builder for getting segment data
 #[derive(Debug, Clone)]
 pub struct GetSegmentDataBuilder {
+    client: WachtClient,
     segment_id: String,
     target_type: String,
     filters: Option<SegmentDataFilters>,
 }
 
 impl GetSegmentDataBuilder {
-    pub fn new(segment_id: impl Into<String>, target_type: impl Into<String>) -> Self {
+    pub fn new(
+        client: WachtClient,
+        segment_id: impl Into<String>,
+        target_type: impl Into<String>,
+    ) -> Self {
         Self {
+            client,
             segment_id: segment_id.into(),
             target_type: target_type.into(),
             filters: None,
@@ -415,11 +471,9 @@ impl GetSegmentDataBuilder {
     }
 
     pub async fn send(self) -> Result<SegmentDataResponse> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/segments/data", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/segments/data", self.client.config().base_url);
 
-        // Build filters with segment_id included
         let mut final_filters = self.filters.unwrap_or_default();
         if final_filters.segment_id.is_none() {
             final_filters.segment_id = Some(self.segment_id.clone());
@@ -444,56 +498,4 @@ impl GetSegmentDataBuilder {
             })
         }
     }
-}
-
-/// Fetch segments
-pub async fn fetch_segments(options: Option<ListSegmentsOptions>) -> Result<SegmentListResponse> {
-    FetchSegmentsBuilder::new()
-        .options(options.unwrap_or_default())
-        .send()
-        .await
-}
-
-/// Create segment
-pub async fn create_segment(request: CreateSegmentRequest) -> Result<Segment> {
-    CreateSegmentBuilder::new(request).send().await
-}
-
-/// Update segment
-pub async fn update_segment(segment_id: &str, request: UpdateSegmentRequest) -> Result<Segment> {
-    UpdateSegmentBuilder::new(segment_id, request).send().await
-}
-
-/// Delete segment
-pub async fn delete_segment(segment_id: &str) -> Result<()> {
-    DeleteSegmentBuilder::new(segment_id).send().await
-}
-
-/// Assign entity to segment
-pub async fn assign_segment(segment_id: &str, entity_id: &str) -> Result<()> {
-    AssignSegmentBuilder::new(segment_id, entity_id)
-        .send()
-        .await
-}
-
-/// Remove entity from segment
-pub async fn remove_segment(segment_id: &str, entity_id: &str) -> Result<()> {
-    RemoveSegmentBuilder::new(segment_id, entity_id)
-        .send()
-        .await
-}
-
-/// Get segment data
-pub async fn get_segment_data(
-    segment_id: &str,
-    target_type: &str,
-    filters: Option<SegmentDataFilters>,
-) -> Result<SegmentDataResponse> {
-    let mut builder = GetSegmentDataBuilder::new(segment_id, target_type);
-
-    if let Some(filters) = filters {
-        builder = builder.filters(filters);
-    }
-
-    builder.send().await
 }

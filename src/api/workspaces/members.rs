@@ -3,22 +3,56 @@
 //! Handles member management within workspaces using builder pattern.
 
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{ListOptions, PaginatedResponse, WorkspaceMember},
 };
 
 pub type WorkspaceMemberListResponse = PaginatedResponse<WorkspaceMember>;
 
+#[derive(Debug, Clone)]
+pub struct WorkspaceMembersApi {
+    client: WachtClient,
+}
+
+impl WorkspaceMembersApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn fetch_members(&self, workspace_id: &str) -> FetchMembersBuilder {
+        FetchMembersBuilder::new(self.client.clone(), workspace_id)
+    }
+
+    pub fn add_member(
+        &self,
+        workspace_id: &str,
+        user_id: &str,
+        role_ids: Vec<String>,
+    ) -> AddMemberBuilder {
+        AddMemberBuilder::new(self.client.clone(), workspace_id, user_id, role_ids)
+    }
+
+    pub fn update_member(&self, workspace_id: &str, membership_id: &str) -> UpdateMemberBuilder {
+        UpdateMemberBuilder::new(self.client.clone(), workspace_id, membership_id)
+    }
+
+    pub fn remove_member(&self, workspace_id: &str, membership_id: &str) -> RemoveMemberBuilder {
+        RemoveMemberBuilder::new(self.client.clone(), workspace_id, membership_id)
+    }
+}
+
 /// Builder for fetching workspace members
 pub struct FetchMembersBuilder {
+    client: WachtClient,
     workspace_id: String,
     options: ListOptions,
 }
 
 impl FetchMembersBuilder {
-    pub fn new(workspace_id: &str) -> Self {
+    pub fn new(client: WachtClient, workspace_id: &str) -> Self {
         Self {
+            client,
             workspace_id: workspace_id.to_string(),
             options: ListOptions::default(),
         }
@@ -50,11 +84,11 @@ impl FetchMembersBuilder {
     }
 
     pub async fn send(self) -> Result<WorkspaceMemberListResponse> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/workspaces/{}/members",
-            config.base_url, self.workspace_id
+            self.client.config().base_url,
+            self.workspace_id
         );
 
         let mut request = client.get(&url);
@@ -70,8 +104,8 @@ impl FetchMembersBuilder {
             Err(Error::Api {
                 status,
                 message: format!(
-                    "Failed to fetch members for workspace {}: {}",
-                    self.workspace_id, error_body
+                    "Failed to fetch members for workspace {}: {error_body}",
+                    self.workspace_id
                 ),
                 details: serde_json::from_str(&error_body).ok(),
             })
@@ -79,21 +113,18 @@ impl FetchMembersBuilder {
     }
 }
 
-/// Fetch workspace members using builder pattern
-pub fn fetch_members(workspace_id: &str) -> FetchMembersBuilder {
-    FetchMembersBuilder::new(workspace_id)
-}
-
 /// Builder for adding a member to workspace
 pub struct AddMemberBuilder {
+    client: WachtClient,
     workspace_id: String,
     user_id: String,
     role_ids: Vec<String>,
 }
 
 impl AddMemberBuilder {
-    pub fn new(workspace_id: &str, user_id: &str, role_ids: Vec<String>) -> Self {
+    pub fn new(client: WachtClient, workspace_id: &str, user_id: &str, role_ids: Vec<String>) -> Self {
         Self {
+            client,
             workspace_id: workspace_id.to_string(),
             user_id: user_id.to_string(),
             role_ids,
@@ -101,11 +132,11 @@ impl AddMemberBuilder {
     }
 
     pub async fn send(self) -> Result<WorkspaceMember> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/workspaces/{}/members",
-            config.base_url, self.workspace_id
+            self.client.config().base_url,
+            self.workspace_id
         );
 
         let payload = serde_json::json!({
@@ -123,8 +154,8 @@ impl AddMemberBuilder {
             Err(Error::Api {
                 status,
                 message: format!(
-                    "Failed to add member to workspace {}: {}",
-                    self.workspace_id, error_body
+                    "Failed to add member to workspace {}: {error_body}",
+                    self.workspace_id
                 ),
                 details: serde_json::from_str(&error_body).ok(),
             })
@@ -132,13 +163,9 @@ impl AddMemberBuilder {
     }
 }
 
-/// Add member to workspace using builder pattern
-pub fn add_member(workspace_id: &str, user_id: &str, role_ids: Vec<String>) -> AddMemberBuilder {
-    AddMemberBuilder::new(workspace_id, user_id, role_ids)
-}
-
 /// Builder for updating workspace member
 pub struct UpdateMemberBuilder {
+    client: WachtClient,
     workspace_id: String,
     membership_id: String,
     role_ids: Option<Vec<String>>,
@@ -146,8 +173,9 @@ pub struct UpdateMemberBuilder {
 }
 
 impl UpdateMemberBuilder {
-    pub fn new(workspace_id: &str, membership_id: &str) -> Self {
+    pub fn new(client: WachtClient, workspace_id: &str, membership_id: &str) -> Self {
         Self {
+            client,
             workspace_id: workspace_id.to_string(),
             membership_id: membership_id.to_string(),
             role_ids: None,
@@ -166,11 +194,12 @@ impl UpdateMemberBuilder {
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/workspaces/{}/members/{}",
-            config.base_url, self.workspace_id, self.membership_id
+            self.client.config().base_url,
+            self.workspace_id,
+            self.membership_id
         );
 
         let mut payload = serde_json::json!({});
@@ -191,38 +220,36 @@ impl UpdateMemberBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to update workspace member: {}", error_body),
+                message: format!("Failed to update workspace member: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Update workspace member using builder pattern
-pub fn update_member(workspace_id: &str, membership_id: &str) -> UpdateMemberBuilder {
-    UpdateMemberBuilder::new(workspace_id, membership_id)
-}
-
 /// Builder for removing workspace member
 pub struct RemoveMemberBuilder {
+    client: WachtClient,
     workspace_id: String,
     membership_id: String,
 }
 
 impl RemoveMemberBuilder {
-    pub fn new(workspace_id: &str, membership_id: &str) -> Self {
+    pub fn new(client: WachtClient, workspace_id: &str, membership_id: &str) -> Self {
         Self {
+            client,
             workspace_id: workspace_id.to_string(),
             membership_id: membership_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/workspaces/{}/members/{}",
-            config.base_url, self.workspace_id, self.membership_id
+            self.client.config().base_url,
+            self.workspace_id,
+            self.membership_id
         );
 
         let response = client.delete(&url).send().await?;
@@ -234,14 +261,9 @@ impl RemoveMemberBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to remove workspace member: {}", error_body),
+                message: format!("Failed to remove workspace member: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
-}
-
-/// Remove workspace member using builder pattern
-pub fn remove_member(workspace_id: &str, membership_id: &str) -> RemoveMemberBuilder {
-    RemoveMemberBuilder::new(workspace_id, membership_id)
 }

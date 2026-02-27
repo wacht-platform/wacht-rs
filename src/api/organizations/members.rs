@@ -3,7 +3,7 @@
 //! Handles member management within organizations using builder pattern.
 
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{
         AddOrganizationMemberRequest, ListOptions, OrganizationMember, PaginatedResponse,
@@ -13,15 +13,53 @@ use crate::{
 
 pub type OrganizationMemberListResponse = PaginatedResponse<OrganizationMember>;
 
+#[derive(Debug, Clone)]
+pub struct OrganizationMembersApi {
+    client: WachtClient,
+}
+
+impl OrganizationMembersApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn fetch_members(&self, organization_id: &str) -> FetchMembersBuilder {
+        FetchMembersBuilder::new(self.client.clone(), organization_id)
+    }
+
+    pub fn add_member(
+        &self,
+        organization_id: &str,
+        request: AddOrganizationMemberRequest,
+    ) -> AddMemberBuilder {
+        AddMemberBuilder::new(self.client.clone(), organization_id, request)
+    }
+
+    pub fn update_member(
+        &self,
+        organization_id: &str,
+        membership_id: &str,
+        request: UpdateOrganizationMemberRequest,
+    ) -> UpdateMemberBuilder {
+        UpdateMemberBuilder::new(self.client.clone(), organization_id, membership_id, request)
+    }
+
+    pub fn remove_member(&self, organization_id: &str, membership_id: &str) -> RemoveMemberBuilder {
+        RemoveMemberBuilder::new(self.client.clone(), organization_id, membership_id)
+    }
+}
+
 /// Builder for fetching organization members
 pub struct FetchMembersBuilder {
+    client: WachtClient,
     organization_id: String,
     options: ListOptions,
 }
 
 impl FetchMembersBuilder {
-    pub fn new(organization_id: &str) -> Self {
+    pub fn new(client: WachtClient, organization_id: &str) -> Self {
         Self {
+            client,
             organization_id: organization_id.to_string(),
             options: ListOptions::default(),
         }
@@ -53,11 +91,11 @@ impl FetchMembersBuilder {
     }
 
     pub async fn send(self) -> Result<OrganizationMemberListResponse> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/organizations/{}/members",
-            config.base_url, self.organization_id
+            self.client.config().base_url,
+            self.organization_id
         );
 
         let mut request = client.get(&url);
@@ -72,38 +110,35 @@ impl FetchMembersBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch organization members: {}", error_body),
+                message: format!("Failed to fetch organization members: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Fetch organization members using builder pattern
-pub fn fetch_members(organization_id: &str) -> FetchMembersBuilder {
-    FetchMembersBuilder::new(organization_id)
-}
-
 /// Builder for adding a member to organization
 pub struct AddMemberBuilder {
+    client: WachtClient,
     organization_id: String,
     request: AddOrganizationMemberRequest,
 }
 
 impl AddMemberBuilder {
-    pub fn new(organization_id: &str, request: AddOrganizationMemberRequest) -> Self {
+    pub fn new(client: WachtClient, organization_id: &str, request: AddOrganizationMemberRequest) -> Self {
         Self {
+            client,
             organization_id: organization_id.to_string(),
             request,
         }
     }
 
     pub async fn send(self) -> Result<OrganizationMember> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/organizations/{}/members",
-            config.base_url, self.organization_id
+            self.client.config().base_url,
+            self.organization_id
         );
 
         let response = client.post(&url).json(&self.request).send().await?;
@@ -116,8 +151,8 @@ impl AddMemberBuilder {
             Err(Error::Api {
                 status,
                 message: format!(
-                    "Failed to add member to organization {}: {}",
-                    self.organization_id, error_body
+                    "Failed to add member to organization {}: {error_body}",
+                    self.organization_id
                 ),
                 details: serde_json::from_str(&error_body).ok(),
             })
@@ -125,16 +160,9 @@ impl AddMemberBuilder {
     }
 }
 
-/// Add member to organization using builder pattern
-pub fn add_member(
-    organization_id: &str,
-    request: AddOrganizationMemberRequest,
-) -> AddMemberBuilder {
-    AddMemberBuilder::new(organization_id, request)
-}
-
 /// Builder for updating organization member
 pub struct UpdateMemberBuilder {
+    client: WachtClient,
     organization_id: String,
     membership_id: String,
     request: UpdateOrganizationMemberRequest,
@@ -142,11 +170,13 @@ pub struct UpdateMemberBuilder {
 
 impl UpdateMemberBuilder {
     pub fn new(
+        client: WachtClient,
         organization_id: &str,
         membership_id: &str,
         request: UpdateOrganizationMemberRequest,
     ) -> Self {
         Self {
+            client,
             organization_id: organization_id.to_string(),
             membership_id: membership_id.to_string(),
             request,
@@ -154,11 +184,12 @@ impl UpdateMemberBuilder {
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/organizations/{}/members/{}",
-            config.base_url, self.organization_id, self.membership_id
+            self.client.config().base_url,
+            self.organization_id,
+            self.membership_id
         );
 
         let response = client.patch(&url).json(&self.request).send().await?;
@@ -171,8 +202,8 @@ impl UpdateMemberBuilder {
             Err(Error::Api {
                 status,
                 message: format!(
-                    "Failed to update member {} in organization {}: {}",
-                    self.membership_id, self.organization_id, error_body
+                    "Failed to update member {} in organization {}: {error_body}",
+                    self.membership_id, self.organization_id
                 ),
                 details: serde_json::from_str(&error_body).ok(),
             })
@@ -180,35 +211,29 @@ impl UpdateMemberBuilder {
     }
 }
 
-/// Update organization member using builder pattern
-pub fn update_member(
-    organization_id: &str,
-    membership_id: &str,
-    request: UpdateOrganizationMemberRequest,
-) -> UpdateMemberBuilder {
-    UpdateMemberBuilder::new(organization_id, membership_id, request)
-}
-
 /// Builder for removing organization member
 pub struct RemoveMemberBuilder {
+    client: WachtClient,
     organization_id: String,
     membership_id: String,
 }
 
 impl RemoveMemberBuilder {
-    pub fn new(organization_id: &str, membership_id: &str) -> Self {
+    pub fn new(client: WachtClient, organization_id: &str, membership_id: &str) -> Self {
         Self {
+            client,
             organization_id: organization_id.to_string(),
             membership_id: membership_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/organizations/{}/members/{}",
-            config.base_url, self.organization_id, self.membership_id
+            self.client.config().base_url,
+            self.organization_id,
+            self.membership_id
         );
 
         let response = client.delete(&url).send().await?;
@@ -221,16 +246,11 @@ impl RemoveMemberBuilder {
             Err(Error::Api {
                 status,
                 message: format!(
-                    "Failed to remove member {} from organization {}: {}",
-                    self.membership_id, self.organization_id, error_body
+                    "Failed to remove member {} from organization {}: {error_body}",
+                    self.membership_id, self.organization_id
                 ),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
-}
-
-/// Remove organization member using builder pattern
-pub fn remove_member(organization_id: &str, membership_id: &str) -> RemoveMemberBuilder {
-    RemoveMemberBuilder::new(organization_id, membership_id)
 }

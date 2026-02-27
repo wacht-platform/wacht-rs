@@ -1,5 +1,5 @@
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::RecentSignup,
 };
@@ -30,14 +30,41 @@ pub struct AnalyticsStatsResponse {
     pub workspaces_created_change: Option<f64>,
 }
 
+#[derive(Debug, Clone)]
+pub struct AnalyticsApi {
+    client: WachtClient,
+}
+
+impl AnalyticsApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn fetch_stats(&self) -> FetchStatsBuilder {
+        FetchStatsBuilder::new(self.client.clone())
+    }
+
+    pub fn fetch_recent_signups(&self) -> FetchRecentSignupsBuilder {
+        FetchRecentSignupsBuilder::new(self.client.clone())
+    }
+
+    pub fn fetch_recent_signins(&self) -> FetchRecentSigninsBuilder {
+        FetchRecentSigninsBuilder::new(self.client.clone())
+    }
+}
+
 /// Builder for fetching analytics statistics
 pub struct FetchStatsBuilder {
+    client: WachtClient,
     options: Option<AnalyticsStatsOptions>,
 }
 
 impl FetchStatsBuilder {
-    pub fn new() -> Self {
-        Self { options: None }
+    pub fn new(client: WachtClient) -> Self {
+        Self {
+            client,
+            options: None,
+        }
     }
 
     pub fn options(mut self, options: AnalyticsStatsOptions) -> Self {
@@ -46,9 +73,8 @@ impl FetchStatsBuilder {
     }
 
     pub async fn send(self) -> Result<AnalyticsStatsResponse> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/analytics/summary", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/analytics/summary", self.client.config().base_url);
 
         let mut request = client.get(&url);
 
@@ -65,26 +91,25 @@ impl FetchStatsBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch analytics statistics: {}", error_body),
+                message: format!("Failed to fetch analytics statistics: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
-}
-
-/// Fetch analytics statistics using builder pattern
-pub fn fetch_stats() -> FetchStatsBuilder {
-    FetchStatsBuilder::new()
 }
 
 /// Builder for fetching recent signups
 pub struct FetchRecentSignupsBuilder {
+    client: WachtClient,
     limit: Option<u32>,
 }
 
 impl FetchRecentSignupsBuilder {
-    pub fn new() -> Self {
-        Self { limit: None }
+    pub fn new(client: WachtClient) -> Self {
+        Self {
+            client,
+            limit: None,
+        }
     }
 
     pub fn limit(mut self, limit: u32) -> Self {
@@ -93,9 +118,8 @@ impl FetchRecentSignupsBuilder {
     }
 
     pub async fn send(self) -> Result<RecentSignupsResponse> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/analytics/recent-signups", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/analytics/recent-signups", self.client.config().base_url);
 
         let mut request = client.get(&url);
 
@@ -112,26 +136,25 @@ impl FetchRecentSignupsBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch recent signups: {}", error_body),
+                message: format!("Failed to fetch recent signups: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
-}
-
-/// Fetch recent signups using builder pattern
-pub fn fetch_recent_signups() -> FetchRecentSignupsBuilder {
-    FetchRecentSignupsBuilder::new()
 }
 
 /// Builder for fetching recent signins
 pub struct FetchRecentSigninsBuilder {
+    client: WachtClient,
     limit: Option<u32>,
 }
 
 impl FetchRecentSigninsBuilder {
-    pub fn new() -> Self {
-        Self { limit: None }
+    pub fn new(client: WachtClient) -> Self {
+        Self {
+            client,
+            limit: None,
+        }
     }
 
     pub fn limit(mut self, limit: u32) -> Self {
@@ -140,9 +163,8 @@ impl FetchRecentSigninsBuilder {
     }
 
     pub async fn send(self) -> Result<RecentSignupsResponse> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/analytics/recent-signins", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/analytics/recent-signins", self.client.config().base_url);
 
         let mut request = client.get(&url);
 
@@ -159,14 +181,9 @@ impl FetchRecentSigninsBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to fetch recent signins: {}", error_body),
+                message: format!("Failed to fetch recent signins: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
-}
-
-/// Fetch recent signins using builder pattern
-pub fn fetch_recent_signins() -> FetchRecentSigninsBuilder {
-    FetchRecentSigninsBuilder::new()
 }

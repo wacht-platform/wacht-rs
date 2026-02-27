@@ -1,23 +1,38 @@
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{CreateNotificationRequest, Notification},
 };
 
+#[derive(Debug, Clone)]
+pub struct NotificationsApi {
+    client: WachtClient,
+}
+
+impl NotificationsApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn create(&self, request: CreateNotificationRequest) -> CreateBuilder {
+        CreateBuilder::new(self.client.clone(), request)
+    }
+}
+
 /// Builder for creating a notification
 pub struct CreateBuilder {
+    client: WachtClient,
     request: CreateNotificationRequest,
 }
 
 impl CreateBuilder {
-    pub fn new(request: CreateNotificationRequest) -> Self {
-        Self { request }
+    pub fn new(client: WachtClient, request: CreateNotificationRequest) -> Self {
+        Self { client, request }
     }
 
     pub async fn send(self) -> Result<Notification> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/notifications", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/notifications", self.client.config().base_url);
 
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -28,14 +43,9 @@ impl CreateBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to create notification: {}", error_body),
+                message: format!("Failed to create notification: {error_body}"),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
-}
-
-/// Create a notification for a specific user using builder pattern
-pub fn create(request: CreateNotificationRequest) -> CreateBuilder {
-    CreateBuilder::new(request)
 }

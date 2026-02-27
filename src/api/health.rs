@@ -1,5 +1,5 @@
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
 };
 use serde::{Deserialize, Serialize};
@@ -9,18 +9,34 @@ pub struct HealthStatus {
     pub status: String,
 }
 
+#[derive(Debug, Clone)]
+pub struct HealthApi {
+    client: WachtClient,
+}
+
+impl HealthApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn check(&self) -> CheckHealthBuilder {
+        CheckHealthBuilder::new(self.client.clone())
+    }
+}
+
 /// Builder for checking API health
-pub struct CheckHealthBuilder;
+pub struct CheckHealthBuilder {
+    client: WachtClient,
+}
 
 impl CheckHealthBuilder {
-    pub fn new() -> Self {
-        Self
+    pub fn new(client: WachtClient) -> Self {
+        Self { client }
     }
 
     pub async fn send(self) -> Result<HealthStatus> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/health", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/health", self.client.config().base_url);
 
         let response = client.get(&url).send().await?;
 
@@ -34,9 +50,4 @@ impl CheckHealthBuilder {
             })
         }
     }
-}
-
-/// Check the health status of the API using builder pattern
-pub fn check() -> CheckHealthBuilder {
-    CheckHealthBuilder::new()
 }

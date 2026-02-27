@@ -1,25 +1,40 @@
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{DeploymentAiSettings, UpdateDeploymentAiSettingsRequest},
 };
 
-/// Builder for fetching AI settings
+#[derive(Debug, Clone)]
+pub struct AiSettingsApi {
+    client: WachtClient,
+}
+
+impl AiSettingsApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn fetch_ai_settings(&self) -> FetchAiSettingsBuilder {
+        FetchAiSettingsBuilder::new(self.client.clone())
+    }
+
+    pub fn update_ai_settings(&self, request: UpdateDeploymentAiSettingsRequest) -> UpdateAiSettingsBuilder {
+        UpdateAiSettingsBuilder::new(self.client.clone(), request)
+    }
+}
+
 pub struct FetchAiSettingsBuilder {
-    _private: (),
+    client: WachtClient,
 }
 
 impl FetchAiSettingsBuilder {
-    /// Create a new builder for fetching AI settings
-    pub fn new() -> Self {
-        Self { _private: () }
+    pub fn new(client: WachtClient) -> Self {
+        Self { client }
     }
 
-    /// Execute the fetch operation
     pub async fn send(self) -> Result<DeploymentAiSettings> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/ai/settings", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/ai/settings", self.client.config().base_url);
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -37,22 +52,19 @@ impl FetchAiSettingsBuilder {
     }
 }
 
-/// Builder for updating AI settings
 pub struct UpdateAiSettingsBuilder {
+    client: WachtClient,
     request: UpdateDeploymentAiSettingsRequest,
 }
 
 impl UpdateAiSettingsBuilder {
-    /// Create a new builder for updating AI settings
-    pub fn new(request: UpdateDeploymentAiSettingsRequest) -> Self {
-        Self { request }
+    pub fn new(client: WachtClient, request: UpdateDeploymentAiSettingsRequest) -> Self {
+        Self { client, request }
     }
 
-    /// Execute the update operation
     pub async fn send(self) -> Result<DeploymentAiSettings> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/ai/settings", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/ai/settings", self.client.config().base_url);
 
         let response = client.put(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -68,14 +80,4 @@ impl UpdateAiSettingsBuilder {
             })
         }
     }
-}
-
-/// Convenience function to create a fetch AI settings builder
-pub fn fetch_ai_settings() -> FetchAiSettingsBuilder {
-    FetchAiSettingsBuilder::new()
-}
-
-/// Convenience function to create an update AI settings builder
-pub fn update_ai_settings(request: UpdateDeploymentAiSettingsRequest) -> UpdateAiSettingsBuilder {
-    UpdateAiSettingsBuilder::new(request)
 }

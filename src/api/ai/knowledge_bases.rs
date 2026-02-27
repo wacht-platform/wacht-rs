@@ -1,5 +1,5 @@
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{
         AiKnowledgeBase, CreateAiKnowledgeBaseRequest, KnowledgeBaseDocument, PaginatedResponse,
@@ -19,13 +19,69 @@ pub struct ListKnowledgeBasesOptions {
 }
 
 #[derive(Debug, Clone)]
+pub struct KnowledgeBasesApi {
+    client: WachtClient,
+}
+
+impl KnowledgeBasesApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn fetch_knowledge_bases(&self) -> FetchKnowledgeBasesBuilder {
+        FetchKnowledgeBasesBuilder::new(self.client.clone())
+    }
+
+    pub fn create_knowledge_base(&self, request: CreateAiKnowledgeBaseRequest) -> CreateKnowledgeBaseBuilder {
+        CreateKnowledgeBaseBuilder::new(self.client.clone(), request)
+    }
+
+    pub fn fetch_knowledge_base(&self, knowledge_base_id: &str) -> FetchKnowledgeBaseBuilder {
+        FetchKnowledgeBaseBuilder::new(self.client.clone(), knowledge_base_id)
+    }
+
+    pub fn update_knowledge_base(
+        &self,
+        knowledge_base_id: &str,
+        request: UpdateAiKnowledgeBaseRequest,
+    ) -> UpdateKnowledgeBaseBuilder {
+        UpdateKnowledgeBaseBuilder::new(self.client.clone(), knowledge_base_id, request)
+    }
+
+    pub fn delete_knowledge_base(&self, knowledge_base_id: &str) -> DeleteKnowledgeBaseBuilder {
+        DeleteKnowledgeBaseBuilder::new(self.client.clone(), knowledge_base_id)
+    }
+
+    pub fn fetch_documents(&self, knowledge_base_id: &str) -> FetchDocumentsBuilder {
+        FetchDocumentsBuilder::new(self.client.clone(), knowledge_base_id)
+    }
+
+    pub fn upload_document(
+        &self,
+        knowledge_base_id: &str,
+        file_content: Vec<u8>,
+        file_name: String,
+    ) -> UploadDocumentBuilder {
+        UploadDocumentBuilder::new(self.client.clone(), knowledge_base_id, file_content, file_name)
+    }
+
+    pub fn delete_document(&self, knowledge_base_id: &str, document_id: &str) -> DeleteDocumentBuilder {
+        DeleteDocumentBuilder::new(self.client.clone(), knowledge_base_id, document_id)
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct FetchKnowledgeBasesBuilder {
+    client: WachtClient,
     options: Option<ListKnowledgeBasesOptions>,
 }
 
 impl FetchKnowledgeBasesBuilder {
-    pub fn new() -> Self {
-        Self { options: None }
+    pub fn new(client: WachtClient) -> Self {
+        Self {
+            client,
+            options: None,
+        }
     }
 
     pub fn options(mut self, options: ListKnowledgeBasesOptions) -> Self {
@@ -34,12 +90,10 @@ impl FetchKnowledgeBasesBuilder {
     }
 
     pub async fn send(self) -> Result<PaginatedResponse<AiKnowledgeBase>> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/ai/knowledge-bases", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/ai/knowledge-bases", self.client.config().base_url);
 
         let mut request = client.get(&url);
-
         if let Some(opts) = self.options {
             request = request.query(&opts);
         }
@@ -62,18 +116,18 @@ impl FetchKnowledgeBasesBuilder {
 
 #[derive(Debug, Clone)]
 pub struct CreateKnowledgeBaseBuilder {
+    client: WachtClient,
     request: CreateAiKnowledgeBaseRequest,
 }
 
 impl CreateKnowledgeBaseBuilder {
-    pub fn new(request: CreateAiKnowledgeBaseRequest) -> Self {
-        Self { request }
+    pub fn new(client: WachtClient, request: CreateAiKnowledgeBaseRequest) -> Self {
+        Self { client, request }
     }
 
     pub async fn send(self) -> Result<AiKnowledgeBase> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/ai/knowledge-bases", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/ai/knowledge-bases", self.client.config().base_url);
 
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -93,22 +147,24 @@ impl CreateKnowledgeBaseBuilder {
 
 #[derive(Debug, Clone)]
 pub struct FetchKnowledgeBaseBuilder {
+    client: WachtClient,
     knowledge_base_id: String,
 }
 
 impl FetchKnowledgeBaseBuilder {
-    pub fn new(knowledge_base_id: &str) -> Self {
+    pub fn new(client: WachtClient, knowledge_base_id: &str) -> Self {
         Self {
+            client,
             knowledge_base_id: knowledge_base_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<AiKnowledgeBase> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/ai/knowledge-bases/{}",
-            config.base_url, self.knowledge_base_id
+            self.client.config().base_url,
+            self.knowledge_base_id
         );
 
         let response = client.get(&url).send().await?;
@@ -132,24 +188,30 @@ impl FetchKnowledgeBaseBuilder {
 
 #[derive(Debug, Clone)]
 pub struct UpdateKnowledgeBaseBuilder {
+    client: WachtClient,
     knowledge_base_id: String,
     request: UpdateAiKnowledgeBaseRequest,
 }
 
 impl UpdateKnowledgeBaseBuilder {
-    pub fn new(knowledge_base_id: &str, request: UpdateAiKnowledgeBaseRequest) -> Self {
+    pub fn new(
+        client: WachtClient,
+        knowledge_base_id: &str,
+        request: UpdateAiKnowledgeBaseRequest,
+    ) -> Self {
         Self {
+            client,
             knowledge_base_id: knowledge_base_id.to_string(),
             request,
         }
     }
 
     pub async fn send(self) -> Result<AiKnowledgeBase> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/ai/knowledge-bases/{}",
-            config.base_url, self.knowledge_base_id
+            self.client.config().base_url,
+            self.knowledge_base_id
         );
 
         let response = client.patch(&url).json(&self.request).send().await?;
@@ -173,22 +235,24 @@ impl UpdateKnowledgeBaseBuilder {
 
 #[derive(Debug, Clone)]
 pub struct DeleteKnowledgeBaseBuilder {
+    client: WachtClient,
     knowledge_base_id: String,
 }
 
 impl DeleteKnowledgeBaseBuilder {
-    pub fn new(knowledge_base_id: &str) -> Self {
+    pub fn new(client: WachtClient, knowledge_base_id: &str) -> Self {
         Self {
+            client,
             knowledge_base_id: knowledge_base_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/ai/knowledge-bases/{}",
-            config.base_url, self.knowledge_base_id
+            self.client.config().base_url,
+            self.knowledge_base_id
         );
 
         let response = client.delete(&url).send().await?;
@@ -212,22 +276,24 @@ impl DeleteKnowledgeBaseBuilder {
 
 #[derive(Debug, Clone)]
 pub struct FetchDocumentsBuilder {
+    client: WachtClient,
     knowledge_base_id: String,
 }
 
 impl FetchDocumentsBuilder {
-    pub fn new(knowledge_base_id: &str) -> Self {
+    pub fn new(client: WachtClient, knowledge_base_id: &str) -> Self {
         Self {
+            client,
             knowledge_base_id: knowledge_base_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<PaginatedResponse<KnowledgeBaseDocument>> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/ai/knowledge-bases/{}/documents",
-            config.base_url, self.knowledge_base_id
+            self.client.config().base_url,
+            self.knowledge_base_id
         );
 
         let response = client.get(&url).send().await?;
@@ -251,14 +317,21 @@ impl FetchDocumentsBuilder {
 
 #[derive(Debug, Clone)]
 pub struct UploadDocumentBuilder {
+    client: WachtClient,
     knowledge_base_id: String,
     file_content: Vec<u8>,
     file_name: String,
 }
 
 impl UploadDocumentBuilder {
-    pub fn new(knowledge_base_id: &str, file_content: Vec<u8>, file_name: String) -> Self {
+    pub fn new(
+        client: WachtClient,
+        knowledge_base_id: &str,
+        file_content: Vec<u8>,
+        file_name: String,
+    ) -> Self {
         Self {
+            client,
             knowledge_base_id: knowledge_base_id.to_string(),
             file_content,
             file_name,
@@ -266,15 +339,14 @@ impl UploadDocumentBuilder {
     }
 
     pub async fn send(self) -> Result<KnowledgeBaseDocument> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/ai/knowledge-bases/{}/documents",
-            config.base_url, self.knowledge_base_id
+            self.client.config().base_url,
+            self.knowledge_base_id
         );
 
         let part = reqwest::multipart::Part::bytes(self.file_content).file_name(self.file_name);
-
         let form = reqwest::multipart::Form::new().part("file", part);
 
         let response = client.post(&url).multipart(form).send().await?;
@@ -298,24 +370,27 @@ impl UploadDocumentBuilder {
 
 #[derive(Debug, Clone)]
 pub struct DeleteDocumentBuilder {
+    client: WachtClient,
     knowledge_base_id: String,
     document_id: String,
 }
 
 impl DeleteDocumentBuilder {
-    pub fn new(knowledge_base_id: &str, document_id: &str) -> Self {
+    pub fn new(client: WachtClient, knowledge_base_id: &str, document_id: &str) -> Self {
         Self {
+            client,
             knowledge_base_id: knowledge_base_id.to_string(),
             document_id: document_id.to_string(),
         }
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
+        let client = self.client.http_client();
         let url = format!(
             "{}/ai/knowledge-bases/{}/documents/{}",
-            config.base_url, self.knowledge_base_id, self.document_id
+            self.client.config().base_url,
+            self.knowledge_base_id,
+            self.document_id
         );
 
         let response = client.delete(&url).send().await?;
@@ -335,72 +410,6 @@ impl DeleteDocumentBuilder {
             })
         }
     }
-}
-
-/// Convenience function for list knowledge bases (deprecated - use builder pattern)
-pub async fn fetch_knowledge_bases(
-    options: Option<ListKnowledgeBasesOptions>,
-) -> Result<PaginatedResponse<AiKnowledgeBase>> {
-    FetchKnowledgeBasesBuilder::new()
-        .options(options.unwrap_or_default())
-        .send()
-        .await
-}
-
-/// Convenience function for create knowledge base (deprecated - use builder pattern)
-pub async fn create_knowledge_base(
-    request: CreateAiKnowledgeBaseRequest,
-) -> Result<AiKnowledgeBase> {
-    CreateKnowledgeBaseBuilder::new(request).send().await
-}
-
-/// Convenience function for fetch knowledge base (deprecated - use builder pattern)
-pub async fn fetch_knowledge_base(knowledge_base_id: &str) -> Result<AiKnowledgeBase> {
-    FetchKnowledgeBaseBuilder::new(knowledge_base_id)
-        .send()
-        .await
-}
-
-/// Convenience function for update knowledge base (deprecated - use builder pattern)
-pub async fn update_knowledge_base(
-    knowledge_base_id: &str,
-    request: UpdateAiKnowledgeBaseRequest,
-) -> Result<AiKnowledgeBase> {
-    UpdateKnowledgeBaseBuilder::new(knowledge_base_id, request)
-        .send()
-        .await
-}
-
-/// Convenience function for delete knowledge base (deprecated - use builder pattern)
-pub async fn delete_knowledge_base(knowledge_base_id: &str) -> Result<()> {
-    DeleteKnowledgeBaseBuilder::new(knowledge_base_id)
-        .send()
-        .await
-}
-
-/// Convenience function for fetch documents (deprecated - use builder pattern)
-pub async fn fetch_documents(
-    knowledge_base_id: &str,
-) -> Result<PaginatedResponse<KnowledgeBaseDocument>> {
-    FetchDocumentsBuilder::new(knowledge_base_id).send().await
-}
-
-/// Convenience function for upload document (deprecated - use builder pattern)
-pub async fn upload_document(
-    knowledge_base_id: &str,
-    file_content: Vec<u8>,
-    file_name: String,
-) -> Result<KnowledgeBaseDocument> {
-    UploadDocumentBuilder::new(knowledge_base_id, file_content, file_name)
-        .send()
-        .await
-}
-
-/// Convenience function for delete document (deprecated - use builder pattern)
-pub async fn delete_document(knowledge_base_id: &str, document_id: &str) -> Result<()> {
-    DeleteDocumentBuilder::new(knowledge_base_id, document_id)
-        .send()
-        .await
 }
 
 pub mod builders {

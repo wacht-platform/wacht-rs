@@ -1,5 +1,5 @@
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{
         AiExecutionContext, CreateAiExecutionContextRequest, ExecuteAgentRequest,
@@ -22,21 +22,65 @@ pub struct ListExecutionContextsOptions {
     pub context_group: Option<String>,
 }
 
-/// Builder for listing execution contexts
-#[derive(Debug, Clone)]
-pub struct ListExecutionContextsBuilder {
-    options: ListExecutionContextsOptions,
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct UpdateExecutionContextRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub system_instructions: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context_group: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub status: Option<String>,
 }
 
-impl Default for ListExecutionContextsBuilder {
-    fn default() -> Self {
-        Self::new()
+#[derive(Debug, Clone)]
+pub struct ExecutionContextsApi {
+    client: WachtClient,
+}
+
+impl ExecutionContextsApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn list_execution_contexts(&self) -> ListExecutionContextsBuilder {
+        ListExecutionContextsBuilder::new(self.client.clone())
+    }
+
+    pub fn update_execution_context_builder(
+        &self,
+        id: impl Into<String>,
+    ) -> UpdateExecutionContextBuilder {
+        UpdateExecutionContextBuilder::new(self.client.clone(), id)
+    }
+
+    pub fn create_execution_context_with_request_builder(
+        &self,
+        request: CreateAiExecutionContextRequest,
+    ) -> CreateExecutionContextBuilder {
+        CreateExecutionContextBuilder::new(self.client.clone(), request)
+    }
+
+    pub fn execute_agent_builder(
+        &self,
+        context_id: impl Into<String>,
+        request: ExecuteAgentRequest,
+    ) -> ExecuteAgentBuilder {
+        ExecuteAgentBuilder::new(self.client.clone(), context_id, request)
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct ListExecutionContextsBuilder {
+    client: WachtClient,
+    options: ListExecutionContextsOptions,
+}
+
 impl ListExecutionContextsBuilder {
-    pub fn new() -> Self {
+    pub fn new(client: WachtClient) -> Self {
         Self {
+            client,
             options: ListExecutionContextsOptions::default(),
         }
     }
@@ -62,32 +106,54 @@ impl ListExecutionContextsBuilder {
     }
 
     pub async fn send(self) -> Result<ExecutionContextListResponse> {
-        fetch_execution_contexts_with_options(Some(self.options)).await
+        let client = self.client.http_client();
+        let mut url = format!("{}/ai/execution-contexts", self.client.config().base_url);
+
+        let opts = self.options;
+        let mut params = vec![];
+        if let Some(limit) = opts.limit {
+            params.push(format!("limit={limit}"));
+        }
+        if let Some(offset) = opts.offset {
+            params.push(format!("offset={offset}"));
+        }
+        if let Some(status) = opts.status {
+            params.push(format!("status={status}"));
+        }
+        if let Some(context_group) = opts.context_group {
+            params.push(format!("context_group={context_group}"));
+        }
+        if !params.is_empty() {
+            url = format!("{}?{}", url, params.join("&"));
+        }
+
+        let response = client.get(&url).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::Api {
+                status,
+                message: format!("Failed to fetch execution contexts: {error_body}"),
+                details: serde_json::from_str(&error_body).ok(),
+            })
+        }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct UpdateExecutionContextRequest {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub title: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub system_instructions: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub context_group: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub status: Option<String>,
-}
-
-/// Builder for updating execution contexts
 #[derive(Debug, Clone)]
 pub struct UpdateExecutionContextBuilder {
+    client: WachtClient,
     id: String,
     request: UpdateExecutionContextRequest,
 }
 
 impl UpdateExecutionContextBuilder {
-    pub fn new(id: impl Into<String>) -> Self {
+    pub fn new(client: WachtClient, id: impl Into<String>) -> Self {
         Self {
+            client,
             id: id.into(),
             request: UpdateExecutionContextRequest::default(),
         }
@@ -114,216 +180,96 @@ impl UpdateExecutionContextBuilder {
     }
 
     pub async fn send(self) -> Result<AiExecutionContext> {
-        update_execution_context_with_id_and_request(&self.id, self.request).await
+        let client = self.client.http_client();
+        let url = format!("{}/ai/execution-contexts/{}", self.client.config().base_url, self.id);
+
+        let response = client.patch(&url).json(&self.request).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::Api {
+                status,
+                message: format!("Failed to update execution context: {error_body}"),
+                details: serde_json::from_str(&error_body).ok(),
+            })
+        }
     }
 }
 
-/// Builder for creating execution contexts
 #[derive(Debug, Clone)]
 pub struct CreateExecutionContextBuilder {
+    client: WachtClient,
     request: CreateAiExecutionContextRequest,
 }
 
 impl CreateExecutionContextBuilder {
-    pub fn new(request: CreateAiExecutionContextRequest) -> Self {
-        Self { request }
+    pub fn new(client: WachtClient, request: CreateAiExecutionContextRequest) -> Self {
+        Self { client, request }
     }
 
     pub async fn send(self) -> Result<AiExecutionContext> {
-        create_execution_context_with_request(self.request).await
+        let client = self.client.http_client();
+        let url = format!("{}/ai/execution-contexts", self.client.config().base_url);
+
+        let response = client.post(&url).json(&self.request).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::Api {
+                status,
+                message: format!("Failed to create execution context: {error_body}"),
+                details: serde_json::from_str(&error_body).ok(),
+            })
+        }
     }
 }
 
-/// Builder for executing agents
 #[derive(Debug, Clone)]
 pub struct ExecuteAgentBuilder {
+    client: WachtClient,
     context_id: String,
     request: ExecuteAgentRequest,
 }
 
 impl ExecuteAgentBuilder {
-    pub fn new(context_id: impl Into<String>, request: ExecuteAgentRequest) -> Self {
+    pub fn new(
+        client: WachtClient,
+        context_id: impl Into<String>,
+        request: ExecuteAgentRequest,
+    ) -> Self {
         Self {
+            client,
             context_id: context_id.into(),
             request,
         }
     }
 
     pub async fn send(self) -> Result<ExecuteAgentResponse> {
-        execute_agent_with_context_id_and_request(&self.context_id, self.request).await
-    }
-}
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/ai/execution-contexts/{}/execute",
+            self.client.config().base_url,
+            self.context_id
+        );
 
-/// Fetch all execution contexts for the current workspace
-pub async fn fetch_execution_contexts(
-    options: Option<ListExecutionContextsOptions>,
-) -> Result<ExecutionContextListResponse> {
-    fetch_execution_contexts_with_options(options).await
-}
+        let response = client.post(&url).json(&self.request).send().await?;
+        let status = response.status();
 
-/// Create a new execution context for AI operations
-pub async fn create_execution_context(
-    request: CreateAiExecutionContextRequest,
-) -> Result<AiExecutionContext> {
-    create_execution_context_with_request(request).await
-}
-
-/// Update an existing execution context
-pub async fn update_execution_context(
-    id: &str,
-    request: UpdateExecutionContextRequest,
-) -> Result<AiExecutionContext> {
-    update_execution_context_with_id_and_request(id, request).await
-}
-
-/// Execute agent in execution context
-pub async fn execute_agent(
-    context_id: &str,
-    request: ExecuteAgentRequest,
-) -> Result<ExecuteAgentResponse> {
-    execute_agent_with_context_id_and_request(context_id, request).await
-}
-
-/// Internal function for fetching execution contexts with options
-async fn fetch_execution_contexts_with_options(
-    options: Option<ListExecutionContextsOptions>,
-) -> Result<ExecutionContextListResponse> {
-    let config = get_config();
-    let client = get_client();
-    let mut url = format!("{}/ai/execution-contexts", config.base_url);
-
-    if let Some(opts) = options {
-        let mut params = vec![];
-        if let Some(limit) = opts.limit {
-            params.push(format!("limit={limit}"));
-        }
-        if let Some(offset) = opts.offset {
-            params.push(format!("offset={offset}"));
-        }
-        if let Some(status) = opts.status {
-            params.push(format!("status={status}"));
-        }
-        if let Some(context_group) = opts.context_group {
-            params.push(format!("context_group={context_group}"));
-        }
-        if !params.is_empty() {
-            url = format!("{}?{}", url, params.join("&"));
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::Api {
+                status,
+                message: format!("Failed to execute agent: {error_body}"),
+                details: serde_json::from_str(&error_body).ok(),
+            })
         }
     }
-
-    let response = client.get(&url).send().await?;
-    let status = response.status();
-
-    if status.is_success() {
-        Ok(response.json().await?)
-    } else {
-        let error_body = response.text().await?;
-        Err(Error::Api {
-            status,
-            message: format!("Failed to fetch execution contexts: {error_body}"),
-            details: serde_json::from_str(&error_body).ok(),
-        })
-    }
-}
-
-/// Internal function for creating execution contexts
-async fn create_execution_context_with_request(
-    request: CreateAiExecutionContextRequest,
-) -> Result<AiExecutionContext> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/ai/execution-contexts", config.base_url);
-
-    let response = client.post(&url).json(&request).send().await?;
-    let status = response.status();
-
-    if status.is_success() {
-        Ok(response.json().await?)
-    } else {
-        let error_body = response.text().await?;
-
-        println!("error {error_body}");
-
-        Err(Error::Api {
-            status,
-            message: format!("Failed to create execution context: {error_body}"),
-            details: serde_json::from_str(&error_body).ok(),
-        })
-    }
-}
-
-/// Internal function for updating execution contexts
-async fn update_execution_context_with_id_and_request(
-    id: &str,
-    request: UpdateExecutionContextRequest,
-) -> Result<AiExecutionContext> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!("{}/ai/execution-contexts/{}", config.base_url, id);
-
-    let response = client.patch(&url).json(&request).send().await?;
-    let status = response.status();
-
-    if status.is_success() {
-        Ok(response.json().await?)
-    } else {
-        let error_body = response.text().await?;
-        Err(Error::Api {
-            status,
-            message: format!("Failed to update execution context: {error_body}"),
-            details: serde_json::from_str(&error_body).ok(),
-        })
-    }
-}
-
-/// Internal function for executing agents
-async fn execute_agent_with_context_id_and_request(
-    context_id: &str,
-    request: ExecuteAgentRequest,
-) -> Result<ExecuteAgentResponse> {
-    let config = get_config();
-    let client = get_client();
-    let url = format!(
-        "{}/ai/execution-contexts/{}/execute",
-        config.base_url, context_id
-    );
-
-    let response = client.post(&url).json(&request).send().await?;
-    let status = response.status();
-
-    if status.is_success() {
-        Ok(response.json().await?)
-    } else {
-        let error_body = response.text().await?;
-        Err(Error::Api {
-            status,
-            message: format!("Failed to execute agent: {error_body}"),
-            details: serde_json::from_str(&error_body).ok(),
-        })
-    }
-}
-
-/// Convenience function to list execution contexts using builder pattern
-pub fn list_execution_contexts() -> ListExecutionContextsBuilder {
-    ListExecutionContextsBuilder::new()
-}
-
-/// Convenience function to update an execution context using builder pattern
-pub fn update_execution_context_builder(id: impl Into<String>) -> UpdateExecutionContextBuilder {
-    UpdateExecutionContextBuilder::new(id)
-}
-
-/// Convenience function to create an execution context using builder pattern
-pub fn create_execution_context_with_request_builder(
-    request: CreateAiExecutionContextRequest,
-) -> CreateExecutionContextBuilder {
-    CreateExecutionContextBuilder::new(request)
-}
-
-/// Convenience function to execute an agent using builder pattern
-pub fn execute_agent_builder(
-    context_id: impl Into<String>,
-    request: ExecuteAgentRequest,
-) -> ExecuteAgentBuilder {
-    ExecuteAgentBuilder::new(context_id, request)
 }

@@ -1,5 +1,5 @@
 use crate::{
-    client::{get_client, get_config},
+    client::WachtClient,
     error::{Error, Result},
     models::{AiTool, CreateAiToolRequest, PaginatedResponse, UpdateAiToolRequest},
 };
@@ -17,22 +17,48 @@ pub struct ListToolsOptions {
     pub is_active: Option<bool>,
 }
 
-/// List all AI tools (async function)
-pub async fn list_tools(options: Option<ListToolsOptions>) -> Result<PaginatedResponse<AiTool>> {
-    ListToolsBuilder::new()
-        .with_options(options.unwrap_or_default())
-        .send()
-        .await
+#[derive(Debug, Clone)]
+pub struct ToolsApi {
+    client: WachtClient,
 }
 
-/// Builder for listing AI tools
+impl ToolsApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+
+    pub fn list_tools(&self) -> ListToolsBuilder {
+        ListToolsBuilder::new(self.client.clone())
+    }
+
+    pub fn create_tool(&self) -> CreateToolBuilder {
+        CreateToolBuilder::new(self.client.clone())
+    }
+
+    pub fn fetch_tool(&self) -> FetchToolBuilder {
+        FetchToolBuilder::new(self.client.clone())
+    }
+
+    pub fn update_tool(&self) -> UpdateToolBuilder {
+        UpdateToolBuilder::new(self.client.clone())
+    }
+
+    pub fn delete_tool(&self) -> DeleteToolBuilder {
+        DeleteToolBuilder::new(self.client.clone())
+    }
+}
+
 pub struct ListToolsBuilder {
+    client: WachtClient,
     options: Option<ListToolsOptions>,
 }
 
 impl ListToolsBuilder {
-    pub fn new() -> Self {
-        Self { options: None }
+    pub fn new(client: WachtClient) -> Self {
+        Self {
+            client,
+            options: None,
+        }
     }
 
     pub fn with_options(mut self, options: ListToolsOptions) -> Self {
@@ -69,12 +95,10 @@ impl ListToolsBuilder {
     }
 
     pub async fn send(self) -> Result<PaginatedResponse<AiTool>> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/ai/tools", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/ai/tools", self.client.config().base_url);
 
         let mut request = client.get(&url);
-
         if let Some(opts) = self.options {
             request = request.query(&opts);
         }
@@ -95,19 +119,15 @@ impl ListToolsBuilder {
     }
 }
 
-/// Create a new AI tool (async function)
-pub async fn create_tool(request: CreateAiToolRequest) -> Result<AiTool> {
-    CreateToolBuilder::new().request(request).send().await
-}
-
-/// Builder for creating AI tools
 pub struct CreateToolBuilder {
+    client: WachtClient,
     request: CreateAiToolRequest,
 }
 
 impl CreateToolBuilder {
-    pub fn new() -> Self {
+    pub fn new(client: WachtClient) -> Self {
         Self {
+            client,
             request: CreateAiToolRequest::new(
                 "".to_string(),
                 "".to_string(),
@@ -122,9 +142,8 @@ impl CreateToolBuilder {
     }
 
     pub async fn send(self) -> Result<AiTool> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/ai/tools", config.base_url);
+        let client = self.client.http_client();
+        let url = format!("{}/ai/tools", self.client.config().base_url);
 
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -142,19 +161,15 @@ impl CreateToolBuilder {
     }
 }
 
-/// Get a specific AI tool by ID (async function)
-pub async fn fetch_tool(tool_id: &str) -> Result<AiTool> {
-    FetchToolBuilder::new().tool_id(tool_id).send().await
-}
-
-/// Builder for fetching AI tools
 pub struct FetchToolBuilder {
+    client: WachtClient,
     tool_id: String,
 }
 
 impl FetchToolBuilder {
-    pub fn new() -> Self {
+    pub fn new(client: WachtClient) -> Self {
         Self {
+            client,
             tool_id: String::new(),
         }
     }
@@ -165,9 +180,8 @@ impl FetchToolBuilder {
     }
 
     pub async fn send(self) -> Result<AiTool> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/ai/tools/{}", config.base_url, self.tool_id);
+        let client = self.client.http_client();
+        let url = format!("{}/ai/tools/{}", self.client.config().base_url, self.tool_id);
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -178,31 +192,23 @@ impl FetchToolBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to get tool {}: {}", self.tool_id, error_body),
+                message: format!("Failed to get tool {}: {error_body}", self.tool_id),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Update an AI tool (async function)
-pub async fn update_tool(tool_id: &str, request: UpdateAiToolRequest) -> Result<AiTool> {
-    UpdateToolBuilder::new()
-        .tool_id(tool_id)
-        .request(request)
-        .send()
-        .await
-}
-
-/// Builder for updating AI tools
 pub struct UpdateToolBuilder {
+    client: WachtClient,
     tool_id: String,
     request: UpdateAiToolRequest,
 }
 
 impl UpdateToolBuilder {
-    pub fn new() -> Self {
+    pub fn new(client: WachtClient) -> Self {
         Self {
+            client,
             tool_id: String::new(),
             request: UpdateAiToolRequest::new(),
         }
@@ -219,9 +225,8 @@ impl UpdateToolBuilder {
     }
 
     pub async fn send(self) -> Result<AiTool> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/ai/tools/{}", config.base_url, self.tool_id);
+        let client = self.client.http_client();
+        let url = format!("{}/ai/tools/{}", self.client.config().base_url, self.tool_id);
 
         let response = client.patch(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -232,26 +237,22 @@ impl UpdateToolBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to update tool {}: {}", self.tool_id, error_body),
+                message: format!("Failed to update tool {}: {error_body}", self.tool_id),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }
     }
 }
 
-/// Delete an AI tool (async function)
-pub async fn delete_tool(tool_id: &str) -> Result<()> {
-    DeleteToolBuilder::new().tool_id(tool_id).send().await
-}
-
-/// Builder for deleting AI tools
 pub struct DeleteToolBuilder {
+    client: WachtClient,
     tool_id: String,
 }
 
 impl DeleteToolBuilder {
-    pub fn new() -> Self {
+    pub fn new(client: WachtClient) -> Self {
         Self {
+            client,
             tool_id: String::new(),
         }
     }
@@ -262,9 +263,8 @@ impl DeleteToolBuilder {
     }
 
     pub async fn send(self) -> Result<()> {
-        let config = get_config();
-        let client = get_client();
-        let url = format!("{}/ai/tools/{}", config.base_url, self.tool_id);
+        let client = self.client.http_client();
+        let url = format!("{}/ai/tools/{}", self.client.config().base_url, self.tool_id);
 
         let response = client.delete(&url).send().await?;
         let status = response.status();
@@ -275,7 +275,7 @@ impl DeleteToolBuilder {
             let error_body = response.text().await?;
             Err(Error::Api {
                 status,
-                message: format!("Failed to delete tool {}: {}", self.tool_id, error_body),
+                message: format!("Failed to delete tool {}: {error_body}", self.tool_id),
                 details: serde_json::from_str(&error_body).ok(),
             })
         }

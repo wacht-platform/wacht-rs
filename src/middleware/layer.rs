@@ -218,7 +218,6 @@ async fn validate_token(
     req: Request<Body>,
     config: &AuthConfig,
 ) -> Result<(Request<Body>, AuthContext), Response> {
-    // Extract authorization header
     let auth_header = req
         .headers()
         .get(header::AUTHORIZATION)
@@ -228,12 +227,10 @@ async fn validate_token(
             error_response(StatusCode::UNAUTHORIZED, "Missing authorization header")
         })?;
 
-    // Extract bearer token
     let token = auth_header
         .strip_prefix("Bearer ")
         .ok_or_else(|| error_response(StatusCode::UNAUTHORIZED, "Invalid authorization format"))?;
 
-    // Decode token header to get algorithm
     let header = decode_header(token).map_err(|e| {
         error_response(
             StatusCode::UNAUTHORIZED,
@@ -241,7 +238,6 @@ async fn validate_token(
         )
     })?;
 
-    // Validate algorithm is supported by backend
     let algorithm = match header.alg {
         Algorithm::HS256 => Algorithm::HS256,
         Algorithm::HS384 => Algorithm::HS384,
@@ -259,9 +255,7 @@ async fn validate_token(
         }
     };
 
-    // Create decoding key based on algorithm type
     let decoding_key = match algorithm {
-        // Elliptic Curve algorithms
         Algorithm::ES256 | Algorithm::ES384 => {
             DecodingKey::from_ec_pem(config.public_key.as_bytes()).map_err(|e| {
                 error_response(
@@ -270,7 +264,6 @@ async fn validate_token(
                 )
             })?
         }
-        // RSA algorithms
         Algorithm::RS256 | Algorithm::RS384 | Algorithm::RS512 => {
             DecodingKey::from_rsa_pem(config.public_key.as_bytes()).map_err(|e| {
                 error_response(
@@ -279,7 +272,6 @@ async fn validate_token(
                 )
             })?
         }
-        // HMAC algorithms
         Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
             DecodingKey::from_secret(config.public_key.as_bytes())
         }
@@ -291,7 +283,6 @@ async fn validate_token(
         }
     };
 
-    // Configure validation
     let mut validation = Validation::new(algorithm);
     validation.leeway = config.allowed_clock_skew;
     validation.validate_exp = config.validate_exp;
