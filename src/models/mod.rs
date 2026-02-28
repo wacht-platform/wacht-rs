@@ -142,7 +142,7 @@ pub mod update_phone_request;
 pub use self::update_phone_request::UpdatePhoneRequest;
 pub mod create_session_ticket_request;
 pub use self::create_session_ticket_request::{
-    CreateSessionTicketRequest, SessionTicketResponse, TicketType,
+    AgentSessionIdentifier, CreateSessionTicketRequest, SessionTicketResponse, TicketType,
 };
 pub mod notification;
 pub use self::notification::{CallToAction, Notification, NotificationSeverity};
@@ -158,5 +158,6 @@ pub mod deployment_ai_settings;
 pub use self::deployment_ai_settings::{DeploymentAiSettings, UpdateDeploymentAiSettingsRequest};
 pub mod execute_agent_request;
 pub use self::execute_agent_request::{
-    ExecuteAgentRequest, ExecuteAgentRequestType, ExecuteAgentResponse, FileData,
+    CancelRequest, ExecuteAgentRequest, ExecuteAgentRequestType, ExecuteAgentResponse, FileData,
+    NewMessageRequest, PlatformFunctionResultRequest, UserInputResponseRequest,
 };

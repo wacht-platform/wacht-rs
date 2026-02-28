@@ -14,6 +14,14 @@ pub enum TicketType {
     ApiAuthAccess,
 }
 
+/// Agent session identifier mode for agent access tickets
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum AgentSessionIdentifier {
+    Static,
+    Signin,
+}
+
 /// Request to create a session ticket
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CreateSessionTicketRequest {
@@ -25,6 +33,9 @@ pub struct CreateSessionTicketRequest {
     /// List of agent IDs to grant access to (required for agent_access tickets)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_ids: Option<Vec<String>>,
+    /// Agent session identifier mode (optional, agent_access only)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub agent_session_identifier: Option<AgentSessionIdentifier>,
     /// Context group for grouping agent sessions (required for agent_access tickets)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub context_group: Option<String>,
@@ -46,6 +57,7 @@ impl CreateSessionTicketRequest {
             ticket_type: TicketType::Impersonation,
             user_id: Some(user_id.into()),
             agent_ids: None,
+            agent_session_identifier: None,
             context_group: None,
             webhook_app_slug: None,
             api_auth_app_slug: None,
@@ -59,6 +71,7 @@ impl CreateSessionTicketRequest {
             ticket_type: TicketType::AgentAccess,
             user_id: None,
             agent_ids: Some(agent_ids),
+            agent_session_identifier: Some(AgentSessionIdentifier::Static),
             context_group: Some(context_group.into()),
             webhook_app_slug: None,
             api_auth_app_slug: None,
@@ -72,6 +85,7 @@ impl CreateSessionTicketRequest {
             ticket_type: TicketType::WebhookAppAccess,
             user_id: None,
             agent_ids: None,
+            agent_session_identifier: None,
             context_group: None,
             webhook_app_slug: Some(webhook_app_slug.into()),
             api_auth_app_slug: None,
@@ -85,6 +99,7 @@ impl CreateSessionTicketRequest {
             ticket_type: TicketType::ApiAuthAccess,
             user_id: None,
             agent_ids: None,
+            agent_session_identifier: None,
             context_group: None,
             webhook_app_slug: None,
             api_auth_app_slug: Some(api_auth_app_slug.into()),
@@ -92,9 +107,29 @@ impl CreateSessionTicketRequest {
         }
     }
 
+    /// Create a new agent access ticket request using signin-scoped mode
+    pub fn agent_access_signin(agent_ids: Vec<String>) -> Self {
+        Self {
+            ticket_type: TicketType::AgentAccess,
+            user_id: None,
+            agent_ids: Some(agent_ids),
+            agent_session_identifier: Some(AgentSessionIdentifier::Signin),
+            context_group: None,
+            webhook_app_slug: None,
+            api_auth_app_slug: None,
+            expires_at: None,
+        }
+    }
+
     /// Set the expiration timestamp
     pub fn expires_at(mut self, expires_at: i64) -> Self {
         self.expires_at = Some(expires_at);
+        self
+    }
+
+    /// Set agent session identifier mode for agent_access tickets
+    pub fn agent_session_identifier(mut self, mode: AgentSessionIdentifier) -> Self {
+        self.agent_session_identifier = Some(mode);
         self
     }
 }

@@ -159,7 +159,7 @@ pub struct TriggerWebhookEventRequest {
 
 #[derive(Debug, Deserialize)]
 pub struct TriggerWebhookEventResponse {
-    pub delivery_ids: Vec<String>,
+    pub delivery_ids: Vec<i64>,
     pub filtered_count: usize,
     pub delivered_count: usize,
 }
@@ -170,8 +170,7 @@ pub struct TestWebhookEndpointResponse {
     pub status_code: u16,
     pub response_time_ms: u64,
     pub response_body: Option<String>,
-    pub response_headers: Option<Value>,
-    pub error_message: Option<String>,
+    pub error: Option<String>,
 }
 
 /// Webhook app
@@ -220,52 +219,10 @@ pub struct WebhookDeliveryDetails {
     pub attempt_number: i32,
     pub max_attempts: i32,
 
-    pub payload_s3_key: String,
     pub response_body: Option<String>,
     pub response_headers: Option<Value>,
     pub timestamp: DateTime<Utc>,
     pub payload: Option<Value>,
-}
-
-/// Webhook stats response
-#[derive(Debug, Deserialize)]
-pub struct WebhookStats {
-    pub total_events: i64,
-    pub total_deliveries: i64,
-    pub successful_deliveries: i64,
-    pub failed_deliveries: i64,
-    pub filtered_deliveries: i64,
-    pub avg_response_time_ms: Option<f64>,
-    pub p50_response_time_ms: Option<f64>,
-    pub p95_response_time_ms: Option<f64>,
-    pub p99_response_time_ms: Option<f64>,
-    pub success_rate: f64,
-    pub top_events: Vec<EventCount>,
-    pub endpoint_performance: Vec<EndpointPerformance>,
-    pub failure_reasons: Vec<FailureReason>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EventCount {
-    pub event_name: String,
-    pub count: i64,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct EndpointPerformance {
-    pub endpoint_id: i64,
-    pub endpoint_url: String,
-    pub total_attempts: i64,
-    pub successful_attempts: i64,
-    pub failed_attempts: i64,
-    pub avg_response_time_ms: Option<f64>,
-    pub success_rate: f64,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct FailureReason {
-    pub reason: String,
-    pub count: i64,
 }
 
 /// Webhook endpoint
@@ -293,27 +250,9 @@ pub struct WebhookEndpoint {
 }
 
 #[derive(Debug, Deserialize)]
-pub struct WebhookEndpointSubscription {
-    pub endpoint_id: String,
-    pub deployment_id: String,
-    pub app_slug: String,
-    pub event_name: String,
-    pub filter_rules: Option<Value>,
-    pub created_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Deserialize)]
 pub struct WebhookEndpointWithSubscriptions {
     pub endpoint: WebhookEndpoint,
     pub subscribed_events: Vec<String>,
-}
-
-/// Webhook event definition (for creating/updating apps)
-#[derive(Debug, Serialize, Deserialize)]
-pub struct WebhookEventDefinition {
-    pub name: String,
-    pub description: String,
-    pub schema: Option<Value>,
 }
 
 /// Webhook event from backend
@@ -409,14 +348,22 @@ impl WebhooksApi {
         b
     }
 
-    pub fn update_webhook_endpoint(&self, endpoint_id: &str) -> UpdateWebhookEndpointBuilder {
-        let mut b = UpdateWebhookEndpointBuilder::new(endpoint_id);
+    pub fn update_webhook_endpoint(
+        &self,
+        app_name: &str,
+        endpoint_id: &str,
+    ) -> UpdateWebhookEndpointBuilder {
+        let mut b = UpdateWebhookEndpointBuilder::new(app_name, endpoint_id);
         b.sdk = Some(self.client.clone());
         b
     }
 
-    pub fn delete_webhook_endpoint(&self, endpoint_id: &str) -> DeleteWebhookEndpointBuilder {
-        let mut b = DeleteWebhookEndpointBuilder::new(endpoint_id);
+    pub fn delete_webhook_endpoint(
+        &self,
+        app_name: &str,
+        endpoint_id: &str,
+    ) -> DeleteWebhookEndpointBuilder {
+        let mut b = DeleteWebhookEndpointBuilder::new(app_name, endpoint_id);
         b.sdk = Some(self.client.clone());
         b
     }
@@ -438,8 +385,12 @@ impl WebhooksApi {
         b
     }
 
-    pub fn get_webhook_delivery_details(&self, delivery_id: &str) -> GetWebhookDeliveryDetailsBuilder {
-        let mut b = GetWebhookDeliveryDetailsBuilder::new(delivery_id);
+    pub fn get_webhook_delivery_details(
+        &self,
+        app_name: &str,
+        delivery_id: &str,
+    ) -> GetWebhookDeliveryDetailsBuilder {
+        let mut b = GetWebhookDeliveryDetailsBuilder::new(app_name, delivery_id);
         b.sdk = Some(self.client.clone());
         b
     }
@@ -1080,7 +1031,10 @@ impl CreateWebhookEndpointBuilder {
     pub async fn send(self) -> Result<WebhookEndpoint> {
         let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
         let client = sdk.http_client();
-        let url = format!("{}/webhooks/endpoints", sdk.config().base_url);
+        let url = format!(
+            "{}/webhooks/apps/{}/endpoints",
+            sdk.config().base_url, self.app_slug
+        );
 
         let request = CreateWebhookEndpointRequest {
             app_slug: self.app_slug,
@@ -1112,6 +1066,7 @@ impl CreateWebhookEndpointBuilder {
 /// Builder for update_webhook_endpoint
 pub struct UpdateWebhookEndpointBuilder {
     sdk: Option<WachtClient>,
+    app_name: String,
     endpoint_id: String,
     url: Option<String>,
     description: Option<String>,
@@ -1123,9 +1078,10 @@ pub struct UpdateWebhookEndpointBuilder {
 }
 
 impl UpdateWebhookEndpointBuilder {
-    pub fn new(endpoint_id: &str) -> Self {
+    pub fn new(app_name: &str, endpoint_id: &str) -> Self {
         Self {
             sdk: None,
+            app_name: app_name.to_string(),
             endpoint_id: endpoint_id.to_string(),
             url: None,
             description: None,
@@ -1176,8 +1132,8 @@ impl UpdateWebhookEndpointBuilder {
         let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
         let client = sdk.http_client();
         let url = format!(
-            "{}/webhooks/endpoints/{}",
-            sdk.config().base_url, self.endpoint_id
+            "{}/webhooks/apps/{}/endpoints/{}",
+            sdk.config().base_url, self.app_name, self.endpoint_id
         );
 
         let request = UpdateWebhookEndpointRequest {
@@ -1210,13 +1166,15 @@ impl UpdateWebhookEndpointBuilder {
 /// Builder for delete_webhook_endpoint
 pub struct DeleteWebhookEndpointBuilder {
     sdk: Option<WachtClient>,
+    app_name: String,
     endpoint_id: String,
 }
 
 impl DeleteWebhookEndpointBuilder {
-    pub fn new(endpoint_id: &str) -> Self {
+    pub fn new(app_name: &str, endpoint_id: &str) -> Self {
         Self {
             sdk: None,
+            app_name: app_name.to_string(),
             endpoint_id: endpoint_id.to_string(),
         }
     }
@@ -1225,8 +1183,8 @@ impl DeleteWebhookEndpointBuilder {
         let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
         let client = sdk.http_client();
         let url = format!(
-            "{}/webhooks/endpoints/{}",
-            sdk.config().base_url, self.endpoint_id
+            "{}/webhooks/apps/{}/endpoints/{}",
+            sdk.config().base_url, self.app_name, self.endpoint_id
         );
 
         let response = client.delete(&url).send().await?;
@@ -1300,15 +1258,6 @@ impl TriggerWebhookEventBuilder {
             })
         }
     }
-}
-
-/// Webhook event trigger for batch operations
-#[derive(Debug, Serialize)]
-pub struct WebhookEventTrigger {
-    pub event_name: String,
-    pub payload: Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub filter_context: Option<Value>,
 }
 
 /// Builder for get_webhook_deliveries
@@ -1441,13 +1390,15 @@ pub struct GetWebhookDeliveriesResponse {
 /// Builder for get_webhook_delivery_details
 pub struct GetWebhookDeliveryDetailsBuilder {
     sdk: Option<WachtClient>,
+    app_name: String,
     delivery_id: String,
 }
 
 impl GetWebhookDeliveryDetailsBuilder {
-    pub fn new(delivery_id: &str) -> Self {
+    pub fn new(app_name: &str, delivery_id: &str) -> Self {
         Self {
             sdk: None,
+            app_name: app_name.to_string(),
             delivery_id: delivery_id.to_string(),
         }
     }
@@ -1456,8 +1407,8 @@ impl GetWebhookDeliveryDetailsBuilder {
         let sdk = self.sdk.ok_or_else(|| Error::InvalidRequest("Webhook builder is not bound to a WachtClient".to_string()))?;
         let client = sdk.http_client();
         let url = format!(
-            "{}/webhooks/deliveries/{}",
-            sdk.config().base_url, self.delivery_id
+            "{}/webhooks/apps/{}/deliveries/{}",
+            sdk.config().base_url, self.app_name, self.delivery_id
         );
 
         let response = client.get(&url).send().await?;
@@ -1489,11 +1440,21 @@ pub struct ReplayWebhookDeliveriesBuilder {
 pub enum ReplayWebhookDeliveriesRequest {
     ByIds {
         delivery_ids: Vec<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        idempotency_key: Option<String>,
     },
     ByDateRange {
         start_date: DateTime<Utc>,
         #[serde(skip_serializing_if = "Option::is_none")]
         end_date: Option<DateTime<Utc>>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        idempotency_key: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        status: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        event_name: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        endpoint_id: Option<String>,
     },
 }
 
@@ -1504,12 +1465,24 @@ impl ReplayWebhookDeliveriesBuilder {
             app_name: app_name.to_string(),
             request: ReplayWebhookDeliveriesRequest::ByIds {
                 delivery_ids: Vec::new(),
+                idempotency_key: None,
             },
         }
     }
 
     pub fn by_ids(mut self, delivery_ids: Vec<String>) -> Self {
-        self.request = ReplayWebhookDeliveriesRequest::ByIds { delivery_ids };
+        let idempotency_key = match self.request {
+            ReplayWebhookDeliveriesRequest::ByIds {
+                idempotency_key, ..
+            } => idempotency_key,
+            ReplayWebhookDeliveriesRequest::ByDateRange {
+                idempotency_key, ..
+            } => idempotency_key,
+        };
+        self.request = ReplayWebhookDeliveriesRequest::ByIds {
+            delivery_ids,
+            idempotency_key,
+        };
         self
     }
 
@@ -1518,10 +1491,115 @@ impl ReplayWebhookDeliveriesBuilder {
         start_date: DateTime<Utc>,
         end_date: Option<DateTime<Utc>>,
     ) -> Self {
+        let idempotency_key = match self.request {
+            ReplayWebhookDeliveriesRequest::ByIds {
+                idempotency_key, ..
+            } => idempotency_key,
+            ReplayWebhookDeliveriesRequest::ByDateRange {
+                idempotency_key, ..
+            } => idempotency_key,
+        };
         self.request = ReplayWebhookDeliveriesRequest::ByDateRange {
             start_date,
             end_date,
+            idempotency_key,
+            status: None,
+            event_name: None,
+            endpoint_id: None,
         };
+        self
+    }
+
+    pub fn idempotency_key(mut self, key: &str) -> Self {
+        self.request = match self.request {
+            ReplayWebhookDeliveriesRequest::ByIds { delivery_ids, .. } => {
+                ReplayWebhookDeliveriesRequest::ByIds {
+                    delivery_ids,
+                    idempotency_key: Some(key.to_string()),
+                }
+            }
+            ReplayWebhookDeliveriesRequest::ByDateRange {
+                start_date,
+                end_date,
+                status,
+                event_name,
+                endpoint_id,
+                ..
+            } => ReplayWebhookDeliveriesRequest::ByDateRange {
+                start_date,
+                end_date,
+                idempotency_key: Some(key.to_string()),
+                status,
+                event_name,
+                endpoint_id,
+            },
+        };
+        self
+    }
+
+    pub fn status(mut self, status: &str) -> Self {
+        if let ReplayWebhookDeliveriesRequest::ByDateRange {
+            start_date,
+            end_date,
+            idempotency_key,
+            event_name,
+            endpoint_id,
+            ..
+        } = self.request
+        {
+            self.request = ReplayWebhookDeliveriesRequest::ByDateRange {
+                start_date,
+                end_date,
+                idempotency_key,
+                status: Some(status.to_string()),
+                event_name,
+                endpoint_id,
+            };
+        }
+        self
+    }
+
+    pub fn event_name(mut self, event_name: &str) -> Self {
+        if let ReplayWebhookDeliveriesRequest::ByDateRange {
+            start_date,
+            end_date,
+            idempotency_key,
+            status,
+            endpoint_id,
+            ..
+        } = self.request
+        {
+            self.request = ReplayWebhookDeliveriesRequest::ByDateRange {
+                start_date,
+                end_date,
+                idempotency_key,
+                status,
+                event_name: Some(event_name.to_string()),
+                endpoint_id,
+            };
+        }
+        self
+    }
+
+    pub fn endpoint_id(mut self, endpoint_id: &str) -> Self {
+        if let ReplayWebhookDeliveriesRequest::ByDateRange {
+            start_date,
+            end_date,
+            idempotency_key,
+            status,
+            event_name,
+            ..
+        } = self.request
+        {
+            self.request = ReplayWebhookDeliveriesRequest::ByDateRange {
+                start_date,
+                end_date,
+                idempotency_key,
+                status,
+                event_name,
+                endpoint_id: Some(endpoint_id.to_string()),
+            };
+        }
         self
     }
 
@@ -1554,6 +1632,8 @@ impl ReplayWebhookDeliveriesBuilder {
 pub struct ReplayWebhookDeliveriesResponse {
     pub status: String,
     pub message: String,
+    #[serde(default)]
+    pub task_id: Option<String>,
 }
 
 /// Builder for reactivate_webhook_endpoint
@@ -1897,121 +1977,4 @@ impl GetWebhookStatsBuilder {
             })
         }
     }
-}
-
-/// List webhook apps
-pub fn list_webhook_apps() -> ListWebhookAppsBuilder {
-    ListWebhookAppsBuilder::new()
-}
-
-/// Get webhook app details
-pub fn get_webhook_app(app_name: &str) -> GetWebhookAppBuilder {
-    GetWebhookAppBuilder::new(app_name)
-}
-
-/// Create a webhook app
-pub fn create_webhook_app(name: &str) -> CreateWebhookAppBuilder {
-    CreateWebhookAppBuilder::new(name)
-}
-
-/// Update a webhook app
-pub fn update_webhook_app(app_name: &str) -> UpdateWebhookAppBuilder {
-    UpdateWebhookAppBuilder::new(app_name)
-}
-
-/// Delete a webhook app
-pub fn delete_webhook_app(app_name: &str) -> DeleteWebhookAppBuilder {
-    DeleteWebhookAppBuilder::new(app_name)
-}
-
-/// Rotate webhook secret
-pub fn rotate_webhook_secret(app_name: &str) -> RotateWebhookSecretBuilder {
-    RotateWebhookSecretBuilder::new(app_name)
-}
-
-/// Get webhook events
-pub fn get_webhook_events(app_name: &str) -> GetWebhookEventsBuilder {
-    GetWebhookEventsBuilder::new(app_name)
-}
-
-/// List webhook endpoints
-pub fn list_webhook_endpoints(app_name: &str) -> ListWebhookEndpointsBuilder {
-    ListWebhookEndpointsBuilder::new().app_name(app_name)
-}
-
-/// Get webhook endpoints with subscriptions
-pub fn get_webhook_endpoints_with_subscriptions(
-    app_name: &str,
-) -> GetWebhookEndpointsWithSubscriptionsBuilder {
-    GetWebhookEndpointsWithSubscriptionsBuilder::new(app_name)
-}
-
-/// Create a webhook endpoint
-pub fn create_webhook_endpoint(app_name: &str, url: &str) -> CreateWebhookEndpointBuilder {
-    CreateWebhookEndpointBuilder::new(app_name, url)
-}
-
-/// Update a webhook endpoint
-pub fn update_webhook_endpoint(endpoint_id: &str) -> UpdateWebhookEndpointBuilder {
-    UpdateWebhookEndpointBuilder::new(endpoint_id)
-}
-
-/// Delete a webhook endpoint
-pub fn delete_webhook_endpoint(endpoint_id: &str) -> DeleteWebhookEndpointBuilder {
-    DeleteWebhookEndpointBuilder::new(endpoint_id)
-}
-
-/// Trigger a webhook event
-pub fn trigger_webhook_event(
-    app_name: &str,
-    event_name: &str,
-    payload: Value,
-) -> TriggerWebhookEventBuilder {
-    TriggerWebhookEventBuilder::new(app_name, event_name, payload)
-}
-
-/// Batch trigger webhook events
-
-/// List webhook deliveries
-pub fn list_webhook_deliveries(app_name: &str) -> GetWebhookDeliveriesBuilder {
-    GetWebhookDeliveriesBuilder::new(app_name)
-}
-
-/// Get webhook delivery details
-pub fn get_webhook_delivery_details(delivery_id: &str) -> GetWebhookDeliveryDetailsBuilder {
-    GetWebhookDeliveryDetailsBuilder::new(delivery_id)
-}
-
-/// Replay webhook deliveries
-pub fn replay_webhook_deliveries(app_name: &str) -> ReplayWebhookDeliveriesBuilder {
-    ReplayWebhookDeliveriesBuilder::new(app_name)
-}
-
-/// Reactivate a webhook endpoint
-pub fn reactivate_webhook_endpoint(endpoint_id: &str) -> ReactivateWebhookEndpointBuilder {
-    ReactivateWebhookEndpointBuilder::new(endpoint_id)
-}
-
-/// Test a webhook endpoint
-pub fn test_webhook_endpoint(
-    app_name: &str,
-    endpoint_id: &str,
-    event_name: &str,
-) -> TestWebhookEndpointBuilder {
-    TestWebhookEndpointBuilder::new(app_name, endpoint_id, event_name)
-}
-
-/// Get webhook stats
-pub fn get_webhook_stats(app_name: &str) -> GetWebhookStatsBuilder {
-    GetWebhookStatsBuilder::new(app_name)
-}
-
-/// Get webhook timeseries
-pub fn get_webhook_timeseries(app_name: &str, interval: &str) -> GetWebhookTimeseriesBuilder {
-    GetWebhookTimeseriesBuilder::new(app_name, interval)
-}
-
-/// Get webhook analytics
-pub fn get_webhook_analytics(app_name: &str) -> GetWebhookAnalyticsBuilder {
-    GetWebhookAnalyticsBuilder::new(app_name)
 }

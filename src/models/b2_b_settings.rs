@@ -83,7 +83,6 @@ pub struct DeploymentB2bSettingsUpdates {
     )]
     pub organization_permissions: Option<Vec<String>>,
 
-    // Workspace Controls
     #[serde(
         rename = "max_allowed_workspace_members",
         skip_serializing_if = "Option::is_none"
@@ -135,12 +134,23 @@ pub struct DeploymentB2bSettingsUpdates {
     pub workspace_permissions: Option<Vec<String>>,
 
     #[serde(
+        rename = "workspace_permission_catalog",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub workspace_permission_catalog: Option<serde_json::Value>,
+
+    #[serde(
+        rename = "organization_permission_catalog",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub organization_permission_catalog: Option<serde_json::Value>,
+
+    #[serde(
         rename = "ip_allowlist_per_workspace_enabled",
         skip_serializing_if = "Option::is_none"
     )]
     pub ip_allowlist_per_workspace_enabled: Option<bool>,
 
-    // MFA Enforcement
     #[serde(
         rename = "enforce_mfa_per_org_enabled",
         skip_serializing_if = "Option::is_none"
