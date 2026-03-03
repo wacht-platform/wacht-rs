@@ -212,7 +212,8 @@ pub struct GatewayPrincipalMetadata {
     pub organization_permissions: Vec<String>,
     pub workspace_permissions: Vec<String>,
     pub scopes: Vec<String>,
-    pub resource: Option<String>,
+    pub oauth_resource: Option<String>,
+    pub granted_resource: Option<String>,
     pub expires_at: Option<String>,
     pub raw: Value,
 }
@@ -331,7 +332,8 @@ impl GatewayCheckResponse {
             Vec::new()
         };
         let scopes = extract_string_array(&self.metadata, "scopes");
-        let resource = extract_optional_string(&self.metadata, "resource");
+        let oauth_resource = extract_optional_string(&self.metadata, "oauth_resource");
+        let granted_resource = extract_optional_string(&self.metadata, "granted_resource");
         let expires_at = extract_optional_string(&self.metadata, "expires_at");
         let metadata = GatewayPrincipalMetadata {
             principal_type: token_type,
@@ -339,7 +341,8 @@ impl GatewayCheckResponse {
             organization_permissions,
             workspace_permissions,
             scopes,
-            resource,
+            oauth_resource,
+            granted_resource,
             expires_at,
             raw: self.metadata.clone(),
         };
