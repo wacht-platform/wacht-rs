@@ -25,6 +25,6 @@ pub use models::PaginatedResponse;
 // Re-export the API modules for easy access
 pub use api::{
     ai, ai_settings, analytics, api_keys, deployments, health, integrations, notifications,
-    invitations, organizations, segments, session, settings, users, waitlist, webhooks,
+    invitations, oauth, organizations, segments, session, settings, users, waitlist, webhooks,
     workspaces,
 };

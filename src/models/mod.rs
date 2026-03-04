@@ -148,6 +148,14 @@ pub mod notification;
 pub use self::notification::{CallToAction, Notification, NotificationSeverity};
 pub mod create_notification_request;
 pub use self::create_notification_request::CreateNotificationRequest;
+pub mod oauth;
+pub use self::oauth::{
+    CreateOAuthAppRequest, CreateOAuthClientRequest, Jwk, JwksDocument, ListOAuthAppsResponse,
+    ListOAuthClientsResponse, ListOAuthGrantsResponse, OAuthApp, OAuthClient,
+    OAuthDomainVerificationResponse, OAuthGrant, OAuthScopeDefinition,
+    RotateOAuthClientSecretResponse, SetOAuthScopeMappingRequest, UpdateOAuthAppRequest,
+    UpdateOAuthClientRequest, UpdateOAuthScopeRequest,
+};
 pub mod agent_integration;
 pub use self::agent_integration::{AgentIntegration, IntegrationType};
 pub mod create_agent_integration_request;

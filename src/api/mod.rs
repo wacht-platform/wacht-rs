@@ -7,6 +7,7 @@ pub mod health;
 pub mod integrations;
 pub mod invitations;
 pub mod notifications;
+pub mod oauth;
 pub mod organizations;
 pub mod segments;
 pub mod session;
