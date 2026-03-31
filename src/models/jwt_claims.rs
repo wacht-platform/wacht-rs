@@ -28,6 +28,9 @@ pub struct JwtClaims {
     /// Custom claims - additional key-value pairs for application-specific data
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom_claims: Option<HashMap<String, serde_json::Value>>,
+    /// Metadata claim payload
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
 }
 
 impl JwtClaims {
@@ -42,6 +45,7 @@ impl JwtClaims {
             iat: None,
             jti: None,
             custom_claims: None,
+            metadata: None,
         }
     }
 
@@ -95,6 +99,12 @@ impl JwtClaims {
     /// Add multiple custom claims
     pub fn with_custom_claims(mut self, claims: HashMap<String, serde_json::Value>) -> Self {
         self.custom_claims = Some(claims);
+        self
+    }
+
+    /// Set metadata claim payload
+    pub fn with_metadata(mut self, metadata: serde_json::Value) -> Self {
+        self.metadata = Some(metadata);
         self
     }
 }

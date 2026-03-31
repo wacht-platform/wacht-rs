@@ -12,9 +12,21 @@ pub struct UserInputResponseRequest {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PlatformFunctionResultRequest {
-    pub execution_id: String,
-    pub result: serde_json::Value,
+pub struct ToolApprovalSelection {
+    pub tool_name: String,
+    pub mode: ToolApprovalMode,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ApprovalResponseRequest {
+    pub approvals: Vec<ToolApprovalSelection>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ToolApprovalMode {
+    AllowOnce,
+    AllowAlways,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -24,7 +36,7 @@ pub struct CancelRequest {}
 pub struct ExecuteAgentRequestType {
     pub new_message: Option<NewMessageRequest>,
     pub user_input_response: Option<UserInputResponseRequest>,
-    pub platform_function_result: Option<PlatformFunctionResultRequest>,
+    pub approval_response: Option<ApprovalResponseRequest>,
     pub cancel: Option<CancelRequest>,
 }
 

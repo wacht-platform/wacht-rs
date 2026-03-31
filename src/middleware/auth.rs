@@ -38,6 +38,9 @@ pub struct TokenClaims {
     /// Custom claims object
     #[serde(skip_serializing_if = "Option::is_none")]
     pub claims: Option<serde_json::Map<String, serde_json::Value>>,
+    /// Metadata object
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub metadata: Option<serde_json::Value>,
     /// Additional custom claims (flattened)
     #[serde(flatten)]
     pub custom_claims: serde_json::Map<String, serde_json::Value>,

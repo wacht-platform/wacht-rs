@@ -28,6 +28,15 @@ pub struct AnalyticsStatsResponse {
     pub signups_change: Option<f64>,
     pub organizations_created_change: Option<f64>,
     pub workspaces_created_change: Option<f64>,
+    #[serde(default)]
+    pub daily_metrics: Vec<DailyAuthMetric>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DailyAuthMetric {
+    pub day: String,
+    pub signins: i64,
+    pub signups: i64,
 }
 
 #[derive(Debug, Clone)]

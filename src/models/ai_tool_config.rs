@@ -6,7 +6,6 @@ use std::collections::HashMap;
 pub enum AiToolConfiguration {
     Api(ApiToolConfiguration),
     PlatformEvent(PlatformEventToolConfiguration),
-    PlatformFunction(PlatformFunctionToolConfiguration),
     Internal(InternalToolConfiguration),
     UseExternalService(UseExternalServiceToolConfiguration),
 }
@@ -16,7 +15,6 @@ pub enum AiToolConfiguration {
 pub enum AiToolType {
     Api,
     PlatformEvent,
-    PlatformFunction,
     Internal,
     UseExternalService,
 }
@@ -40,18 +38,6 @@ pub struct PlatformEventToolConfiguration {
     pub event_label: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_data: Option<serde_json::Value>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct PlatformFunctionToolConfiguration {
-    pub function_name: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub function_description: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_schema: Option<Vec<SchemaField>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub output_schema: Option<Vec<SchemaField>>,
-    pub is_overridable: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -167,18 +153,6 @@ impl Default for ApiToolConfiguration {
             request_body_schema: None,
             url_params_schema: None,
             timeout_seconds: Some(30),
-        }
-    }
-}
-
-impl Default for PlatformFunctionToolConfiguration {
-    fn default() -> Self {
-        Self {
-            function_name: String::new(),
-            function_description: None,
-            input_schema: None,
-            output_schema: None,
-            is_overridable: true,
         }
     }
 }

@@ -14,8 +14,7 @@ pub mod ai_tool_config;
 pub use self::ai_tool_config::{
     AiToolConfiguration, AiToolType, ApiToolConfiguration, AuthorizationConfiguration, HttpMethod,
     InternalToolConfiguration, InternalToolType, PlatformEventToolConfiguration,
-    PlatformFunctionToolConfiguration, SchemaField, UseExternalServiceToolConfiguration,
-    UseExternalServiceToolType,
+    SchemaField, UseExternalServiceToolConfiguration, UseExternalServiceToolType,
 };
 pub mod ai_tool_config_parameters_inner;
 pub use self::ai_tool_config_parameters_inner::AiToolConfigParametersInner;
@@ -167,5 +166,5 @@ pub use self::deployment_ai_settings::{DeploymentAiSettings, UpdateDeploymentAiS
 pub mod execute_agent_request;
 pub use self::execute_agent_request::{
     CancelRequest, ExecuteAgentRequest, ExecuteAgentRequestType, ExecuteAgentResponse, FileData,
-    NewMessageRequest, PlatformFunctionResultRequest, UserInputResponseRequest,
+    NewMessageRequest, UserInputResponseRequest,
 };
