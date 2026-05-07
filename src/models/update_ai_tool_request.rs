@@ -10,7 +10,5 @@ pub struct UpdateAiToolRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_type: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub requires_user_approval: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub configuration: Option<AiToolConfiguration>,
 }

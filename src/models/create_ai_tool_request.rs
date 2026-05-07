@@ -7,8 +7,6 @@ pub struct CreateAiToolRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub tool_type: String,
-    #[serde(default)]
-    pub requires_user_approval: bool,
     pub configuration: AiToolConfiguration,
 }
 
@@ -22,7 +20,6 @@ impl CreateAiToolRequest {
             name: name.into(),
             description: None,
             tool_type: tool_type.into(),
-            requires_user_approval: false,
             configuration,
         }
     }

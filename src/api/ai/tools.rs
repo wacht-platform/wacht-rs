@@ -2,7 +2,8 @@ use crate::{
     client::WachtClient,
     error::{Error, Result},
     models::{
-        AiTool, AiToolWithDetails, CreateAiToolRequest, PaginatedResponse, UpdateAiToolRequest,
+        AiTool, AiToolWithDetails, CreateAiToolRequest, PaginatedResponse,
+        UpdateAgentToolApprovalActionRequest, UpdateAiToolRequest,
     },
 };
 use serde::Serialize;
@@ -60,6 +61,14 @@ impl ToolsApi {
         tool_id: impl Into<String>,
     ) -> DetachToolBuilder {
         DetachToolBuilder::new(self.client.clone(), agent_id, tool_id)
+    }
+    pub fn set_agent_tool_approval_action(
+        &self,
+        agent_id: impl Into<String>,
+        tool_id: impl Into<String>,
+        request: UpdateAgentToolApprovalActionRequest,
+    ) -> SetAgentToolApprovalActionBuilder {
+        SetAgentToolApprovalActionBuilder::new(self.client.clone(), agent_id, tool_id, request)
     }
 }
 
@@ -324,6 +333,52 @@ impl AttachToolBuilder {
             Err(api_error(
                 status,
                 "Failed to attach tool",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct SetAgentToolApprovalActionBuilder {
+    client: WachtClient,
+    agent_id: String,
+    tool_id: String,
+    request: UpdateAgentToolApprovalActionRequest,
+}
+impl SetAgentToolApprovalActionBuilder {
+    pub fn new(
+        client: WachtClient,
+        agent_id: impl Into<String>,
+        tool_id: impl Into<String>,
+        request: UpdateAgentToolApprovalActionRequest,
+    ) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+            tool_id: tool_id.into(),
+            request,
+        }
+    }
+    pub async fn send(self) -> Result<()> {
+        let response = self
+            .client
+            .http_client()
+            .patch(format!(
+                "{}/ai/agents/{}/tools/{}",
+                self.client.config().base_url,
+                self.agent_id,
+                self.tool_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(())
+        } else {
+            Err(api_error(
+                status,
+                "Failed to set tool approval action",
                 response.text().await?,
             ))
         }

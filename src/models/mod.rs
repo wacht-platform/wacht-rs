@@ -1,7 +1,10 @@
 pub mod add_organization_member_request;
 pub use self::add_organization_member_request::AddOrganizationMemberRequest;
 pub mod ai_agent;
-pub use self::ai_agent::{AgentDetailsResponse, AiAgent, AiAgentWithDetails};
+pub use self::ai_agent::{
+    AgentDetailsResponse, AgentToolApprovalRule, AiAgent, AiAgentWithDetails, ApprovalAction,
+    UpdateAgentToolApprovalActionRequest,
+};
 pub mod ai_skill;
 pub use self::ai_skill::{SkillFileResponse, SkillScope, SkillTreeEntry, SkillTreeResponse};
 pub mod paginated;

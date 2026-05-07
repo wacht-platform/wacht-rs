@@ -1,4 +1,4 @@
-use crate::models::{AiToolConfiguration, AiToolType};
+use crate::models::{AiToolConfiguration, AiToolType, ApprovalAction};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -12,9 +12,9 @@ pub struct AiTool {
     pub description: Option<String>,
     pub tool_type: AiToolType,
     pub deployment_id: String,
-    #[serde(default)]
-    pub requires_user_approval: bool,
     pub configuration: AiToolConfiguration,
+    #[serde(default)]
+    pub approval_action: ApprovalAction,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -27,7 +27,7 @@ pub struct AiToolWithDetails {
     pub description: Option<String>,
     pub tool_type: AiToolType,
     pub deployment_id: String,
-    #[serde(default)]
-    pub requires_user_approval: bool,
     pub configuration: AiToolConfiguration,
+    #[serde(default)]
+    pub approval_action: ApprovalAction,
 }

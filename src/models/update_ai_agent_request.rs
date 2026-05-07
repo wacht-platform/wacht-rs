@@ -1,3 +1,4 @@
+use crate::models::AgentToolApprovalRule;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -17,4 +18,10 @@ pub struct UpdateAiAgentRequest {
     pub knowledge_base_ids: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_agents: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub require_approval_mcp: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub require_approval_virtual: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_approval_rules: Option<Vec<AgentToolApprovalRule>>,
 }
