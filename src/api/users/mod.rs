@@ -120,11 +120,11 @@ impl FetchUsersBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch users: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch users",
+                &error_body,
+            ))
         }
     }
 }
@@ -164,6 +164,15 @@ impl CreateUserBuilder {
             "skip_password_check",
             self.request.skip_password_check.to_string(),
         );
+        if let Some(profile_image) = &self.request.profile_image {
+            let part = reqwest::multipart::Part::bytes(profile_image.clone())
+                .file_name("profile_image.jpg")
+                .mime_str("image/jpeg")
+                .map_err(|e| {
+                    Error::InvalidRequest(format!("Failed to create multipart payload: {e}"))
+                })?;
+            form = form.part("profile_image", part);
+        }
 
         let response = client.post(&url).multipart(form).send().await?;
         let status = response.status();
@@ -172,11 +181,11 @@ impl CreateUserBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to create user: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to create user",
+                &error_body,
+            ))
         }
     }
 }
@@ -197,7 +206,11 @@ impl FetchUserDetailsBuilder {
 
     pub async fn send(self) -> Result<UserDetails> {
         let client = self.client.http_client();
-        let url = format!("{}/users/{}/details", self.client.config().base_url, self.user_id);
+        let url = format!(
+            "{}/users/{}/details",
+            self.client.config().base_url,
+            self.user_id
+        );
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -206,11 +219,11 @@ impl FetchUserDetailsBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch user details: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch user details",
+                &error_body,
+            ))
         }
     }
 }
@@ -258,6 +271,21 @@ impl UpdateUserBuilder {
                 serde_json::to_string(private_metadata).unwrap_or_default(),
             );
         }
+        if let Some(disabled) = self.request.disabled {
+            form = form.text("disabled", disabled.to_string());
+        }
+        if let Some(remove_profile_image) = self.request.remove_profile_image {
+            form = form.text("remove_profile_image", remove_profile_image.to_string());
+        }
+        if let Some(profile_image) = &self.request.profile_image {
+            let part = reqwest::multipart::Part::bytes(profile_image.clone())
+                .file_name("profile_image.jpg")
+                .mime_str("image/jpeg")
+                .map_err(|e| {
+                    Error::InvalidRequest(format!("Failed to create multipart payload: {e}"))
+                })?;
+            form = form.part("profile_image", part);
+        }
 
         let response = client.patch(&url).multipart(form).send().await?;
         let status = response.status();
@@ -266,11 +294,11 @@ impl UpdateUserBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update user: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update user",
+                &error_body,
+            ))
         }
     }
 }
@@ -293,7 +321,11 @@ impl UpdatePasswordBuilder {
 
     pub async fn send(self) -> Result<()> {
         let client = self.client.http_client();
-        let url = format!("{}/users/{}/password", self.client.config().base_url, self.user_id);
+        let url = format!(
+            "{}/users/{}/password",
+            self.client.config().base_url,
+            self.user_id
+        );
 
         let response = client.patch(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -302,11 +334,11 @@ impl UpdatePasswordBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update password: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update password",
+                &error_body,
+            ))
         }
     }
 }
@@ -336,11 +368,11 @@ impl DeleteUserBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to delete user: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to delete user",
+                &error_body,
+            ))
         }
     }
 }

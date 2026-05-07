@@ -18,7 +18,10 @@ impl AiSettingsApi {
         FetchAiSettingsBuilder::new(self.client.clone())
     }
 
-    pub fn update_ai_settings(&self, request: UpdateDeploymentAiSettingsRequest) -> UpdateAiSettingsBuilder {
+    pub fn update_ai_settings(
+        &self,
+        request: UpdateDeploymentAiSettingsRequest,
+    ) -> UpdateAiSettingsBuilder {
         UpdateAiSettingsBuilder::new(self.client.clone(), request)
     }
 }
@@ -43,11 +46,11 @@ impl FetchAiSettingsBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch AI settings: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch AI settings",
+                &error_body,
+            ))
         }
     }
 }
@@ -73,11 +76,11 @@ impl UpdateAiSettingsBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update AI settings: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update AI settings",
+                &error_body,
+            ))
         }
     }
 }

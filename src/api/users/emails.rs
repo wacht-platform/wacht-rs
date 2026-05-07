@@ -54,7 +54,11 @@ impl AddEmailBuilder {
 
     pub async fn send(self) -> Result<UserEmail> {
         let client = self.client.http_client();
-        let url = format!("{}/users/{}/emails", self.client.config().base_url, self.user_id);
+        let url = format!(
+            "{}/users/{}/emails",
+            self.client.config().base_url,
+            self.user_id
+        );
 
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -63,11 +67,11 @@ impl AddEmailBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to add email: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to add email",
+                &error_body,
+            ))
         }
     }
 }
@@ -111,11 +115,11 @@ impl UpdateEmailBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update email: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update email",
+                &error_body,
+            ))
         }
     }
 }
@@ -152,11 +156,11 @@ impl DeleteEmailBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to delete email: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to delete email",
+                &error_body,
+            ))
         }
     }
 }

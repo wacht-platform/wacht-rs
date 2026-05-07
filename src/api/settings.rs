@@ -3,9 +3,10 @@ use crate::{
     error::{Error, Result},
     models::{
         AuthenticationSettings, CreateJwtTemplateRequest, DeploymentB2bSettingsUpdates,
-        DeploymentRestrictionsUpdates, DisplaySettings, EmailTemplate, ImageUploadResponse,
-        JwtTemplate, PaginatedResponse, SmtpConfigRequest, SmtpConfigResponse, SmtpVerifyResponse,
-        SocialConnection, UpdateJwtTemplateRequest,
+        DeploymentOrganizationRole, DeploymentRestrictionsUpdates, DeploymentWorkspaceRole,
+        DisplaySettings, EmailTemplate, ImageUploadResponse, JwtTemplate, PaginatedResponse,
+        SmtpConfigRequest, SmtpConfigResponse, SmtpVerifyResponse, SocialConnection,
+        UpdateJwtTemplateRequest,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -90,6 +91,14 @@ impl SettingsApi {
         UpdateB2BSettingsBuilder::new(self.ctx.clone(), settings)
     }
 
+    pub fn fetch_deployment_organization_roles(&self) -> FetchDeploymentOrganizationRolesBuilder {
+        FetchDeploymentOrganizationRolesBuilder::new(self.ctx.clone())
+    }
+
+    pub fn fetch_deployment_workspace_roles(&self) -> FetchDeploymentWorkspaceRolesBuilder {
+        FetchDeploymentWorkspaceRolesBuilder::new(self.ctx.clone())
+    }
+
     pub fn update_deployment_restrictions(
         &self,
         restrictions: DeploymentRestrictionsUpdates,
@@ -101,7 +110,10 @@ impl SettingsApi {
         FetchJwtTemplatesBuilder::new(self.ctx.clone())
     }
 
-    pub fn create_jwt_template(&self, request: CreateJwtTemplateRequest) -> CreateJwtTemplateBuilder {
+    pub fn create_jwt_template(
+        &self,
+        request: CreateJwtTemplateRequest,
+    ) -> CreateJwtTemplateBuilder {
         CreateJwtTemplateBuilder::new(self.ctx.clone(), request)
     }
 
@@ -189,11 +201,11 @@ impl FetchDeploymentSettingsBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch deployment settings: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch deployment settings",
+                &error_body,
+            ))
         }
     }
 }
@@ -223,9 +235,15 @@ impl UpdateAuthenticationSettingsBuilder {
         let url = format!("{}/settings/auth", self.ctx.base_url);
         let response = client.patch(&url).json(&self.settings).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(()) } else {
+        if status.is_success() {
+            Ok(())
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to update authentication settings: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to update authentication settings",
+                &error_body,
+            ))
         }
     }
 }
@@ -238,19 +256,32 @@ pub struct UpdateDisplaySettingsBuilder {
 
 impl UpdateDisplaySettingsBuilder {
     fn new(ctx: SettingsContext, settings: DisplaySettings) -> Self {
-        Self { ctx, client: None, settings }
+        Self {
+            ctx,
+            client: None,
+            settings,
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<()> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/settings/display", self.ctx.base_url);
         let response = client.patch(&url).json(&self.settings).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(()) } else {
+        if status.is_success() {
+            Ok(())
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to update display settings: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to update display settings",
+                &error_body,
+            ))
         }
     }
 }
@@ -263,19 +294,98 @@ pub struct UpdateB2BSettingsBuilder {
 
 impl UpdateB2BSettingsBuilder {
     fn new(ctx: SettingsContext, settings: DeploymentB2bSettingsUpdates) -> Self {
-        Self { ctx, client: None, settings }
+        Self {
+            ctx,
+            client: None,
+            settings,
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<()> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/settings/b2b", self.ctx.base_url);
         let response = client.patch(&url).json(&self.settings).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(()) } else {
+        if status.is_success() {
+            Ok(())
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to update B2B settings: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to update B2B settings",
+                &error_body,
+            ))
+        }
+    }
+}
+
+pub struct FetchDeploymentOrganizationRolesBuilder {
+    ctx: SettingsContext,
+    client: Option<reqwest::Client>,
+}
+
+impl FetchDeploymentOrganizationRolesBuilder {
+    fn new(ctx: SettingsContext) -> Self {
+        Self { ctx, client: None }
+    }
+
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
+
+    pub async fn send(self) -> Result<PaginatedResponse<DeploymentOrganizationRole>> {
+        let client = self.ctx.resolve_client(self.client);
+        let url = format!("{}/settings/b2b/organization-roles", self.ctx.base_url);
+        let response = client.get(&url).send().await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::api_from_text(
+                status,
+                "Failed to fetch deployment organization roles",
+                &error_body,
+            ))
+        }
+    }
+}
+
+pub struct FetchDeploymentWorkspaceRolesBuilder {
+    ctx: SettingsContext,
+    client: Option<reqwest::Client>,
+}
+
+impl FetchDeploymentWorkspaceRolesBuilder {
+    fn new(ctx: SettingsContext) -> Self {
+        Self { ctx, client: None }
+    }
+
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
+
+    pub async fn send(self) -> Result<PaginatedResponse<DeploymentWorkspaceRole>> {
+        let client = self.ctx.resolve_client(self.client);
+        let url = format!("{}/settings/b2b/workspace-roles", self.ctx.base_url);
+        let response = client.get(&url).send().await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::api_from_text(
+                status,
+                "Failed to fetch deployment workspace roles",
+                &error_body,
+            ))
         }
     }
 }
@@ -288,19 +398,32 @@ pub struct UpdateDeploymentRestrictionsBuilder {
 
 impl UpdateDeploymentRestrictionsBuilder {
     fn new(ctx: SettingsContext, restrictions: DeploymentRestrictionsUpdates) -> Self {
-        Self { ctx, client: None, restrictions }
+        Self {
+            ctx,
+            client: None,
+            restrictions,
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<()> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/settings/restrictions", self.ctx.base_url);
         let response = client.patch(&url).json(&self.restrictions).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(()) } else {
+        if status.is_success() {
+            Ok(())
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to update deployment restrictions: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to update deployment restrictions",
+                &error_body,
+            ))
         }
     }
 }
@@ -311,18 +434,29 @@ pub struct FetchJwtTemplatesBuilder {
 }
 
 impl FetchJwtTemplatesBuilder {
-    fn new(ctx: SettingsContext) -> Self { Self { ctx, client: None } }
+    fn new(ctx: SettingsContext) -> Self {
+        Self { ctx, client: None }
+    }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<JwtTemplateListResponse> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/jwt-templates", self.ctx.base_url);
         let response = client.get(&url).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(response.json().await?) } else {
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to fetch JWT templates: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to fetch JWT templates",
+                &error_body,
+            ))
         }
     }
 }
@@ -335,19 +469,32 @@ pub struct CreateJwtTemplateBuilder {
 
 impl CreateJwtTemplateBuilder {
     fn new(ctx: SettingsContext, request: CreateJwtTemplateRequest) -> Self {
-        Self { ctx, client: None, request }
+        Self {
+            ctx,
+            client: None,
+            request,
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<JwtTemplate> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/jwt-templates", self.ctx.base_url);
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(response.json().await?) } else {
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to create JWT template: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to create JWT template",
+                &error_body,
+            ))
         }
     }
 }
@@ -361,19 +508,33 @@ pub struct UpdateJwtTemplateBuilder {
 
 impl UpdateJwtTemplateBuilder {
     fn new(ctx: SettingsContext, template_id: &str, request: UpdateJwtTemplateRequest) -> Self {
-        Self { ctx, client: None, template_id: template_id.to_string(), request }
+        Self {
+            ctx,
+            client: None,
+            template_id: template_id.to_string(),
+            request,
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<JwtTemplate> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/jwt-templates/{}", self.ctx.base_url, self.template_id);
         let response = client.patch(&url).json(&self.request).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(response.json().await?) } else {
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to update JWT template {}: {error_body}", self.template_id), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                format!("Failed to update JWT template {}", self.template_id),
+                &error_body,
+            ))
         }
     }
 }
@@ -386,19 +547,32 @@ pub struct DeleteJwtTemplateBuilder {
 
 impl DeleteJwtTemplateBuilder {
     fn new(ctx: SettingsContext, template_id: &str) -> Self {
-        Self { ctx, client: None, template_id: template_id.to_string() }
+        Self {
+            ctx,
+            client: None,
+            template_id: template_id.to_string(),
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<()> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/jwt-templates/{}", self.ctx.base_url, self.template_id);
         let response = client.delete(&url).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(()) } else {
+        if status.is_success() {
+            Ok(())
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to delete JWT template {}: {error_body}", self.template_id), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                format!("Failed to delete JWT template {}", self.template_id),
+                &error_body,
+            ))
         }
     }
 }
@@ -411,19 +585,32 @@ pub struct UpdateSmtpConfigBuilder {
 
 impl UpdateSmtpConfigBuilder {
     fn new(ctx: SettingsContext, config_data: SmtpConfigRequest) -> Self {
-        Self { ctx, client: None, config_data }
+        Self {
+            ctx,
+            client: None,
+            config_data,
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<SmtpConfigResponse> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/settings/email/smtp", self.ctx.base_url);
         let response = client.post(&url).json(&self.config_data).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(response.json().await?) } else {
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to update SMTP configuration: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to update SMTP configuration",
+                &error_body,
+            ))
         }
     }
 }
@@ -434,18 +621,29 @@ pub struct RemoveSmtpConfigBuilder {
 }
 
 impl RemoveSmtpConfigBuilder {
-    fn new(ctx: SettingsContext) -> Self { Self { ctx, client: None } }
+    fn new(ctx: SettingsContext) -> Self {
+        Self { ctx, client: None }
+    }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<()> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/settings/email/smtp", self.ctx.base_url);
         let response = client.delete(&url).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(()) } else {
+        if status.is_success() {
+            Ok(())
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to remove SMTP configuration: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to remove SMTP configuration",
+                &error_body,
+            ))
         }
     }
 }
@@ -458,19 +656,32 @@ pub struct VerifySmtpConnectionBuilder {
 
 impl VerifySmtpConnectionBuilder {
     fn new(ctx: SettingsContext, config_data: SmtpConfigRequest) -> Self {
-        Self { ctx, client: None, config_data }
+        Self {
+            ctx,
+            client: None,
+            config_data,
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<SmtpVerifyResponse> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/settings/email/smtp/verify", self.ctx.base_url);
         let response = client.post(&url).json(&self.config_data).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(response.json().await?) } else {
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to verify SMTP connection: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to verify SMTP connection",
+                &error_body,
+            ))
         }
     }
 }
@@ -483,19 +694,35 @@ pub struct FetchEmailTemplateBuilder {
 
 impl FetchEmailTemplateBuilder {
     fn new(ctx: SettingsContext, template_name: &str) -> Self {
-        Self { ctx, client: None, template_name: template_name.to_string() }
+        Self {
+            ctx,
+            client: None,
+            template_name: template_name.to_string(),
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<EmailTemplate> {
         let client = self.ctx.resolve_client(self.client);
-        let url = format!("{}/settings/email-templates/{}", self.ctx.base_url, self.template_name);
+        let url = format!(
+            "{}/settings/email-templates/{}",
+            self.ctx.base_url, self.template_name
+        );
         let response = client.get(&url).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(response.json().await?) } else {
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to fetch email template {}: {error_body}", self.template_name), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                format!("Failed to fetch email template {}", self.template_name),
+                &error_body,
+            ))
         }
     }
 }
@@ -509,19 +736,36 @@ pub struct UpdateEmailTemplateBuilder {
 
 impl UpdateEmailTemplateBuilder {
     fn new(ctx: SettingsContext, template_name: &str, template: EmailTemplate) -> Self {
-        Self { ctx, client: None, template_name: template_name.to_string(), template }
+        Self {
+            ctx,
+            client: None,
+            template_name: template_name.to_string(),
+            template,
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<()> {
         let client = self.ctx.resolve_client(self.client);
-        let url = format!("{}/settings/email-templates/{}", self.ctx.base_url, self.template_name);
+        let url = format!(
+            "{}/settings/email-templates/{}",
+            self.ctx.base_url, self.template_name
+        );
         let response = client.patch(&url).json(&self.template).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(()) } else {
+        if status.is_success() {
+            Ok(())
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to update email template {}: {error_body}", self.template_name), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                format!("Failed to update email template {}", self.template_name),
+                &error_body,
+            ))
         }
     }
 }
@@ -532,18 +776,29 @@ pub struct FetchSocialConnectionsBuilder {
 }
 
 impl FetchSocialConnectionsBuilder {
-    fn new(ctx: SettingsContext) -> Self { Self { ctx, client: None } }
+    fn new(ctx: SettingsContext) -> Self {
+        Self { ctx, client: None }
+    }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<SocialConnectionsResponse> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/settings/social-connections", self.ctx.base_url);
         let response = client.get(&url).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(response.json().await?) } else {
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to fetch social connections: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to fetch social connections",
+                &error_body,
+            ))
         }
     }
 }
@@ -556,19 +811,32 @@ pub struct UpsertSocialConnectionBuilder {
 
 impl UpsertSocialConnectionBuilder {
     fn new(ctx: SettingsContext, connection: SocialConnection) -> Self {
-        Self { ctx, client: None, connection }
+        Self {
+            ctx,
+            client: None,
+            connection,
+        }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<SocialConnection> {
         let client = self.ctx.resolve_client(self.client);
         let url = format!("{}/settings/social-connections", self.ctx.base_url);
         let response = client.put(&url).json(&self.connection).send().await?;
         let status = response.status();
-        if status.is_success() { Ok(response.json().await?) } else {
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
             let error_body = response.text().await?;
-            Err(Error::Api { status, message: format!("Failed to upsert social connection: {error_body}"), details: serde_json::from_str(&error_body).ok() })
+            Err(Error::api_from_text(
+                status,
+                "Failed to upsert social connection",
+                &error_body,
+            ))
         }
     }
 }
@@ -582,7 +850,12 @@ pub struct UploadImageBuilder {
 }
 
 impl UploadImageBuilder {
-    fn new(ctx: SettingsContext, image_type: &str, file_content: Vec<u8>, file_name: String) -> Self {
+    fn new(
+        ctx: SettingsContext,
+        image_type: &str,
+        file_content: Vec<u8>,
+        file_name: String,
+    ) -> Self {
         Self {
             ctx,
             client: None,
@@ -592,7 +865,10 @@ impl UploadImageBuilder {
         }
     }
 
-    pub fn with_client(mut self, client: reqwest::Client) -> Self { self.client = Some(client); self }
+    pub fn with_client(mut self, client: reqwest::Client) -> Self {
+        self.client = Some(client);
+        self
+    }
 
     pub async fn send(self) -> Result<ImageUploadResponse> {
         let client = self.ctx.resolve_client(self.client);
@@ -620,11 +896,11 @@ impl UploadImageBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to upload {} image: {error_body}", self.image_type),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                format!("Failed to upload {} image", self.image_type),
+                &error_body,
+            ))
         }
     }
 }

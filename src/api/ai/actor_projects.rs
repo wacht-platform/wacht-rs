@@ -1,0 +1,1275 @@
+use crate::{
+    client::WachtClient,
+    error::{Error, Result},
+    models::{
+        ActorProject, AgentThread, AnswerSubmission, ApprovalSubmission, CreateActorProjectRequest,
+        CreateAgentThreadRequest, CreateProjectTaskBoardItemCommentRequest,
+        CreateProjectTaskBoardItemRequest, CursorPage, PaginatedResponse, ProjectTaskBoard,
+        ProjectTaskBoardItem, ProjectTaskBoardItemAssignment, ProjectTaskBoardItemComment,
+        TaskWorkspaceFileContent, TaskWorkspaceListing, UpdateActorProjectRequest,
+        UpdateProjectTaskBoardItemRequest,
+    },
+};
+use serde::Serialize;
+
+#[derive(Debug, Clone)]
+pub struct ActorProjectsApi {
+    client: WachtClient,
+}
+impl ActorProjectsApi {
+    pub(crate) fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+    pub fn list_actor_projects(&self, actor_id: impl Into<String>) -> ListActorProjectsBuilder {
+        ListActorProjectsBuilder::new(self.client.clone(), actor_id)
+    }
+    pub fn search_actor_projects(&self, actor_id: impl Into<String>) -> SearchActorProjectsBuilder {
+        SearchActorProjectsBuilder::new(self.client.clone(), actor_id)
+    }
+    pub fn create_actor_project(
+        &self,
+        actor_id: impl Into<String>,
+        request: CreateActorProjectRequest,
+    ) -> CreateActorProjectBuilder {
+        CreateActorProjectBuilder::new(self.client.clone(), actor_id, request)
+    }
+    pub fn fetch_actor_project(&self, project_id: impl Into<String>) -> FetchActorProjectBuilder {
+        FetchActorProjectBuilder::new(self.client.clone(), project_id)
+    }
+    pub fn update_actor_project(
+        &self,
+        project_id: impl Into<String>,
+        request: UpdateActorProjectRequest,
+    ) -> UpdateActorProjectBuilder {
+        UpdateActorProjectBuilder::new(self.client.clone(), project_id, request)
+    }
+    pub fn archive_actor_project(
+        &self,
+        project_id: impl Into<String>,
+    ) -> ArchiveActorProjectBuilder {
+        ArchiveActorProjectBuilder::new(self.client.clone(), project_id)
+    }
+    pub fn unarchive_actor_project(
+        &self,
+        project_id: impl Into<String>,
+    ) -> UnarchiveActorProjectBuilder {
+        UnarchiveActorProjectBuilder::new(self.client.clone(), project_id)
+    }
+    pub fn fetch_board(&self, project_id: impl Into<String>) -> FetchActorProjectBoardBuilder {
+        FetchActorProjectBoardBuilder::new(self.client.clone(), project_id)
+    }
+    pub fn fetch_board_items(
+        &self,
+        project_id: impl Into<String>,
+    ) -> FetchActorProjectBoardItemsBuilder {
+        FetchActorProjectBoardItemsBuilder::new(self.client.clone(), project_id)
+    }
+    pub fn create_board_item(
+        &self,
+        project_id: impl Into<String>,
+        request: CreateProjectTaskBoardItemRequest,
+    ) -> CreateActorProjectBoardItemBuilder {
+        CreateActorProjectBoardItemBuilder::new(self.client.clone(), project_id, request)
+    }
+    pub fn fetch_board_item(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> FetchActorProjectBoardItemBuilder {
+        FetchActorProjectBoardItemBuilder::new(self.client.clone(), project_id, item_id)
+    }
+    pub fn fetch_board_item_assignments(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> FetchActorProjectBoardItemAssignmentsBuilder {
+        FetchActorProjectBoardItemAssignmentsBuilder::new(self.client.clone(), project_id, item_id)
+    }
+    pub fn fetch_board_item_filesystem(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> FetchActorProjectBoardItemFilesystemBuilder {
+        FetchActorProjectBoardItemFilesystemBuilder::new(self.client.clone(), project_id, item_id)
+    }
+    pub fn fetch_board_item_filesystem_file(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        path: impl Into<String>,
+    ) -> FetchActorProjectBoardItemFilesystemFileBuilder {
+        FetchActorProjectBoardItemFilesystemFileBuilder::new(
+            self.client.clone(),
+            project_id,
+            item_id,
+            path,
+        )
+    }
+    pub fn update_board_item(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        request: UpdateProjectTaskBoardItemRequest,
+    ) -> UpdateActorProjectBoardItemBuilder {
+        UpdateActorProjectBoardItemBuilder::new(self.client.clone(), project_id, item_id, request)
+    }
+    pub fn archive_board_item(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> ArchiveActorProjectBoardItemBuilder {
+        ArchiveActorProjectBoardItemBuilder::new(self.client.clone(), project_id, item_id)
+    }
+    pub fn unarchive_board_item(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> UnarchiveActorProjectBoardItemBuilder {
+        UnarchiveActorProjectBoardItemBuilder::new(self.client.clone(), project_id, item_id)
+    }
+    pub fn cancel_board_item(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> CancelActorProjectBoardItemBuilder {
+        CancelActorProjectBoardItemBuilder::new(self.client.clone(), project_id, item_id)
+    }
+    pub fn answer_board_item_question(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        request: AnswerSubmission,
+    ) -> AnswerActorProjectBoardItemQuestionBuilder {
+        AnswerActorProjectBoardItemQuestionBuilder::new(
+            self.client.clone(),
+            project_id,
+            item_id,
+            request,
+        )
+    }
+    pub fn approve_board_item_tool(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        request: ApprovalSubmission,
+    ) -> ApproveActorProjectBoardItemToolBuilder {
+        ApproveActorProjectBoardItemToolBuilder::new(
+            self.client.clone(),
+            project_id,
+            item_id,
+            request,
+        )
+    }
+    pub fn fetch_board_item_comments(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> FetchActorProjectBoardItemCommentsBuilder {
+        FetchActorProjectBoardItemCommentsBuilder::new(self.client.clone(), project_id, item_id)
+    }
+    pub fn create_board_item_comment(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        actor_id: impl Into<String>,
+        request: CreateProjectTaskBoardItemCommentRequest,
+    ) -> CreateActorProjectBoardItemCommentBuilder {
+        CreateActorProjectBoardItemCommentBuilder::new(
+            self.client.clone(),
+            project_id,
+            item_id,
+            actor_id,
+            request,
+        )
+    }
+    pub fn fetch_threads(&self, project_id: impl Into<String>) -> FetchActorProjectThreadsBuilder {
+        FetchActorProjectThreadsBuilder::new(self.client.clone(), project_id)
+    }
+    pub fn create_thread(
+        &self,
+        project_id: impl Into<String>,
+        request: CreateAgentThreadRequest,
+    ) -> CreateActorProjectThreadBuilder {
+        CreateActorProjectThreadBuilder::new(self.client.clone(), project_id, request)
+    }
+}
+
+fn api_error(status: reqwest::StatusCode, prefix: &str, body: String) -> Error {
+    Error::api_from_text(status, prefix, &body)
+}
+
+#[derive(Debug, Default, Serialize)]
+struct ActorIdQuery {
+    actor_id: String,
+}
+#[derive(Debug, Default, Serialize)]
+struct ActorProjectsListQuery {
+    actor_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    include_archived: Option<bool>,
+}
+#[derive(Debug, Default, Serialize)]
+struct SearchActorProjectsQuery {
+    actor_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    q: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    limit: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cursor: Option<String>,
+}
+#[derive(Debug, Default, Serialize)]
+struct LimitCursorQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    limit: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cursor: Option<String>,
+}
+#[derive(Debug, Default, Serialize)]
+struct PathQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    path: Option<String>,
+}
+#[derive(Debug, Default, Serialize)]
+struct IncludeArchivedQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    include_archived: Option<bool>,
+}
+
+pub struct ListActorProjectsBuilder {
+    client: WachtClient,
+    query: ActorProjectsListQuery,
+}
+impl ListActorProjectsBuilder {
+    pub fn new(client: WachtClient, actor_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            query: ActorProjectsListQuery {
+                actor_id: actor_id.into(),
+                include_archived: None,
+            },
+        }
+    }
+    pub fn include_archived(mut self, include_archived: bool) -> Self {
+        self.query.include_archived = Some(include_archived);
+        self
+    }
+    pub async fn send(self) -> Result<PaginatedResponse<ActorProject>> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects",
+                self.client.config().base_url
+            ))
+            .query(&self.query)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to list actor projects",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct SearchActorProjectsBuilder {
+    client: WachtClient,
+    query: SearchActorProjectsQuery,
+}
+impl SearchActorProjectsBuilder {
+    pub fn new(client: WachtClient, actor_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            query: SearchActorProjectsQuery {
+                actor_id: actor_id.into(),
+                q: None,
+                limit: None,
+                cursor: None,
+            },
+        }
+    }
+    pub fn query(mut self, q: impl Into<String>) -> Self {
+        self.query.q = Some(q.into());
+        self
+    }
+    pub fn limit(mut self, limit: i64) -> Self {
+        self.query.limit = Some(limit);
+        self
+    }
+    pub fn cursor(mut self, cursor: impl Into<String>) -> Self {
+        self.query.cursor = Some(cursor.into());
+        self
+    }
+    pub async fn send(self) -> Result<CursorPage<ActorProject>> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/search",
+                self.client.config().base_url
+            ))
+            .query(&self.query)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to search actor projects",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct CreateActorProjectBuilder {
+    client: WachtClient,
+    actor_id: String,
+    request: CreateActorProjectRequest,
+}
+impl CreateActorProjectBuilder {
+    pub fn new(
+        client: WachtClient,
+        actor_id: impl Into<String>,
+        request: CreateActorProjectRequest,
+    ) -> Self {
+        Self {
+            client,
+            actor_id: actor_id.into(),
+            request,
+        }
+    }
+    pub async fn send(self) -> Result<ActorProject> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects",
+                self.client.config().base_url
+            ))
+            .query(&ActorIdQuery {
+                actor_id: self.actor_id,
+            })
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to create actor project",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchActorProjectBuilder {
+    client: WachtClient,
+    project_id: String,
+}
+impl FetchActorProjectBuilder {
+    pub fn new(client: WachtClient, project_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<ActorProject> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/{}",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to fetch actor project",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct UpdateActorProjectBuilder {
+    client: WachtClient,
+    project_id: String,
+    request: UpdateActorProjectRequest,
+}
+impl UpdateActorProjectBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        request: UpdateActorProjectRequest,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            request,
+        }
+    }
+    pub async fn send(self) -> Result<ActorProject> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/update",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to update actor project",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct ArchiveActorProjectBuilder {
+    client: WachtClient,
+    project_id: String,
+}
+impl ArchiveActorProjectBuilder {
+    pub fn new(client: WachtClient, project_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<ActorProject> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/archive",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .json(&serde_json::json!({}))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to archive actor project",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct UnarchiveActorProjectBuilder {
+    client: WachtClient,
+    project_id: String,
+}
+impl UnarchiveActorProjectBuilder {
+    pub fn new(client: WachtClient, project_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<ActorProject> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/unarchive",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .json(&serde_json::json!({}))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to unarchive actor project",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchActorProjectBoardBuilder {
+    client: WachtClient,
+    project_id: String,
+}
+impl FetchActorProjectBoardBuilder {
+    pub fn new(client: WachtClient, project_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoard> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/{}/board",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to fetch project board",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchActorProjectBoardItemsBuilder {
+    client: WachtClient,
+    project_id: String,
+}
+impl FetchActorProjectBoardItemsBuilder {
+    pub fn new(client: WachtClient, project_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<PaginatedResponse<ProjectTaskBoardItem>> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/{}/board/items",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to list board items",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct CreateActorProjectBoardItemBuilder {
+    client: WachtClient,
+    project_id: String,
+    request: CreateProjectTaskBoardItemRequest,
+}
+impl CreateActorProjectBoardItemBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        request: CreateProjectTaskBoardItemRequest,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            request,
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItem> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to create board item",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchActorProjectBoardItemBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+}
+impl FetchActorProjectBoardItemBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItem> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/{}/board/items/{}",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to fetch board item",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchActorProjectBoardItemAssignmentsBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+    query: LimitCursorQuery,
+}
+impl FetchActorProjectBoardItemAssignmentsBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+            query: LimitCursorQuery::default(),
+        }
+    }
+    pub fn limit(mut self, limit: i64) -> Self {
+        self.query.limit = Some(limit);
+        self
+    }
+    pub fn cursor(mut self, cursor: impl Into<String>) -> Self {
+        self.query.cursor = Some(cursor.into());
+        self
+    }
+    pub async fn send(self) -> Result<PaginatedResponse<ProjectTaskBoardItemAssignment>> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/assignments",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .query(&self.query)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to fetch board item assignments",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchActorProjectBoardItemFilesystemBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+    query: PathQuery,
+}
+impl FetchActorProjectBoardItemFilesystemBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+            query: PathQuery::default(),
+        }
+    }
+    pub fn path(mut self, path: impl Into<String>) -> Self {
+        self.query.path = Some(path.into());
+        self
+    }
+    pub async fn send(self) -> Result<TaskWorkspaceListing> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/filesystem",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .query(&self.query)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to fetch board item filesystem",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchActorProjectBoardItemFilesystemFileBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+    path: String,
+}
+impl FetchActorProjectBoardItemFilesystemFileBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        path: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+            path: path.into(),
+        }
+    }
+    pub async fn send(self) -> Result<TaskWorkspaceFileContent> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/filesystem/file",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .query(&PathQuery {
+                path: Some(self.path),
+            })
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to fetch board item file",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct UpdateActorProjectBoardItemBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+    request: UpdateProjectTaskBoardItemRequest,
+}
+impl UpdateActorProjectBoardItemBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        request: UpdateProjectTaskBoardItemRequest,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+            request,
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItem> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/update",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to update board item",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct ArchiveActorProjectBoardItemBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+}
+impl ArchiveActorProjectBoardItemBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItem> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/archive",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .json(&serde_json::json!({}))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to archive board item",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct UnarchiveActorProjectBoardItemBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+}
+impl UnarchiveActorProjectBoardItemBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItem> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/unarchive",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .json(&serde_json::json!({}))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to unarchive board item",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct CancelActorProjectBoardItemBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+}
+impl CancelActorProjectBoardItemBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItem> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/cancel",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .json(&serde_json::json!({}))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to cancel board item",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct AnswerActorProjectBoardItemQuestionBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+    request: AnswerSubmission,
+}
+impl AnswerActorProjectBoardItemQuestionBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        request: AnswerSubmission,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+            request,
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItem> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/answer",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to answer board item question",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct ApproveActorProjectBoardItemToolBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+    request: ApprovalSubmission,
+}
+impl ApproveActorProjectBoardItemToolBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        request: ApprovalSubmission,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+            request,
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItem> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/approval",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to approve board item tool",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchActorProjectBoardItemCommentsBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+}
+impl FetchActorProjectBoardItemCommentsBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<PaginatedResponse<ProjectTaskBoardItemComment>> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/comments",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to fetch board item comments",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct CreateActorProjectBoardItemCommentBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+    actor_id: String,
+    request: CreateProjectTaskBoardItemCommentRequest,
+}
+impl CreateActorProjectBoardItemCommentBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        actor_id: impl Into<String>,
+        request: CreateProjectTaskBoardItemCommentRequest,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+            actor_id: actor_id.into(),
+            request,
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItemComment> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/comments",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .query(&ActorIdQuery {
+                actor_id: self.actor_id,
+            })
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to create board item comment",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchActorProjectThreadsBuilder {
+    client: WachtClient,
+    project_id: String,
+    include_archived: Option<bool>,
+}
+impl FetchActorProjectThreadsBuilder {
+    pub fn new(client: WachtClient, project_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            include_archived: None,
+        }
+    }
+    pub fn include_archived(mut self, include_archived: bool) -> Self {
+        self.include_archived = Some(include_archived);
+        self
+    }
+    pub async fn send(self) -> Result<PaginatedResponse<AgentThread>> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/{}/threads",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .query(&IncludeArchivedQuery {
+                include_archived: self.include_archived,
+            })
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to list project threads",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct CreateActorProjectThreadBuilder {
+    client: WachtClient,
+    project_id: String,
+    request: CreateAgentThreadRequest,
+}
+impl CreateActorProjectThreadBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        request: CreateAgentThreadRequest,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            request,
+        }
+    }
+    pub async fn send(self) -> Result<AgentThread> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/threads",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to create project thread",
+                response.text().await?,
+            ))
+        }
+    }
+}

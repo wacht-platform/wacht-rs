@@ -11,7 +11,7 @@ use axum::{
     http::{StatusCode, header},
     response::Response,
 };
-use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header, jwk::Jwk};
 use std::{
     future::Future,
     pin::Pin,
@@ -53,12 +53,18 @@ impl AuthLayer {
     /// # Panics
     /// Panics if the SDK hasn't been initialized with a public key.
     pub fn new() -> Self {
-        let public_key = crate::get_public_signing_key()
-            .expect("Public key must be configured in Wacht SDK. Initialize SDK with WachtConfig::with_public_key()");
+        let public_key = crate::get_public_signing_key().unwrap_or_default();
+        let public_jwks = crate::get_public_signing_jwks();
+        if public_key.is_empty() && public_jwks.is_none() {
+            panic!(
+                "Public signing material must be configured in Wacht SDK. Initialize SDK with WachtConfig::with_public_key() or load_public_key()"
+            );
+        }
 
         Self {
             config: Arc::new(AuthConfig {
                 public_key,
+                public_jwks,
                 allowed_clock_skew: 5,
                 validate_exp: true,
                 validate_nbf: true,
@@ -71,9 +77,16 @@ impl AuthLayer {
     ///
     /// Returns None if the SDK hasn't been initialized with a public key.
     pub fn try_new() -> Option<Self> {
-        crate::get_public_signing_key().map(|public_key| Self {
+        let public_key = crate::get_public_signing_key().unwrap_or_default();
+        let public_jwks = crate::get_public_signing_jwks();
+        if public_key.is_empty() && public_jwks.is_none() {
+            return None;
+        }
+
+        Some(Self {
             config: Arc::new(AuthConfig {
                 public_key,
+                public_jwks,
                 allowed_clock_skew: 5,
                 validate_exp: true,
                 validate_nbf: true,
@@ -89,6 +102,7 @@ impl AuthLayer {
         Self {
             config: Arc::new(AuthConfig {
                 public_key: key.into(),
+                public_jwks: None,
                 allowed_clock_skew: 5,
                 validate_exp: true,
                 validate_nbf: true,
@@ -255,33 +269,7 @@ async fn validate_token(
         }
     };
 
-    let decoding_key = match algorithm {
-        Algorithm::ES256 | Algorithm::ES384 => {
-            DecodingKey::from_ec_pem(config.public_key.as_bytes()).map_err(|e| {
-                error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    &format!("Invalid EC public key: {e}"),
-                )
-            })?
-        }
-        Algorithm::RS256 | Algorithm::RS384 | Algorithm::RS512 => {
-            DecodingKey::from_rsa_pem(config.public_key.as_bytes()).map_err(|e| {
-                error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    &format!("Invalid RSA public key: {e}"),
-                )
-            })?
-        }
-        Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
-            DecodingKey::from_secret(config.public_key.as_bytes())
-        }
-        _ => {
-            return Err(error_response(
-                StatusCode::UNAUTHORIZED,
-                "Unsupported algorithm",
-            ));
-        }
-    };
+    let decoding_key = build_decoding_key(token, &header, algorithm, config)?;
 
     let mut validation = Validation::new(algorithm);
     validation.leeway = config.allowed_clock_skew;
@@ -308,6 +296,92 @@ async fn validate_token(
             claims: token_data.claims,
         },
     ))
+}
+
+fn build_decoding_key(
+    token: &str,
+    header: &jsonwebtoken::Header,
+    algorithm: Algorithm,
+    config: &AuthConfig,
+) -> Result<DecodingKey, Response> {
+    if let Some(jwk) = select_jwk_for_token(header, config) {
+        return DecodingKey::from_jwk(&jwk).map_err(|e| {
+            error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                &format!("Invalid JWK for token verification: {e}"),
+            )
+        });
+    }
+
+    match algorithm {
+        Algorithm::ES256 | Algorithm::ES384 => {
+            DecodingKey::from_ec_pem(config.public_key.as_bytes()).map_err(|e| {
+                error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &format!("Invalid EC public key: {e}"),
+                )
+            })
+        }
+        Algorithm::RS256 | Algorithm::RS384 | Algorithm::RS512 => {
+            DecodingKey::from_rsa_pem(config.public_key.as_bytes()).map_err(|e| {
+                error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &format!("Invalid RSA public key: {e}"),
+                )
+            })
+        }
+        Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
+            Ok(DecodingKey::from_secret(config.public_key.as_bytes()))
+        }
+        _ => Err(error_response(
+            StatusCode::UNAUTHORIZED,
+            &format!(
+                "Unsupported algorithm for token: {}",
+                token.split('.').next().unwrap_or("unknown")
+            ),
+        )),
+    }
+}
+
+fn select_jwk_for_token(header: &jsonwebtoken::Header, config: &AuthConfig) -> Option<Jwk> {
+    let jwks = config.public_jwks.as_ref()?;
+
+    let matching = jwks.keys.iter().find(|key| {
+        if let Some(header_kid) = header.kid.as_ref() {
+            if key.kid.as_ref() != Some(header_kid) {
+                return false;
+            }
+        }
+
+        if let Some(alg) = key.alg.as_ref() {
+            if alg != algorithm_name(header.alg) {
+                return false;
+            }
+        }
+
+        true
+    })?;
+
+    serde_json::to_value(matching)
+        .ok()
+        .and_then(|value| serde_json::from_value::<Jwk>(value).ok())
+}
+
+fn algorithm_name(algorithm: Algorithm) -> &'static str {
+    match algorithm {
+        Algorithm::HS256 => "HS256",
+        Algorithm::HS384 => "HS384",
+        Algorithm::HS512 => "HS512",
+        Algorithm::ES256 => "ES256",
+        Algorithm::ES384 => "ES384",
+        Algorithm::RS256 => "RS256",
+        Algorithm::RS384 => "RS384",
+        Algorithm::RS512 => "RS512",
+        Algorithm::PS256 => "PS256",
+        Algorithm::PS384 => "PS384",
+        Algorithm::PS512 => "PS512",
+        Algorithm::EdDSA => "EdDSA",
+    }
 }
 
 /// Create an HTTP error response with the given status and message.

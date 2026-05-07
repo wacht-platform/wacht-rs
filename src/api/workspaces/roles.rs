@@ -71,11 +71,11 @@ impl FetchRolesBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch workspace roles: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch workspace roles",
+                &error_body,
+            ))
         }
     }
 }
@@ -111,11 +111,11 @@ impl CreateRoleBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to create workspace role: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to create workspace role",
+                &error_body,
+            ))
         }
     }
 }
@@ -129,7 +129,12 @@ pub struct UpdateRoleBuilder {
 }
 
 impl UpdateRoleBuilder {
-    pub fn new(client: WachtClient, workspace_id: &str, role_id: &str, request: UpdateRoleRequest) -> Self {
+    pub fn new(
+        client: WachtClient,
+        workspace_id: &str,
+        role_id: &str,
+        request: UpdateRoleRequest,
+    ) -> Self {
         Self {
             client,
             workspace_id: workspace_id.to_string(),
@@ -154,11 +159,11 @@ impl UpdateRoleBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update workspace role: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update workspace role",
+                &error_body,
+            ))
         }
     }
 }
@@ -195,11 +200,11 @@ impl DeleteRoleBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to delete workspace role: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to delete workspace role",
+                &error_body,
+            ))
         }
     }
 }

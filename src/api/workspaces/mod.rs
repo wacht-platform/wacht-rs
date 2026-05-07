@@ -9,9 +9,7 @@ pub mod roles;
 use crate::{
     client::WachtClient,
     error::{Error, Result},
-    models::{
-        CreateWorkspaceRequest, ListOptions, PaginatedResponse, UpdateWorkspaceRequest, Workspace,
-    },
+    models::{ListOptions, PaginatedResponse, UpdateWorkspaceRequest, Workspace},
 };
 
 pub type WorkspaceListResponse = PaginatedResponse<Workspace>;
@@ -28,10 +26,6 @@ impl WorkspacesApi {
 
     pub fn fetch_workspaces(&self) -> FetchWorkspacesBuilder {
         FetchWorkspacesBuilder::new(self.client.clone())
-    }
-
-    pub fn create_workspace(&self, request: CreateWorkspaceRequest) -> CreateWorkspaceBuilder {
-        CreateWorkspaceBuilder::new(self.client.clone(), request)
     }
 
     pub fn fetch_workspace(&self, workspace_id: &str) -> FetchWorkspaceBuilder {
@@ -112,71 +106,11 @@ impl FetchWorkspacesBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch workspaces: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
-        }
-    }
-}
-
-/// Builder for creating a workspace
-pub struct CreateWorkspaceBuilder {
-    client: WachtClient,
-    request: CreateWorkspaceRequest,
-}
-
-impl CreateWorkspaceBuilder {
-    pub fn new(client: WachtClient, request: CreateWorkspaceRequest) -> Self {
-        Self { client, request }
-    }
-
-    pub async fn send(self) -> Result<Workspace> {
-        let client = self.client.http_client();
-        let url = format!("{}/workspaces", self.client.config().base_url);
-
-        let mut form = reqwest::multipart::Form::new();
-        form = form.text("name", self.request.name.clone());
-        if let Some(description) = &self.request.description {
-            form = form.text("description", description.clone());
-        }
-        if let Some(public_metadata) = &self.request.public_metadata {
-            form = form.text(
-                "public_metadata",
-                serde_json::to_string(public_metadata).unwrap_or_default(),
-            );
-        }
-        if let Some(private_metadata) = &self.request.private_metadata {
-            form = form.text(
-                "private_metadata",
-                serde_json::to_string(private_metadata).unwrap_or_default(),
-            );
-        }
-        if let Some(image_bytes) = &self.request.workspace_image {
-            let part = reqwest::multipart::Part::bytes(image_bytes.clone())
-                .file_name("workspace_image.jpg")
-                .mime_str("image/jpeg")
-                .map_err(|e| Error::Api {
-                    status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("Failed to create multipart: {e}"),
-                    details: None,
-                })?;
-            form = form.part("workspace_image", part);
-        }
-
-        let response = client.post(&url).multipart(form).send().await?;
-        let status = response.status();
-
-        if status.is_success() {
-            Ok(response.json().await?)
-        } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
-                status,
-                message: format!("Failed to create workspace: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch workspaces",
+                &error_body,
+            ))
         }
     }
 }
@@ -197,7 +131,11 @@ impl FetchWorkspaceBuilder {
 
     pub async fn send(self) -> Result<Workspace> {
         let client = self.client.http_client();
-        let url = format!("{}/workspaces/{}", self.client.config().base_url, self.workspace_id);
+        let url = format!(
+            "{}/workspaces/{}",
+            self.client.config().base_url,
+            self.workspace_id
+        );
 
         let response = client.get(&url).send().await?;
         let status = response.status();
@@ -206,11 +144,11 @@ impl FetchWorkspaceBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch workspace: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch workspace",
+                &error_body,
+            ))
         }
     }
 }
@@ -233,7 +171,11 @@ impl UpdateWorkspaceBuilder {
 
     pub async fn send(self) -> Result<Workspace> {
         let client = self.client.http_client();
-        let url = format!("{}/workspaces/{}", self.client.config().base_url, self.workspace_id);
+        let url = format!(
+            "{}/workspaces/{}",
+            self.client.config().base_url,
+            self.workspace_id
+        );
 
         let mut form = reqwest::multipart::Form::new();
         if let Some(name) = &self.request.name {
@@ -254,14 +196,15 @@ impl UpdateWorkspaceBuilder {
                 serde_json::to_string(private_metadata).unwrap_or_default(),
             );
         }
+        if let Some(remove_image) = self.request.remove_image {
+            form = form.text("remove_image", remove_image.to_string());
+        }
         if let Some(image_bytes) = &self.request.workspace_image {
             let part = reqwest::multipart::Part::bytes(image_bytes.clone())
                 .file_name("workspace_image.jpg")
                 .mime_str("image/jpeg")
-                .map_err(|e| Error::Api {
-                    status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("Failed to create multipart: {e}"),
-                    details: None,
+                .map_err(|e| {
+                    Error::InvalidRequest(format!("Failed to create multipart payload: {e}"))
                 })?;
             form = form.part("workspace_image", part);
         }
@@ -273,11 +216,11 @@ impl UpdateWorkspaceBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update workspace: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update workspace",
+                &error_body,
+            ))
         }
     }
 }
@@ -298,7 +241,11 @@ impl DeleteWorkspaceBuilder {
 
     pub async fn send(self) -> Result<()> {
         let client = self.client.http_client();
-        let url = format!("{}/workspaces/{}", self.client.config().base_url, self.workspace_id);
+        let url = format!(
+            "{}/workspaces/{}",
+            self.client.config().base_url,
+            self.workspace_id
+        );
 
         let response = client.delete(&url).send().await?;
         let status = response.status();
@@ -307,11 +254,11 @@ impl DeleteWorkspaceBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to delete workspace: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to delete workspace",
+                &error_body,
+            ))
         }
     }
 }

@@ -108,11 +108,11 @@ impl FetchMembersBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch organization members: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch organization members",
+                &error_body,
+            ))
         }
     }
 }
@@ -125,7 +125,11 @@ pub struct AddMemberBuilder {
 }
 
 impl AddMemberBuilder {
-    pub fn new(client: WachtClient, organization_id: &str, request: AddOrganizationMemberRequest) -> Self {
+    pub fn new(
+        client: WachtClient,
+        organization_id: &str,
+        request: AddOrganizationMemberRequest,
+    ) -> Self {
         Self {
             client,
             organization_id: organization_id.to_string(),
@@ -148,14 +152,14 @@ impl AddMemberBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!(
-                    "Failed to add member to organization {}: {error_body}",
+                format!(
+                    "Failed to add member to organization {}",
                     self.organization_id
                 ),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                &error_body,
+            ))
         }
     }
 }
@@ -199,14 +203,14 @@ impl UpdateMemberBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!(
-                    "Failed to update member {} in organization {}: {error_body}",
+                format!(
+                    "Failed to update member {} in organization {}",
                     self.membership_id, self.organization_id
                 ),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                &error_body,
+            ))
         }
     }
 }
@@ -243,14 +247,14 @@ impl RemoveMemberBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!(
-                    "Failed to remove member {} from organization {}: {error_body}",
+                format!(
+                    "Failed to remove member {} from organization {}",
                     self.membership_id, self.organization_id
                 ),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                &error_body,
+            ))
         }
     }
 }

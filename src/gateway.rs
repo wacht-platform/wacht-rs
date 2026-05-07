@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{client::WachtClient, error::{Error, Result}};
+use crate::{
+    client::WachtClient,
+    error::{Error, Result},
+};
 
 const GATEWAY_URL: &str = "https://gateway.wacht.dev";
 
@@ -27,53 +30,6 @@ pub struct GatewayAuthzOptions {
 impl GatewayApi {
     pub(crate) fn new(client: WachtClient) -> Self {
         Self { client }
-    }
-
-    pub async fn verify_request(
-        &self,
-        api_key: &str,
-        method: &str,
-        resource: &str,
-    ) -> Result<GatewayCheckResponse> {
-        self.verify_request_with_principal_type(
-            GatewayPrincipalType::ApiKey,
-            api_key,
-            method,
-            resource,
-        )
-        .await
-    }
-
-    pub async fn verify_request_with_principal_type(
-        &self,
-        principal_type: GatewayPrincipalType,
-        principal_value: &str,
-        method: &str,
-        resource: &str,
-    ) -> Result<GatewayCheckResponse> {
-        self.check_authz_with_principal_type(
-            principal_type,
-            principal_value,
-            method,
-            resource,
-            GatewayAuthzOptions::default(),
-        )
-        .await
-    }
-
-    pub async fn verify_oauth_access_token_request(
-        &self,
-        access_token: &str,
-        method: &str,
-        resource: &str,
-    ) -> Result<GatewayCheckResponse> {
-        self.verify_request_with_principal_type(
-            GatewayPrincipalType::OauthAccessToken,
-            access_token,
-            method,
-            resource,
-        )
-        .await
     }
 
     pub async fn check_authz_with_principal_type(
@@ -120,11 +76,19 @@ impl GatewayApi {
                 owner_user_id: parse_optional_i64_field(identity.owner_user_id, "owner_user_id")?,
                 principal_type: identity
                     .principal_type
-                    .or_else(|| parsed.metadata.as_ref().and_then(extract_principal_type_from_metadata))
+                    .or_else(|| {
+                        parsed
+                            .metadata
+                            .as_ref()
+                            .and_then(extract_principal_type_from_metadata)
+                    })
                     .unwrap_or(GatewayPrincipalType::ApiKey),
                 permissions: parsed.permissions,
                 metadata: parsed.metadata.unwrap_or(Value::Object(Default::default())),
-                organization_id: parse_optional_i64_field(identity.organization_id, "organization_id")?,
+                organization_id: parse_optional_i64_field(
+                    identity.organization_id,
+                    "organization_id",
+                )?,
                 workspace_id: parse_optional_i64_field(identity.workspace_id, "workspace_id")?,
                 organization_membership_id: parse_optional_i64_field(
                     identity.organization_membership_id,
@@ -136,23 +100,19 @@ impl GatewayApi {
                 )?,
                 rate_limits: parsed.rate_limits,
                 retry_after: parsed.retry_after,
+                headers: parsed.headers,
             })
         } else {
-            Err(Error::Api {
-                status,
-                message: body.clone(),
-                details: serde_json::from_str(&body).ok(),
-            })
+            Err(Error::api_from_text(status, "Gateway check failed", &body))
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RateLimitInfo {
-    pub window_seconds: u64,
-    pub limit: u32,
-    pub remaining: u32,
-    pub reset: Option<u32>,
+pub struct AuthzRateLimitState {
+    pub rule: String,
+    pub remaining: i32,
+    pub limit: i32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -173,8 +133,9 @@ pub struct GatewayCheckResponse {
     pub workspace_id: Option<i64>,
     pub organization_membership_id: Option<i64>,
     pub workspace_membership_id: Option<i64>,
-    pub rate_limits: Vec<RateLimitInfo>,
+    pub rate_limits: Vec<AuthzRateLimitState>,
     pub retry_after: Option<u32>,
+    pub headers: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -255,8 +216,9 @@ struct GatewayAuthzCheckEnvelope {
     identity: Option<GatewayIdentity>,
     permissions: Vec<String>,
     metadata: Option<Value>,
-    rate_limits: Vec<RateLimitInfo>,
+    rate_limits: Vec<AuthzRateLimitState>,
     retry_after: Option<u32>,
+    headers: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Deserialize)]

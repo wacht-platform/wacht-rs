@@ -24,7 +24,11 @@ impl OrganizationRolesApi {
         FetchRolesBuilder::new(self.client.clone(), organization_id)
     }
 
-    pub fn create_role(&self, organization_id: &str, request: CreateRoleRequest) -> CreateRoleBuilder {
+    pub fn create_role(
+        &self,
+        organization_id: &str,
+        request: CreateRoleRequest,
+    ) -> CreateRoleBuilder {
         CreateRoleBuilder::new(self.client.clone(), organization_id, request)
     }
 
@@ -71,11 +75,11 @@ impl FetchRolesBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch organization roles: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch organization roles",
+                &error_body,
+            ))
         }
     }
 }
@@ -111,11 +115,11 @@ impl CreateRoleBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to create organization role: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to create organization role",
+                &error_body,
+            ))
         }
     }
 }
@@ -159,11 +163,11 @@ impl UpdateRoleBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update organization role: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update organization role",
+                &error_body,
+            ))
         }
     }
 }
@@ -200,11 +204,11 @@ impl DeleteRoleBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to delete organization role: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to delete organization role",
+                &error_body,
+            ))
         }
     }
 }

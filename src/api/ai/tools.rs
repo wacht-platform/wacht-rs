@@ -1,9 +1,11 @@
 use crate::{
     client::WachtClient,
     error::{Error, Result},
-    models::{AiTool, CreateAiToolRequest, PaginatedResponse, UpdateAiToolRequest},
+    models::{
+        AiTool, AiToolWithDetails, CreateAiToolRequest, PaginatedResponse, UpdateAiToolRequest,
+    },
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct ListToolsOptions {
@@ -13,150 +15,98 @@ pub struct ListToolsOptions {
     pub offset: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub search: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_active: Option<bool>,
 }
 
 #[derive(Debug, Clone)]
 pub struct ToolsApi {
     client: WachtClient,
 }
-
 impl ToolsApi {
     pub(crate) fn new(client: WachtClient) -> Self {
         Self { client }
     }
-
     pub fn list_tools(&self) -> ListToolsBuilder {
         ListToolsBuilder::new(self.client.clone())
     }
-
-    pub fn create_tool(&self) -> CreateToolBuilder {
-        CreateToolBuilder::new(self.client.clone())
+    pub fn fetch_tool(&self, tool_id: impl Into<String>) -> FetchToolBuilder {
+        FetchToolBuilder::new(self.client.clone(), tool_id)
     }
-
-    pub fn fetch_tool(&self) -> FetchToolBuilder {
-        FetchToolBuilder::new(self.client.clone())
+    pub fn create_tool(&self, request: CreateAiToolRequest) -> CreateToolBuilder {
+        CreateToolBuilder::new(self.client.clone(), request)
     }
-
-    pub fn update_tool(&self) -> UpdateToolBuilder {
-        UpdateToolBuilder::new(self.client.clone())
+    pub fn update_tool(
+        &self,
+        tool_id: impl Into<String>,
+        request: UpdateAiToolRequest,
+    ) -> UpdateToolBuilder {
+        UpdateToolBuilder::new(self.client.clone(), tool_id, request)
     }
-
-    pub fn delete_tool(&self) -> DeleteToolBuilder {
-        DeleteToolBuilder::new(self.client.clone())
+    pub fn delete_tool(&self, tool_id: impl Into<String>) -> DeleteToolBuilder {
+        DeleteToolBuilder::new(self.client.clone(), tool_id)
     }
+    pub fn list_agent_tools(&self, agent_id: impl Into<String>) -> FetchAgentToolsBuilder {
+        FetchAgentToolsBuilder::new(self.client.clone(), agent_id)
+    }
+    pub fn attach_tool(
+        &self,
+        agent_id: impl Into<String>,
+        tool_id: impl Into<String>,
+    ) -> AttachToolBuilder {
+        AttachToolBuilder::new(self.client.clone(), agent_id, tool_id)
+    }
+    pub fn detach_tool(
+        &self,
+        agent_id: impl Into<String>,
+        tool_id: impl Into<String>,
+    ) -> DetachToolBuilder {
+        DetachToolBuilder::new(self.client.clone(), agent_id, tool_id)
+    }
+}
+
+fn api_error(status: reqwest::StatusCode, prefix: &str, body: String) -> Error {
+    Error::api_from_text(status, prefix, &body)
 }
 
 pub struct ListToolsBuilder {
     client: WachtClient,
-    options: Option<ListToolsOptions>,
+    options: ListToolsOptions,
 }
-
 impl ListToolsBuilder {
     pub fn new(client: WachtClient) -> Self {
         Self {
             client,
-            options: None,
+            options: ListToolsOptions::default(),
         }
     }
-
-    pub fn with_options(mut self, options: ListToolsOptions) -> Self {
-        self.options = Some(options);
-        self
-    }
-
     pub fn limit(mut self, limit: i32) -> Self {
-        let mut opts = self.options.unwrap_or_default();
-        opts.limit = Some(limit);
-        self.options = Some(opts);
+        self.options.limit = Some(limit);
         self
     }
-
     pub fn offset(mut self, offset: i32) -> Self {
-        let mut opts = self.options.unwrap_or_default();
-        opts.offset = Some(offset);
-        self.options = Some(opts);
+        self.options.offset = Some(offset);
         self
     }
-
-    pub fn search(mut self, search: &str) -> Self {
-        let mut opts = self.options.unwrap_or_default();
-        opts.search = Some(search.to_string());
-        self.options = Some(opts);
+    pub fn search(mut self, search: impl Into<String>) -> Self {
+        self.options.search = Some(search.into());
         self
     }
-
-    pub fn is_active(mut self, is_active: bool) -> Self {
-        let mut opts = self.options.unwrap_or_default();
-        opts.is_active = Some(is_active);
-        self.options = Some(opts);
-        self
-    }
-
-    pub async fn send(self) -> Result<PaginatedResponse<AiTool>> {
-        let client = self.client.http_client();
-        let url = format!("{}/ai/tools", self.client.config().base_url);
-
-        let mut request = client.get(&url);
-        if let Some(opts) = self.options {
-            request = request.query(&opts);
-        }
-
-        let response = request.send().await?;
+    pub async fn send(self) -> Result<PaginatedResponse<AiToolWithDetails>> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!("{}/ai/tools", self.client.config().base_url))
+            .query(&self.options)
+            .send()
+            .await?;
         let status = response.status();
-
         if status.is_success() {
             Ok(response.json().await?)
         } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(api_error(
                 status,
-                message: format!("Failed to list tools: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
-        }
-    }
-}
-
-pub struct CreateToolBuilder {
-    client: WachtClient,
-    request: CreateAiToolRequest,
-}
-
-impl CreateToolBuilder {
-    pub fn new(client: WachtClient) -> Self {
-        Self {
-            client,
-            request: CreateAiToolRequest::new(
-                "".to_string(),
-                "".to_string(),
-                serde_json::Value::Object(serde_json::Map::new()),
-            ),
-        }
-    }
-
-    pub fn request(mut self, request: CreateAiToolRequest) -> Self {
-        self.request = request;
-        self
-    }
-
-    pub async fn send(self) -> Result<AiTool> {
-        let client = self.client.http_client();
-        let url = format!("{}/ai/tools", self.client.config().base_url);
-
-        let response = client.post(&url).json(&self.request).send().await?;
-        let status = response.status();
-
-        if status.is_success() {
-            Ok(response.json().await?)
-        } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
-                status,
-                message: format!("Failed to create tool: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to list tools",
+                response.text().await?,
+            ))
         }
     }
 }
@@ -165,36 +115,62 @@ pub struct FetchToolBuilder {
     client: WachtClient,
     tool_id: String,
 }
-
 impl FetchToolBuilder {
-    pub fn new(client: WachtClient) -> Self {
+    pub fn new(client: WachtClient, tool_id: impl Into<String>) -> Self {
         Self {
             client,
-            tool_id: String::new(),
+            tool_id: tool_id.into(),
         }
     }
-
-    pub fn tool_id(mut self, tool_id: &str) -> Self {
-        self.tool_id = tool_id.to_string();
-        self
-    }
-
-    pub async fn send(self) -> Result<AiTool> {
-        let client = self.client.http_client();
-        let url = format!("{}/ai/tools/{}", self.client.config().base_url, self.tool_id);
-
-        let response = client.get(&url).send().await?;
+    pub async fn send(self) -> Result<AiToolWithDetails> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/tools/{}",
+                self.client.config().base_url,
+                self.tool_id
+            ))
+            .send()
+            .await?;
         let status = response.status();
-
         if status.is_success() {
             Ok(response.json().await?)
         } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(api_error(
                 status,
-                message: format!("Failed to get tool {}: {error_body}", self.tool_id),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch tool",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct CreateToolBuilder {
+    client: WachtClient,
+    request: CreateAiToolRequest,
+}
+impl CreateToolBuilder {
+    pub fn new(client: WachtClient, request: CreateAiToolRequest) -> Self {
+        Self { client, request }
+    }
+    pub async fn send(self) -> Result<AiTool> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!("{}/ai/tools", self.client.config().base_url))
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to create tool",
+                response.text().await?,
+            ))
         }
     }
 }
@@ -204,42 +180,39 @@ pub struct UpdateToolBuilder {
     tool_id: String,
     request: UpdateAiToolRequest,
 }
-
 impl UpdateToolBuilder {
-    pub fn new(client: WachtClient) -> Self {
+    pub fn new(
+        client: WachtClient,
+        tool_id: impl Into<String>,
+        request: UpdateAiToolRequest,
+    ) -> Self {
         Self {
             client,
-            tool_id: String::new(),
-            request: UpdateAiToolRequest::new(),
+            tool_id: tool_id.into(),
+            request,
         }
     }
-
-    pub fn tool_id(mut self, tool_id: &str) -> Self {
-        self.tool_id = tool_id.to_string();
-        self
-    }
-
-    pub fn request(mut self, request: UpdateAiToolRequest) -> Self {
-        self.request = request;
-        self
-    }
-
     pub async fn send(self) -> Result<AiTool> {
-        let client = self.client.http_client();
-        let url = format!("{}/ai/tools/{}", self.client.config().base_url, self.tool_id);
-
-        let response = client.patch(&url).json(&self.request).send().await?;
+        let response = self
+            .client
+            .http_client()
+            .patch(format!(
+                "{}/ai/tools/{}",
+                self.client.config().base_url,
+                self.tool_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
         let status = response.status();
-
         if status.is_success() {
             Ok(response.json().await?)
         } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(api_error(
                 status,
-                message: format!("Failed to update tool {}: {error_body}", self.tool_id),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update tool",
+                response.text().await?,
+            ))
         }
     }
 }
@@ -248,36 +221,153 @@ pub struct DeleteToolBuilder {
     client: WachtClient,
     tool_id: String,
 }
-
 impl DeleteToolBuilder {
-    pub fn new(client: WachtClient) -> Self {
+    pub fn new(client: WachtClient, tool_id: impl Into<String>) -> Self {
         Self {
             client,
-            tool_id: String::new(),
+            tool_id: tool_id.into(),
         }
     }
-
-    pub fn tool_id(mut self, tool_id: &str) -> Self {
-        self.tool_id = tool_id.to_string();
-        self
-    }
-
     pub async fn send(self) -> Result<()> {
-        let client = self.client.http_client();
-        let url = format!("{}/ai/tools/{}", self.client.config().base_url, self.tool_id);
-
-        let response = client.delete(&url).send().await?;
+        let response = self
+            .client
+            .http_client()
+            .delete(format!(
+                "{}/ai/tools/{}",
+                self.client.config().base_url,
+                self.tool_id
+            ))
+            .send()
+            .await?;
         let status = response.status();
-
         if status.is_success() {
             Ok(())
         } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(api_error(
                 status,
-                message: format!("Failed to delete tool {}: {error_body}", self.tool_id),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to delete tool",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchAgentToolsBuilder {
+    client: WachtClient,
+    agent_id: String,
+}
+impl FetchAgentToolsBuilder {
+    pub fn new(client: WachtClient, agent_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<PaginatedResponse<AiTool>> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/agents/{}/tools",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to list agent tools",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct AttachToolBuilder {
+    client: WachtClient,
+    agent_id: String,
+    tool_id: String,
+}
+impl AttachToolBuilder {
+    pub fn new(
+        client: WachtClient,
+        agent_id: impl Into<String>,
+        tool_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+            tool_id: tool_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<()> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/agents/{}/tools/{}",
+                self.client.config().base_url,
+                self.agent_id,
+                self.tool_id
+            ))
+            .json(&serde_json::json!({}))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(())
+        } else {
+            Err(api_error(
+                status,
+                "Failed to attach tool",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct DetachToolBuilder {
+    client: WachtClient,
+    agent_id: String,
+    tool_id: String,
+}
+impl DetachToolBuilder {
+    pub fn new(
+        client: WachtClient,
+        agent_id: impl Into<String>,
+        tool_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+            tool_id: tool_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<()> {
+        let response = self
+            .client
+            .http_client()
+            .delete(format!(
+                "{}/ai/agents/{}/tools/{}",
+                self.client.config().base_url,
+                self.agent_id,
+                self.tool_id
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(())
+        } else {
+            Err(api_error(
+                status,
+                "Failed to detach tool",
+                response.text().await?,
+            ))
         }
     }
 }

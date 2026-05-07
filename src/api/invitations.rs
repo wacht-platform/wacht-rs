@@ -52,11 +52,11 @@ impl FetchUsersBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch invited users: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch invited users",
+                &error_body,
+            ))
         }
     }
 }
@@ -83,11 +83,11 @@ impl CreateBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to invite user: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to invite user",
+                &error_body,
+            ))
         }
     }
 }
@@ -121,11 +121,11 @@ impl DeleteBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to delete invitation: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to delete invitation",
+                &error_body,
+            ))
         }
     }
 }

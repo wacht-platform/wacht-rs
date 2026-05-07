@@ -210,11 +210,11 @@ impl FetchSegmentsBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch segments: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch segments",
+                &error_body,
+            ))
         }
     }
 }
@@ -241,11 +241,11 @@ impl CreateSegmentBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to create segment: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to create segment",
+                &error_body,
+            ))
         }
     }
 }
@@ -272,7 +272,11 @@ impl UpdateSegmentBuilder {
 
     pub async fn send(self) -> Result<Segment> {
         let client = self.client.http_client();
-        let url = format!("{}/segments/{}", self.client.config().base_url, self.segment_id);
+        let url = format!(
+            "{}/segments/{}",
+            self.client.config().base_url,
+            self.segment_id
+        );
 
         let response = client.patch(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -281,11 +285,11 @@ impl UpdateSegmentBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update segment {}: {error_body}", self.segment_id),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                format!("Failed to update segment {}", self.segment_id),
+                &error_body,
+            ))
         }
     }
 }
@@ -306,7 +310,11 @@ impl DeleteSegmentBuilder {
 
     pub async fn send(self) -> Result<()> {
         let client = self.client.http_client();
-        let url = format!("{}/segments/{}", self.client.config().base_url, self.segment_id);
+        let url = format!(
+            "{}/segments/{}",
+            self.client.config().base_url,
+            self.segment_id
+        );
 
         let response = client.delete(&url).send().await?;
         let status = response.status();
@@ -315,11 +323,11 @@ impl DeleteSegmentBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to delete segment {}: {error_body}", self.segment_id),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                format!("Failed to delete segment {}", self.segment_id),
+                &error_body,
+            ))
         }
     }
 }
@@ -346,7 +354,11 @@ impl AssignSegmentBuilder {
 
     pub async fn send(self) -> Result<()> {
         let client = self.client.http_client();
-        let url = format!("{}/segments/{}/assign", self.client.config().base_url, self.segment_id);
+        let url = format!(
+            "{}/segments/{}/assign",
+            self.client.config().base_url,
+            self.segment_id
+        );
 
         let response = client
             .post(&url)
@@ -361,14 +373,11 @@ impl AssignSegmentBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!(
-                    "Failed to assign entity to segment {}: {error_body}",
-                    self.segment_id
-                ),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                format!("Failed to assign entity to segment {}", self.segment_id),
+                &error_body,
+            ))
         }
     }
 }
@@ -395,7 +404,11 @@ impl RemoveSegmentBuilder {
 
     pub async fn send(self) -> Result<()> {
         let client = self.client.http_client();
-        let url = format!("{}/segments/{}/remove", self.client.config().base_url, self.segment_id);
+        let url = format!(
+            "{}/segments/{}/remove",
+            self.client.config().base_url,
+            self.segment_id
+        );
 
         let response = client
             .post(&url)
@@ -410,14 +423,11 @@ impl RemoveSegmentBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!(
-                    "Failed to remove entity from segment {}: {error_body}",
-                    self.segment_id
-                ),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                format!("Failed to remove entity from segment {}", self.segment_id),
+                &error_body,
+            ))
         }
     }
 }
@@ -491,11 +501,11 @@ impl GetSegmentDataBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to get segment data: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to get segment data",
+                &error_body,
+            ))
         }
     }
 }

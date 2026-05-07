@@ -1,9 +1,13 @@
 use crate::{
     client::WachtClient,
     error::{Error, Result},
-    models::{AiAgent, CreateAiAgentRequest, PaginatedResponse, UpdateAiAgentRequest},
+    models::{
+        AgentDetailsResponse, AiAgent, AiAgentWithDetails, CreateAiAgentRequest, PaginatedResponse,
+        SkillFileResponse, SkillScope, SkillTreeResponse, UpdateAiAgentRequest,
+    },
 };
-use serde::{Deserialize, Serialize};
+use reqwest::multipart::{Form, Part};
+use serde::Serialize;
 
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct ListAgentsOptions {
@@ -11,8 +15,6 @@ pub struct ListAgentsOptions {
     pub limit: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub offset: Option<i32>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_active: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub search: Option<String>,
 }
@@ -35,6 +37,40 @@ impl AgentsApi {
         FetchAgentBuilder::new(self.client.clone(), agent_id)
     }
 
+    pub fn fetch_agent_details(&self, agent_id: impl Into<String>) -> FetchAgentDetailsBuilder {
+        FetchAgentDetailsBuilder::new(self.client.clone(), agent_id)
+    }
+    pub fn list_skill_tree(
+        &self,
+        agent_id: impl Into<String>,
+        scope: SkillScope,
+    ) -> ListAgentSkillTreeBuilder {
+        ListAgentSkillTreeBuilder::new(self.client.clone(), agent_id, scope)
+    }
+    pub fn read_skill_file(
+        &self,
+        agent_id: impl Into<String>,
+        scope: SkillScope,
+        path: impl Into<String>,
+    ) -> ReadAgentSkillFileBuilder {
+        ReadAgentSkillFileBuilder::new(self.client.clone(), agent_id, scope, path)
+    }
+    pub fn import_skill_bundle(
+        &self,
+        agent_id: impl Into<String>,
+        file_name: impl Into<String>,
+        file_content: Vec<u8>,
+    ) -> ImportAgentSkillBundleBuilder {
+        ImportAgentSkillBundleBuilder::new(self.client.clone(), agent_id, file_name, file_content)
+    }
+    pub fn delete_skill(
+        &self,
+        agent_id: impl Into<String>,
+        skill_slug: impl Into<String>,
+    ) -> DeleteAgentSkillBuilder {
+        DeleteAgentSkillBuilder::new(self.client.clone(), agent_id, skill_slug)
+    }
+
     pub fn create_agent(&self, request: CreateAiAgentRequest) -> CreateAgentBuilder {
         CreateAgentBuilder::new(self.client.clone(), request)
     }
@@ -51,93 +87,81 @@ impl AgentsApi {
         DeleteAgentBuilder::new(self.client.clone(), agent_id)
     }
 
-    pub fn fetch_agent_details(&self, agent_id: impl Into<String>) -> FetchAgentDetailsBuilder {
-        FetchAgentDetailsBuilder::new(self.client.clone(), agent_id)
+    pub fn list_sub_agents(&self, agent_id: impl Into<String>) -> ListAgentSubAgentsBuilder {
+        ListAgentSubAgentsBuilder::new(self.client.clone(), agent_id)
     }
+
+    pub fn attach_sub_agent(
+        &self,
+        agent_id: impl Into<String>,
+        sub_agent_id: impl Into<String>,
+    ) -> AttachSubAgentBuilder {
+        AttachSubAgentBuilder::new(self.client.clone(), agent_id, sub_agent_id)
+    }
+
+    pub fn detach_sub_agent(
+        &self,
+        agent_id: impl Into<String>,
+        sub_agent_id: impl Into<String>,
+    ) -> DetachSubAgentBuilder {
+        DetachSubAgentBuilder::new(self.client.clone(), agent_id, sub_agent_id)
+    }
+}
+
+fn api_error(status: reqwest::StatusCode, prefix: &str, body: String) -> Error {
+    Error::api_from_text(status, prefix, &body)
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct SkillTreeQuery {
+    scope: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    path: Option<String>,
 }
 
 pub struct ListAgentsBuilder {
     client: WachtClient,
-    options: Option<ListAgentsOptions>,
+    options: ListAgentsOptions,
 }
 
 impl ListAgentsBuilder {
     pub fn new(client: WachtClient) -> Self {
         Self {
             client,
-            options: None,
+            options: ListAgentsOptions::default(),
         }
     }
 
     pub fn limit(mut self, limit: i32) -> Self {
-        if let Some(ref mut opts) = self.options {
-            opts.limit = Some(limit);
-        } else {
-            self.options = Some(ListAgentsOptions {
-                limit: Some(limit),
-                ..Default::default()
-            });
-        }
+        self.options.limit = Some(limit);
         self
     }
-
     pub fn offset(mut self, offset: i32) -> Self {
-        if let Some(ref mut opts) = self.options {
-            opts.offset = Some(offset);
-        } else {
-            self.options = Some(ListAgentsOptions {
-                offset: Some(offset),
-                ..Default::default()
-            });
-        }
+        self.options.offset = Some(offset);
         self
     }
-
-    pub fn is_active(mut self, is_active: bool) -> Self {
-        if let Some(ref mut opts) = self.options {
-            opts.is_active = Some(is_active);
-        } else {
-            self.options = Some(ListAgentsOptions {
-                is_active: Some(is_active),
-                ..Default::default()
-            });
-        }
-        self
-    }
-
     pub fn search(mut self, search: impl Into<String>) -> Self {
-        if let Some(ref mut opts) = self.options {
-            opts.search = Some(search.into());
-        } else {
-            self.options = Some(ListAgentsOptions {
-                search: Some(search.into()),
-                ..Default::default()
-            });
-        }
+        self.options.search = Some(search.into());
         self
     }
 
-    pub async fn send(self) -> Result<PaginatedResponse<AiAgent>> {
-        let client = self.client.http_client();
-        let url = format!("{}/ai/agents", self.client.config().base_url);
-
-        let mut request = client.get(&url);
-        if let Some(opts) = self.options {
-            request = request.query(&opts);
-        }
-
-        let response = request.send().await?;
+    pub async fn send(self) -> Result<PaginatedResponse<AiAgentWithDetails>> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!("{}/ai/agents", self.client.config().base_url))
+            .query(&self.options)
+            .send()
+            .await?;
         let status = response.status();
-
         if status.is_success() {
             Ok(response.json().await?)
         } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(api_error(
                 status,
-                message: format!("Failed to list agents: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to list agents",
+                response.text().await?,
+            ))
         }
     }
 }
@@ -146,7 +170,6 @@ pub struct FetchAgentBuilder {
     client: WachtClient,
     agent_id: String,
 }
-
 impl FetchAgentBuilder {
     pub fn new(client: WachtClient, agent_id: impl Into<String>) -> Self {
         Self {
@@ -154,23 +177,249 @@ impl FetchAgentBuilder {
             agent_id: agent_id.into(),
         }
     }
-
-    pub async fn send(self) -> Result<AiAgent> {
-        let client = self.client.http_client();
-        let url = format!("{}/ai/agents/{}", self.client.config().base_url, self.agent_id);
-
-        let response = client.get(&url).send().await?;
+    pub async fn send(self) -> Result<AiAgentWithDetails> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/agents/{}",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .send()
+            .await?;
         let status = response.status();
-
         if status.is_success() {
             Ok(response.json().await?)
         } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(api_error(
                 status,
-                message: format!("Failed to get agent {}: {error_body}", self.agent_id),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch agent",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct FetchAgentDetailsBuilder {
+    client: WachtClient,
+    agent_id: String,
+}
+
+pub struct ListAgentSkillTreeBuilder {
+    client: WachtClient,
+    agent_id: String,
+    query: SkillTreeQuery,
+}
+impl ListAgentSkillTreeBuilder {
+    pub fn new(client: WachtClient, agent_id: impl Into<String>, scope: SkillScope) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+            query: SkillTreeQuery {
+                scope: scope.as_str().to_string(),
+                path: None,
+            },
+        }
+    }
+    pub fn path(mut self, path: impl Into<String>) -> Self {
+        self.query.path = Some(path.into());
+        self
+    }
+    pub async fn send(self) -> Result<SkillTreeResponse> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/agents/{}/skills/tree",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .query(&self.query)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to list agent skill tree",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct ReadAgentSkillFileBuilder {
+    client: WachtClient,
+    agent_id: String,
+    query: SkillTreeQuery,
+}
+impl ReadAgentSkillFileBuilder {
+    pub fn new(
+        client: WachtClient,
+        agent_id: impl Into<String>,
+        scope: SkillScope,
+        path: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+            query: SkillTreeQuery {
+                scope: scope.as_str().to_string(),
+                path: Some(path.into()),
+            },
+        }
+    }
+    pub async fn send(self) -> Result<SkillFileResponse> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/agents/{}/skills/file",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .query(&self.query)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to read agent skill file",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct ImportAgentSkillBundleBuilder {
+    client: WachtClient,
+    agent_id: String,
+    file_name: String,
+    file_content: Vec<u8>,
+    replace_existing: bool,
+}
+impl ImportAgentSkillBundleBuilder {
+    pub fn new(
+        client: WachtClient,
+        agent_id: impl Into<String>,
+        file_name: impl Into<String>,
+        file_content: Vec<u8>,
+    ) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+            file_name: file_name.into(),
+            file_content,
+            replace_existing: false,
+        }
+    }
+    pub fn replace_existing(mut self, replace_existing: bool) -> Self {
+        self.replace_existing = replace_existing;
+        self
+    }
+    pub async fn send(self) -> Result<SkillTreeResponse> {
+        let part = Part::bytes(self.file_content).file_name(self.file_name);
+        let form = Form::new()
+            .part("file", part)
+            .text("replace_existing", self.replace_existing.to_string());
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/agents/{}/skills",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .multipart(form)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to import agent skill bundle",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct DeleteAgentSkillBuilder {
+    client: WachtClient,
+    agent_id: String,
+    skill_slug: String,
+}
+impl DeleteAgentSkillBuilder {
+    pub fn new(
+        client: WachtClient,
+        agent_id: impl Into<String>,
+        skill_slug: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+            skill_slug: skill_slug.into(),
+        }
+    }
+    pub async fn send(self) -> Result<()> {
+        let response = self
+            .client
+            .http_client()
+            .delete(format!(
+                "{}/ai/agents/{}/skills/{}",
+                self.client.config().base_url,
+                self.agent_id,
+                self.skill_slug
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(())
+        } else {
+            Err(api_error(
+                status,
+                "Failed to delete agent skill",
+                response.text().await?,
+            ))
+        }
+    }
+}
+impl FetchAgentDetailsBuilder {
+    pub fn new(client: WachtClient, agent_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<AgentDetailsResponse> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/agents/{}/details",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to fetch agent details",
+                response.text().await?,
+            ))
         }
     }
 }
@@ -179,28 +428,27 @@ pub struct CreateAgentBuilder {
     client: WachtClient,
     request: CreateAiAgentRequest,
 }
-
 impl CreateAgentBuilder {
     pub fn new(client: WachtClient, request: CreateAiAgentRequest) -> Self {
         Self { client, request }
     }
-
     pub async fn send(self) -> Result<AiAgent> {
-        let client = self.client.http_client();
-        let url = format!("{}/ai/agents", self.client.config().base_url);
-
-        let response = client.post(&url).json(&self.request).send().await?;
+        let response = self
+            .client
+            .http_client()
+            .post(format!("{}/ai/agents", self.client.config().base_url))
+            .json(&self.request)
+            .send()
+            .await?;
         let status = response.status();
-
         if status.is_success() {
             Ok(response.json().await?)
         } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(api_error(
                 status,
-                message: format!("Failed to create agent: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to create agent",
+                response.text().await?,
+            ))
         }
     }
 }
@@ -210,7 +458,6 @@ pub struct UpdateAgentBuilder {
     agent_id: String,
     request: UpdateAiAgentRequest,
 }
-
 impl UpdateAgentBuilder {
     pub fn new(
         client: WachtClient,
@@ -223,23 +470,27 @@ impl UpdateAgentBuilder {
             request,
         }
     }
-
     pub async fn send(self) -> Result<AiAgent> {
-        let client = self.client.http_client();
-        let url = format!("{}/ai/agents/{}", self.client.config().base_url, self.agent_id);
-
-        let response = client.patch(&url).json(&self.request).send().await?;
+        let response = self
+            .client
+            .http_client()
+            .patch(format!(
+                "{}/ai/agents/{}",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
         let status = response.status();
-
         if status.is_success() {
             Ok(response.json().await?)
         } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(api_error(
                 status,
-                message: format!("Failed to update agent {}: {error_body}", self.agent_id),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update agent",
+                response.text().await?,
+            ))
         }
     }
 }
@@ -248,7 +499,6 @@ pub struct DeleteAgentBuilder {
     client: WachtClient,
     agent_id: String,
 }
-
 impl DeleteAgentBuilder {
     pub fn new(client: WachtClient, agent_id: impl Into<String>) -> Self {
         Self {
@@ -256,60 +506,146 @@ impl DeleteAgentBuilder {
             agent_id: agent_id.into(),
         }
     }
-
     pub async fn send(self) -> Result<()> {
-        let client = self.client.http_client();
-        let url = format!("{}/ai/agents/{}", self.client.config().base_url, self.agent_id);
-
-        let response = client.delete(&url).send().await?;
+        let response = self
+            .client
+            .http_client()
+            .delete(format!(
+                "{}/ai/agents/{}",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .send()
+            .await?;
         let status = response.status();
-
         if status.is_success() {
             Ok(())
         } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(api_error(
                 status,
-                message: format!("Failed to delete agent {}: {error_body}", self.agent_id),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to delete agent",
+                response.text().await?,
+            ))
         }
     }
 }
 
-pub struct FetchAgentDetailsBuilder {
+pub struct ListAgentSubAgentsBuilder {
     client: WachtClient,
     agent_id: String,
 }
-
-impl FetchAgentDetailsBuilder {
+impl ListAgentSubAgentsBuilder {
     pub fn new(client: WachtClient, agent_id: impl Into<String>) -> Self {
         Self {
             client,
             agent_id: agent_id.into(),
         }
     }
-
-    pub async fn send(self) -> Result<AiAgent> {
-        let client = self.client.http_client();
-        let url = format!(
-            "{}/ai/agents/{}/details",
-            self.client.config().base_url,
-            self.agent_id
-        );
-
-        let response = client.get(&url).send().await?;
+    pub async fn send(self) -> Result<PaginatedResponse<AiAgentWithDetails>> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/agents/{}/sub-agents",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .send()
+            .await?;
         let status = response.status();
-
         if status.is_success() {
             Ok(response.json().await?)
         } else {
-            let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(api_error(
                 status,
-                message: format!("Failed to get agent details {}: {error_body}", self.agent_id),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to list sub-agents",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct AttachSubAgentBuilder {
+    client: WachtClient,
+    agent_id: String,
+    sub_agent_id: String,
+}
+impl AttachSubAgentBuilder {
+    pub fn new(
+        client: WachtClient,
+        agent_id: impl Into<String>,
+        sub_agent_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+            sub_agent_id: sub_agent_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<()> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/agents/{}/sub-agents/{}",
+                self.client.config().base_url,
+                self.agent_id,
+                self.sub_agent_id
+            ))
+            .json(&serde_json::json!({}))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(())
+        } else {
+            Err(api_error(
+                status,
+                "Failed to attach sub-agent",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct DetachSubAgentBuilder {
+    client: WachtClient,
+    agent_id: String,
+    sub_agent_id: String,
+}
+impl DetachSubAgentBuilder {
+    pub fn new(
+        client: WachtClient,
+        agent_id: impl Into<String>,
+        sub_agent_id: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+            sub_agent_id: sub_agent_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<()> {
+        let response = self
+            .client
+            .http_client()
+            .delete(format!(
+                "{}/ai/agents/{}/sub-agents/{}",
+                self.client.config().base_url,
+                self.agent_id,
+                self.sub_agent_id
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(())
+        } else {
+            Err(api_error(
+                status,
+                "Failed to detach sub-agent",
+                response.text().await?,
+            ))
         }
     }
 }

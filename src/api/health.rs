@@ -43,11 +43,13 @@ impl CheckHealthBuilder {
         if response.status().is_success() {
             Ok(response.json().await?)
         } else {
-            Err(Error::Api {
-                status: response.status(),
-                message: "Health check failed".to_string(),
-                details: None,
-            })
+            let status = response.status();
+            let error_body = response.text().await.unwrap_or_default();
+            Err(Error::api_from_text(
+                status,
+                "Health check failed",
+                &error_body,
+            ))
         }
     }
 }

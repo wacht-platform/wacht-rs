@@ -17,14 +17,14 @@ pub mod models;
 
 // Re-export commonly used types
 pub use client::{
-    WachtClient, WachtConfig, get_public_signing_key, init, init_from_env, is_initialized,
+    WachtClient, WachtConfig, get_public_signing_jwks, get_public_signing_key, init, init_from_env,
+    is_initialized, try_get_client, try_get_config,
 };
 pub use error::{Error, Result};
 pub use models::PaginatedResponse;
 
 // Re-export the API modules for easy access
 pub use api::{
-    ai, ai_settings, analytics, api_keys, deployments, health, integrations, notifications,
-    invitations, oauth, organizations, segments, session, settings, users, waitlist, webhooks,
-    workspaces,
+    ai, ai_settings, analytics, api_keys, deployments, health, invitations, notifications, oauth,
+    organizations, segments, session, settings, users, waitlist, webhooks, workspaces,
 };

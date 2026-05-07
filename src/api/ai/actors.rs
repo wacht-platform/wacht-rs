@@ -1,38 +1,38 @@
 use crate::{
     client::WachtClient,
     error::{Error, Result},
-    models::{CreateNotificationRequest, Notification},
+    models::{Actor, CreateActorRequest},
 };
 
 #[derive(Debug, Clone)]
-pub struct NotificationsApi {
+pub struct ActorsApi {
     client: WachtClient,
 }
 
-impl NotificationsApi {
+impl ActorsApi {
     pub(crate) fn new(client: WachtClient) -> Self {
         Self { client }
     }
 
-    pub fn create(&self, request: CreateNotificationRequest) -> CreateBuilder {
-        CreateBuilder::new(self.client.clone(), request)
+    pub fn create_actor(&self, request: CreateActorRequest) -> CreateActorBuilder {
+        CreateActorBuilder::new(self.client.clone(), request)
     }
 }
 
-/// Builder for creating a notification
-pub struct CreateBuilder {
+#[derive(Debug, Clone)]
+pub struct CreateActorBuilder {
     client: WachtClient,
-    request: CreateNotificationRequest,
+    request: CreateActorRequest,
 }
 
-impl CreateBuilder {
-    pub fn new(client: WachtClient, request: CreateNotificationRequest) -> Self {
+impl CreateActorBuilder {
+    pub fn new(client: WachtClient, request: CreateActorRequest) -> Self {
         Self { client, request }
     }
 
-    pub async fn send(self) -> Result<Notification> {
+    pub async fn send(self) -> Result<Actor> {
         let client = self.client.http_client();
-        let url = format!("{}/notifications", self.client.config().base_url);
+        let url = format!("{}/ai/actors", self.client.config().base_url);
 
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -43,7 +43,7 @@ impl CreateBuilder {
             let error_body = response.text().await?;
             Err(Error::api_from_text(
                 status,
-                "Failed to create notification",
+                "Failed to create actor",
                 &error_body,
             ))
         }

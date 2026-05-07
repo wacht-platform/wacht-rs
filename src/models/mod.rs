@@ -1,20 +1,22 @@
 pub mod add_organization_member_request;
 pub use self::add_organization_member_request::AddOrganizationMemberRequest;
 pub mod ai_agent;
-pub use self::ai_agent::AiAgent;
+pub use self::ai_agent::{AgentDetailsResponse, AiAgent, AiAgentWithDetails};
+pub mod ai_skill;
+pub use self::ai_skill::{SkillFileResponse, SkillScope, SkillTreeEntry, SkillTreeResponse};
 pub mod paginated;
 pub use self::paginated::PaginatedResponse;
-pub mod ai_execution_context;
-pub use self::ai_execution_context::AiExecutionContext;
 pub mod ai_knowledge_base;
-pub use self::ai_knowledge_base::AiKnowledgeBase;
+pub use self::ai_knowledge_base::{
+    AiKnowledgeBase, AiKnowledgeBaseWithDetails, KnowledgeBaseListResponse,
+};
 pub mod ai_tool;
-pub use self::ai_tool::AiTool;
+pub use self::ai_tool::{AiTool, AiToolWithDetails};
 pub mod ai_tool_config;
 pub use self::ai_tool_config::{
     AiToolConfiguration, AiToolType, ApiToolConfiguration, AuthorizationConfiguration, HttpMethod,
-    InternalToolConfiguration, InternalToolType, PlatformEventToolConfiguration,
-    SchemaField, UseExternalServiceToolConfiguration, UseExternalServiceToolType,
+    InternalToolConfiguration, InternalToolType, PlatformEventToolConfiguration, SchemaField,
+    UseExternalServiceToolConfiguration,
 };
 pub mod ai_tool_config_parameters_inner;
 pub use self::ai_tool_config_parameters_inner::AiToolConfigParametersInner;
@@ -26,8 +28,6 @@ pub mod b2_b_settings;
 pub use self::b2_b_settings::DeploymentB2bSettingsUpdates;
 pub mod create_ai_agent_request;
 pub use self::create_ai_agent_request::CreateAiAgentRequest;
-pub mod create_ai_execution_context_request;
-pub use self::create_ai_execution_context_request::CreateAiExecutionContextRequest;
 pub mod create_ai_knowledge_base_request;
 pub use self::create_ai_knowledge_base_request::CreateAiKnowledgeBaseRequest;
 pub mod create_ai_tool_request;
@@ -42,6 +42,15 @@ pub mod create_user_request;
 pub use self::create_user_request::CreateUserRequest;
 pub mod create_workspace_request;
 pub use self::create_workspace_request::CreateWorkspaceRequest;
+pub mod composio;
+pub use self::composio::{
+    ComposioAuthConfigListResponse, ComposioAuthConfigSummary, ComposioConfigResponse,
+    ComposioEnableAppAuth, ComposioEnabledApp, ComposioToolkit, ComposioToolkitAuthField,
+    ComposioToolkitAuthFields, ComposioToolkitAuthMode, ComposioToolkitDetailsResponse,
+    ComposioToolkitListResponse, EnableComposioAppRequest, UpdateComposioConfigRequest,
+};
+pub mod deployment_roles;
+pub use self::deployment_roles::{DeploymentOrganizationRole, DeploymentWorkspaceRole};
 pub mod deployment_restrictions;
 pub use self::deployment_restrictions::DeploymentRestrictionsUpdates;
 pub mod display_settings;
@@ -60,6 +69,25 @@ pub mod jwt_claims;
 pub use self::jwt_claims::JwtClaims;
 pub mod knowledge_base_document;
 pub use self::knowledge_base_document::AiKnowledgeBaseDocument as KnowledgeBaseDocument;
+pub mod mcp_server;
+pub use self::mcp_server::{
+    CreateMcpServerRequest, McpAuthConfig, McpServer, McpServerConfig, McpServerCreateResponse,
+    McpServerDiscoveryResponse, UpdateMcpServerRequest,
+};
+pub mod ai_runtime;
+pub use self::ai_runtime::{
+    Actor, ActorMcpServerConnectResponse, ActorMcpServerSummary, ActorProject, AgentThread,
+    AnswerSubmission, AnswerValue, AppendProjectTaskBoardItemJournalRequest, ApprovalSubmission,
+    ApprovalSubmissionItem, ConversationRecord, CreateActorProjectRequest, CreateActorRequest,
+    CreateAgentThreadRequest, CreateProjectTaskBoardItemCommentRequest,
+    CreateProjectTaskBoardItemRequest, CursorPage, ProjectTaskBoard,
+    ProjectTaskBoardAssignmentMetadata, ProjectTaskBoardAssignmentTarget, ProjectTaskBoardItem,
+    ProjectTaskBoardItemAssignment, ProjectTaskBoardItemComment, ProjectTaskBoardItemEvent,
+    ScheduleMount, TaskWorkspaceFileContent, TaskWorkspaceFileEntry, TaskWorkspaceListing,
+    ThreadEvent, ThreadMessagesResponse, ThreadTaskEdge, ThreadTaskGraph, ThreadTaskGraphSummary,
+    ThreadTaskNode, ToolApprovalMode, UpdateActorProjectRequest, UpdateAgentThreadRequest,
+    UpdateProjectTaskBoardItemRequest,
+};
 pub mod knowledge_base_search_result;
 pub use self::knowledge_base_search_result::KnowledgeBaseSearchResult;
 pub mod knowledge_base_search_result_results_inner;
@@ -155,16 +183,14 @@ pub use self::oauth::{
     RotateOAuthClientSecretResponse, SetOAuthScopeMappingRequest, UpdateOAuthAppRequest,
     UpdateOAuthClientRequest, UpdateOAuthScopeRequest,
 };
-pub mod agent_integration;
-pub use self::agent_integration::{AgentIntegration, IntegrationType};
-pub mod create_agent_integration_request;
-pub use self::create_agent_integration_request::CreateAgentIntegrationRequest;
-pub mod update_agent_integration_request;
-pub use self::update_agent_integration_request::UpdateAgentIntegrationRequest;
 pub mod deployment_ai_settings;
-pub use self::deployment_ai_settings::{DeploymentAiSettings, UpdateDeploymentAiSettingsRequest};
+pub use self::deployment_ai_settings::{
+    DeploymentAiSettings, DeploymentEmbeddingProvider, DeploymentLlmProvider,
+    DeploymentStorageProvider, DeploymentStorageSettingsResponse, UpdateDeploymentAiSettingsRequest,
+    UpdateDeploymentStorageSettingsRequest,
+};
 pub mod execute_agent_request;
 pub use self::execute_agent_request::{
-    CancelRequest, ExecuteAgentRequest, ExecuteAgentRequestType, ExecuteAgentResponse, FileData,
-    NewMessageRequest, UserInputResponseRequest,
+    ApprovalResponseRequest, CancelRequest, ExecuteAgentRequest, ExecuteAgentRequestType,
+    ExecuteAgentResponse, FileData, NewMessageRequest, ToolApprovalSelection,
 };

@@ -101,14 +101,14 @@ impl FetchMembersBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!(
-                    "Failed to fetch members for workspace {}: {error_body}",
+                format!(
+                    "Failed to fetch members for workspace {}",
                     self.workspace_id
                 ),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                &error_body,
+            ))
         }
     }
 }
@@ -122,7 +122,12 @@ pub struct AddMemberBuilder {
 }
 
 impl AddMemberBuilder {
-    pub fn new(client: WachtClient, workspace_id: &str, user_id: &str, role_ids: Vec<String>) -> Self {
+    pub fn new(
+        client: WachtClient,
+        workspace_id: &str,
+        user_id: &str,
+        role_ids: Vec<String>,
+    ) -> Self {
         Self {
             client,
             workspace_id: workspace_id.to_string(),
@@ -151,14 +156,11 @@ impl AddMemberBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!(
-                    "Failed to add member to workspace {}: {error_body}",
-                    self.workspace_id
-                ),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                format!("Failed to add member to workspace {}", self.workspace_id),
+                &error_body,
+            ))
         }
     }
 }
@@ -218,11 +220,11 @@ impl UpdateMemberBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update workspace member: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update workspace member",
+                &error_body,
+            ))
         }
     }
 }
@@ -259,11 +261,11 @@ impl RemoveMemberBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to remove workspace member: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to remove workspace member",
+                &error_body,
+            ))
         }
     }
 }

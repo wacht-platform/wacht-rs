@@ -21,6 +21,8 @@ pub struct UpdateWorkspaceRequest {
     pub public_metadata: Option<serde_json::Value>,
     #[serde(rename = "private_metadata", skip_serializing_if = "Option::is_none")]
     pub private_metadata: Option<serde_json::Value>,
+    #[serde(rename = "remove_image", skip_serializing_if = "Option::is_none")]
+    pub remove_image: Option<bool>,
     #[serde(skip)]
     pub workspace_image: Option<Vec<u8>>,
 }
@@ -32,6 +34,7 @@ impl UpdateWorkspaceRequest {
             description: None,
             public_metadata: None,
             private_metadata: None,
+            remove_image: None,
             workspace_image: None,
         }
     }

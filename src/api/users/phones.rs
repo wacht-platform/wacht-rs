@@ -54,7 +54,11 @@ impl AddPhoneBuilder {
 
     pub async fn send(self) -> Result<UserPhone> {
         let client = self.client.http_client();
-        let url = format!("{}/users/{}/phones", self.client.config().base_url, self.user_id);
+        let url = format!(
+            "{}/users/{}/phones",
+            self.client.config().base_url,
+            self.user_id
+        );
 
         let response = client.post(&url).json(&self.request).send().await?;
         let status = response.status();
@@ -63,11 +67,11 @@ impl AddPhoneBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to add phone: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to add phone",
+                &error_body,
+            ))
         }
     }
 }
@@ -111,11 +115,11 @@ impl UpdatePhoneBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update phone: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update phone",
+                &error_body,
+            ))
         }
     }
 }
@@ -152,11 +156,11 @@ impl DeletePhoneBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to delete phone: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to delete phone",
+                &error_body,
+            ))
         }
     }
 }

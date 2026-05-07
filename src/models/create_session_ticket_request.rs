@@ -36,18 +36,18 @@ pub struct CreateSessionTicketRequest {
     /// Agent session identifier mode (optional, agent_access only)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub agent_session_identifier: Option<AgentSessionIdentifier>,
-    /// Context group for grouping agent sessions (required for agent_access tickets)
+    /// Actor ID (required for static agent_access tickets)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub context_group: Option<String>,
+    pub actor_id: Option<String>,
     /// Slug of the webhook app to access (required for webhook_app_access tickets)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub webhook_app_slug: Option<String>,
     /// Slug of the API auth app to access (required for api_auth_access tickets)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub api_auth_app_slug: Option<String>,
-    /// Unix timestamp when the ticket expires
+    /// Ticket expiry in seconds from now
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expires_at: Option<i64>,
+    pub expires_in: Option<u64>,
 }
 
 impl CreateSessionTicketRequest {
@@ -58,24 +58,24 @@ impl CreateSessionTicketRequest {
             user_id: Some(user_id.into()),
             agent_ids: None,
             agent_session_identifier: None,
-            context_group: None,
+            actor_id: None,
             webhook_app_slug: None,
             api_auth_app_slug: None,
-            expires_at: None,
+            expires_in: None,
         }
     }
 
     /// Create a new agent access ticket request
-    pub fn agent_access(agent_ids: Vec<String>, context_group: impl Into<String>) -> Self {
+    pub fn agent_access(agent_ids: Vec<String>, actor_id: impl Into<String>) -> Self {
         Self {
             ticket_type: TicketType::AgentAccess,
             user_id: None,
             agent_ids: Some(agent_ids),
             agent_session_identifier: Some(AgentSessionIdentifier::Static),
-            context_group: Some(context_group.into()),
+            actor_id: Some(actor_id.into()),
             webhook_app_slug: None,
             api_auth_app_slug: None,
-            expires_at: None,
+            expires_in: None,
         }
     }
 
@@ -86,10 +86,10 @@ impl CreateSessionTicketRequest {
             user_id: None,
             agent_ids: None,
             agent_session_identifier: None,
-            context_group: None,
+            actor_id: None,
             webhook_app_slug: Some(webhook_app_slug.into()),
             api_auth_app_slug: None,
-            expires_at: None,
+            expires_in: None,
         }
     }
 
@@ -100,10 +100,10 @@ impl CreateSessionTicketRequest {
             user_id: None,
             agent_ids: None,
             agent_session_identifier: None,
-            context_group: None,
+            actor_id: None,
             webhook_app_slug: None,
             api_auth_app_slug: Some(api_auth_app_slug.into()),
-            expires_at: None,
+            expires_in: None,
         }
     }
 
@@ -114,22 +114,28 @@ impl CreateSessionTicketRequest {
             user_id: None,
             agent_ids: Some(agent_ids),
             agent_session_identifier: Some(AgentSessionIdentifier::Signin),
-            context_group: None,
+            actor_id: None,
             webhook_app_slug: None,
             api_auth_app_slug: None,
-            expires_at: None,
+            expires_in: None,
         }
     }
 
-    /// Set the expiration timestamp
-    pub fn expires_at(mut self, expires_at: i64) -> Self {
-        self.expires_at = Some(expires_at);
+    /// Set ticket expiry in seconds from now
+    pub fn expires_in(mut self, expires_in: u64) -> Self {
+        self.expires_in = Some(expires_in);
         self
     }
 
     /// Set agent session identifier mode for agent_access tickets
     pub fn agent_session_identifier(mut self, mode: AgentSessionIdentifier) -> Self {
         self.agent_session_identifier = Some(mode);
+        self
+    }
+
+    /// Set actor id (only for static agent_access tickets)
+    pub fn actor_id(mut self, actor_id: impl Into<String>) -> Self {
+        self.actor_id = Some(actor_id.into());
         self
     }
 }

@@ -10,6 +10,8 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::models::JwksDocument;
+
 /// JWT token claims structure.
 ///
 /// Contains standard JWT claims plus Wacht-specific claims for
@@ -79,6 +81,8 @@ pub struct AuthContext {
 pub struct AuthConfig {
     /// Public key for token verification (PEM format)
     pub public_key: String,
+    /// JWKS document for token verification
+    pub public_jwks: Option<JwksDocument>,
     /// Allowed clock skew in seconds (default: 5)
     pub allowed_clock_skew: u64,
     /// Whether to validate token expiration (default: true)
@@ -93,6 +97,7 @@ impl Default for AuthConfig {
     fn default() -> Self {
         Self {
             public_key: String::new(),
+            public_jwks: None,
             allowed_clock_skew: 5,
             validate_exp: true,
             validate_nbf: true,

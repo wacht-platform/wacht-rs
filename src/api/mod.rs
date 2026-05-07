@@ -4,7 +4,6 @@ pub mod analytics;
 pub mod api_keys;
 pub mod deployments;
 pub mod health;
-pub mod integrations;
 pub mod invitations;
 pub mod notifications;
 pub mod oauth;

@@ -1,11 +1,13 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
+use serde_json::Value;
+use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum AiToolConfiguration {
     Api(ApiToolConfiguration),
     PlatformEvent(PlatformEventToolConfiguration),
+    CodeRunner(CodeRunnerToolConfiguration),
     Internal(InternalToolConfiguration),
     UseExternalService(UseExternalServiceToolConfiguration),
 }
@@ -15,6 +17,7 @@ pub enum AiToolConfiguration {
 pub enum AiToolType {
     Api,
     PlatformEvent,
+    CodeRunner,
     Internal,
     UseExternalService,
 }
@@ -22,6 +25,7 @@ pub enum AiToolType {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ApiToolConfiguration {
     pub endpoint: String,
+    #[serde(default)]
     pub method: HttpMethod,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub authorization: Option<AuthorizationConfiguration>,
@@ -37,74 +41,42 @@ pub struct ApiToolConfiguration {
 pub struct PlatformEventToolConfiguration {
     pub event_label: String,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub event_data: Option<serde_json::Value>,
+    pub event_data: Option<Value>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum InternalToolType {
-    ReadFile,
-    WriteFile,
-    ListDirectory,
-    SearchFiles,
-    ExecuteCommand,
-    SaveMemory,
-    ExecutePython,
+pub enum CodeRunnerRuntime {
+    Python,
+}
+
+impl Default for CodeRunnerRuntime {
+    fn default() -> Self {
+        Self::Python
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct InternalToolConfiguration {
-    pub tool_type: InternalToolType,
+pub struct CodeRunnerToolConfiguration {
+    #[serde(default)]
+    pub runtime: CodeRunnerRuntime,
+    pub code: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub input_schema: Option<Vec<SchemaField>>,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UseExternalServiceToolType {
-    TeamsListUsers,
-    TeamsSearchUsers,
-    TeamsSendDm,
-    TeamsSendContextMessage,
-    TeamsListMessages,
-    TeamsGetMeetingRecording,
-    TeamsTranscribeMeeting,
-    TeamsSaveAttachment,
-    TeamsDescribeImage,
-    TeamsTranscribeAudio,
-    TeamsListContexts,
-    TriggerContext,
-    #[serde(rename = "clickup_create_task")]
-    ClickUpCreateTask,
-    #[serde(rename = "clickup_create_list")]
-    ClickUpCreateList,
-    #[serde(rename = "clickup_update_task")]
-    ClickUpUpdateTask,
-    #[serde(rename = "clickup_add_comment")]
-    ClickUpAddComment,
-    #[serde(rename = "clickup_get_task")]
-    ClickUpGetTask,
-    #[serde(rename = "clickup_get_space_lists")]
-    ClickUpGetSpaceLists,
-    #[serde(rename = "clickup_get_spaces")]
-    ClickUpGetSpaces,
-    #[serde(rename = "clickup_get_teams")]
-    ClickUpGetTeams,
-    #[serde(rename = "clickup_get_current_user")]
-    ClickUpGetCurrentUser,
-    #[serde(rename = "clickup_get_tasks")]
-    ClickUpGetTasks,
-    #[serde(rename = "clickup_search_tasks")]
-    ClickUpSearchTasks,
-    #[serde(rename = "clickup_task_add_attachment")]
-    ClickUpTaskAddAttachment,
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct UseExternalServiceToolConfiguration {
-    pub service_type: UseExternalServiceToolType,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_schema: Option<Vec<SchemaField>>,
+    pub output_schema: Option<Vec<SchemaField>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub env_variables: Option<Vec<CodeRunnerEnvVariable>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub timeout_seconds: Option<u32>,
+    #[serde(default)]
+    pub allow_network: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CodeRunnerEnvVariable {
+    pub name: String,
+    pub value: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -117,17 +89,19 @@ pub struct AuthorizationConfiguration {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "UPPERCASE")]
 pub enum HttpMethod {
-    #[serde(rename = "GET")]
     Get,
-    #[serde(rename = "POST")]
     Post,
-    #[serde(rename = "PUT")]
     Put,
-    #[serde(rename = "DELETE")]
     Delete,
-    #[serde(rename = "PATCH")]
     Patch,
+}
+
+impl Default for HttpMethod {
+    fn default() -> Self {
+        Self::Get
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Default, Serialize, Deserialize)]
@@ -139,9 +113,74 @@ pub struct SchemaField {
     #[serde(default)]
     pub required: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub enum_values: Option<Vec<Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub format: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minimum: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub maximum: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub items_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub items_schema: Option<Box<SchemaField>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_items: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub max_items: Option<usize>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub properties: Option<Vec<SchemaField>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum InternalToolType {
+    ReadImage,
+    ReadFile,
+    WriteFile,
+    EditFile,
+    ExecuteCommand,
+    Sleep,
+    SnapshotExecutionState,
+    WebSearch,
+    UrlContent,
+    SearchKnowledgebase,
+    LoadMemory,
+    SearchTools,
+    LoadTools,
+    CreateProjectTask,
+    UpdateProjectTask,
+    AssignProjectTask,
+    AppendTaskJournal,
+    ListThreads,
+    CreateThread,
+    UpdateThread,
+    SaveMemory,
+    TaskGraphAddNode,
+    TaskGraphAddDependency,
+    TaskGraphMarkInProgress,
+    TaskGraphCompleteNode,
+    TaskGraphFailNode,
+    TaskGraphMarkCompleted,
+    TaskGraphMarkFailed,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct InternalToolConfiguration {
+    pub tool_type: InternalToolType,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_schema: Option<Vec<SchemaField>>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct UseExternalServiceToolConfiguration {
+    pub service_type: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_schema: Option<Vec<SchemaField>>,
 }
 
 impl Default for ApiToolConfiguration {
@@ -152,7 +191,7 @@ impl Default for ApiToolConfiguration {
             authorization: None,
             request_body_schema: None,
             url_params_schema: None,
-            timeout_seconds: Some(30),
+            timeout_seconds: None,
         }
     }
 }

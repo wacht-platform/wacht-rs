@@ -45,11 +45,11 @@ impl CreateTicketBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to create session ticket: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to create session ticket",
+                &error_body,
+            ))
         }
     }
 }

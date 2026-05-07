@@ -27,6 +27,11 @@ pub struct UpdateUserRequest {
     pub private_metadata: Option<serde_json::Value>,
     #[serde(rename = "disabled", skip_serializing_if = "Option::is_none")]
     pub disabled: Option<bool>,
+    #[serde(
+        rename = "remove_profile_image",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub remove_profile_image: Option<bool>,
     #[serde(skip)]
     pub profile_image: Option<Vec<u8>>,
 }
@@ -40,6 +45,7 @@ impl UpdateUserRequest {
             public_metadata: None,
             private_metadata: None,
             disabled: None,
+            remove_profile_image: None,
             profile_image: None,
         }
     }

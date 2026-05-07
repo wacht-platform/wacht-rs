@@ -31,7 +31,10 @@ impl OrganizationsApi {
         FetchOrganizationsBuilder::new(self.client.clone())
     }
 
-    pub fn create_organization(&self, request: CreateOrganizationRequest) -> CreateOrganizationBuilder {
+    pub fn create_organization(
+        &self,
+        request: CreateOrganizationRequest,
+    ) -> CreateOrganizationBuilder {
         CreateOrganizationBuilder::new(self.client.clone(), request)
     }
 
@@ -121,11 +124,11 @@ impl FetchOrganizationsBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch organizations: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch organizations",
+                &error_body,
+            ))
         }
     }
 }
@@ -166,10 +169,8 @@ impl CreateOrganizationBuilder {
             let part = reqwest::multipart::Part::bytes(image_bytes.clone())
                 .file_name("organization_image.jpg")
                 .mime_str("image/jpeg")
-                .map_err(|e| Error::Api {
-                    status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("Failed to create multipart: {e}"),
-                    details: None,
+                .map_err(|e| {
+                    Error::InvalidRequest(format!("Failed to create multipart payload: {e}"))
                 })?;
             form = form.part("organization_image", part);
         }
@@ -181,11 +182,11 @@ impl CreateOrganizationBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to create organization: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to create organization",
+                &error_body,
+            ))
         }
     }
 }
@@ -219,11 +220,11 @@ impl FetchOrganizationBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch organization: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch organization",
+                &error_body,
+            ))
         }
     }
 }
@@ -236,7 +237,11 @@ pub struct UpdateOrganizationBuilder {
 }
 
 impl UpdateOrganizationBuilder {
-    pub fn new(client: WachtClient, organization_id: &str, request: UpdateOrganizationRequest) -> Self {
+    pub fn new(
+        client: WachtClient,
+        organization_id: &str,
+        request: UpdateOrganizationRequest,
+    ) -> Self {
         Self {
             client,
             organization_id: organization_id.to_string(),
@@ -271,14 +276,15 @@ impl UpdateOrganizationBuilder {
                 serde_json::to_string(private_metadata).unwrap_or_default(),
             );
         }
+        if let Some(remove_image) = self.request.remove_image {
+            form = form.text("remove_image", remove_image.to_string());
+        }
         if let Some(image_bytes) = &self.request.organization_image {
             let part = reqwest::multipart::Part::bytes(image_bytes.clone())
                 .file_name("organization_image.jpg")
                 .mime_str("image/jpeg")
-                .map_err(|e| Error::Api {
-                    status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("Failed to create multipart: {e}"),
-                    details: None,
+                .map_err(|e| {
+                    Error::InvalidRequest(format!("Failed to create multipart payload: {e}"))
                 })?;
             form = form.part("organization_image", part);
         }
@@ -290,11 +296,11 @@ impl UpdateOrganizationBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to update organization: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to update organization",
+                &error_body,
+            ))
         }
     }
 }
@@ -328,11 +334,11 @@ impl DeleteOrganizationBuilder {
             Ok(())
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to delete organization: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to delete organization",
+                &error_body,
+            ))
         }
     }
 }
@@ -386,10 +392,8 @@ impl CreateOrganizationWorkspaceBuilder {
             let part = reqwest::multipart::Part::bytes(image_bytes.clone())
                 .file_name("workspace_image.jpg")
                 .mime_str("image/jpeg")
-                .map_err(|e| Error::Api {
-                    status: reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-                    message: format!("Failed to create multipart: {e}"),
-                    details: None,
+                .map_err(|e| {
+                    Error::InvalidRequest(format!("Failed to create multipart payload: {e}"))
                 })?;
             form = form.part("workspace_image", part);
         }
@@ -401,11 +405,11 @@ impl CreateOrganizationWorkspaceBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to create workspace under organization: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to create workspace under organization",
+                &error_body,
+            ))
         }
     }
 }

@@ -48,11 +48,11 @@ impl FetchBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to fetch waitlist: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to fetch waitlist",
+                &error_body,
+            ))
         }
     }
 }
@@ -86,11 +86,11 @@ impl ApproveBuilder {
             Ok(response.json().await?)
         } else {
             let error_body = response.text().await?;
-            Err(Error::Api {
+            Err(Error::api_from_text(
                 status,
-                message: format!("Failed to approve waitlist user: {error_body}"),
-                details: serde_json::from_str(&error_body).ok(),
-            })
+                "Failed to approve waitlist user",
+                &error_body,
+            ))
         }
     }
 }
