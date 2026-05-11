@@ -6,7 +6,7 @@ Official Rust SDK for Wacht.
 
 ```toml
 [dependencies]
-wacht = "0.1.0-beta.1"
+wacht = "0.1.0-beta.5"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
@@ -14,7 +14,7 @@ For Axum middleware support:
 
 ```toml
 [dependencies]
-wacht = { version = "0.1.0-beta.1", features = ["axum"] }
+wacht = { version = "0.1.0-beta.5", features = ["axum"] }
 ```
 
 ## Configuration
