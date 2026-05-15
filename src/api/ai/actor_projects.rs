@@ -2,12 +2,13 @@ use crate::{
     client::WachtClient,
     error::{Error, Result},
     models::{
-        ActorProject, AgentThread, AnswerSubmission, ApprovalSubmission, CreateActorProjectRequest,
-        CreateAgentThreadRequest, CreateProjectTaskBoardItemCommentRequest,
-        CreateProjectTaskBoardItemRequest, CursorPage, PaginatedResponse, ProjectTaskBoard,
-        ProjectTaskBoardItem, ProjectTaskBoardItemAssignment, ProjectTaskBoardItemComment,
-        TaskWorkspaceFileContent, TaskWorkspaceListing, UpdateActorProjectRequest,
-        UpdateProjectTaskBoardItemRequest,
+        ActorProject, AgentThread, AnswerSubmission, ApprovalSubmission, BinaryFileResponse,
+        CreateActorProjectRequest, CreateAgentThreadRequest,
+        CreateProjectTaskBoardItemCommentRequest, CreateProjectTaskBoardItemRequest, CursorPage,
+        DelegateProjectTaskRequest, DelegateProjectTaskResponse, PaginatedResponse,
+        ProjectTaskBoard, ProjectTaskBoardItem, ProjectTaskBoardItemAssignment,
+        ProjectTaskBoardItemComment, TaskWorkspaceFileContent, TaskWorkspaceListing,
+        UpdateActorProjectRequest, UpdateProjectTaskBoardItemRequest,
     },
 };
 use serde::Serialize;
@@ -104,6 +105,32 @@ impl ActorProjectsApi {
             item_id,
             path,
         )
+    }
+
+    /// Download a board item's filesystem entry as raw bytes. Distinct from
+    /// `fetch_board_item_filesystem_file`, which returns JSON metadata.
+    pub fn download_board_item_filesystem_file(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        path: impl Into<String>,
+    ) -> DownloadActorProjectBoardItemFilesystemFileBuilder {
+        DownloadActorProjectBoardItemFilesystemFileBuilder::new(
+            self.client.clone(),
+            project_id,
+            item_id,
+            path,
+        )
+    }
+
+    /// Delegate a task from one thread to a target lane thread within the
+    /// same project. Returns the assigned agent and the new task key.
+    pub fn delegate_task(
+        &self,
+        project_id: impl Into<String>,
+        request: DelegateProjectTaskRequest,
+    ) -> DelegateProjectTaskBuilder {
+        DelegateProjectTaskBuilder::new(self.client.clone(), project_id, request)
     }
     pub fn update_board_item(
         &self,
@@ -1272,4 +1299,128 @@ impl CreateActorProjectThreadBuilder {
             ))
         }
     }
+}
+
+pub struct DownloadActorProjectBoardItemFilesystemFileBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+    path: String,
+}
+impl DownloadActorProjectBoardItemFilesystemFileBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        path: impl Into<String>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+            path: path.into(),
+        }
+    }
+
+    pub async fn send(self) -> Result<BinaryFileResponse> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/filesystem/download",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .query(&PathQuery {
+                path: Some(self.path),
+            })
+            .send()
+            .await?;
+        let status = response.status();
+        if !status.is_success() {
+            return Err(api_error(
+                status,
+                "Failed to download board item file",
+                response.text().await?,
+            ));
+        }
+
+        let mime_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned);
+        let file_name = response
+            .headers()
+            .get(reqwest::header::CONTENT_DISPOSITION)
+            .and_then(|v| v.to_str().ok())
+            .and_then(parse_filename_from_content_disposition);
+        let data = response.bytes().await?.to_vec();
+        Ok(BinaryFileResponse {
+            data,
+            mime_type,
+            file_name,
+        })
+    }
+}
+
+pub struct DelegateProjectTaskBuilder {
+    client: WachtClient,
+    project_id: String,
+    request: DelegateProjectTaskRequest,
+}
+impl DelegateProjectTaskBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        request: DelegateProjectTaskRequest,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            request,
+        }
+    }
+
+    pub async fn send(self) -> Result<DelegateProjectTaskResponse> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items/delegate",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to delegate project task",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+/// Pull the `filename` parameter out of a `Content-Disposition` header.
+/// Returns `None` when there's no `filename=...` segment or the value can't
+/// be parsed cleanly; downloads then fall back to a server-derived name on
+/// the caller side.
+fn parse_filename_from_content_disposition(header: &str) -> Option<String> {
+    for part in header.split(';') {
+        let trimmed = part.trim();
+        if let Some(value) = trimmed.strip_prefix("filename=") {
+            let unquoted = value.trim().trim_matches('"').to_string();
+            if !unquoted.is_empty() {
+                return Some(unquoted);
+            }
+        }
+    }
+    None
 }

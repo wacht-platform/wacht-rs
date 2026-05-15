@@ -2,11 +2,14 @@ pub mod add_organization_member_request;
 pub use self::add_organization_member_request::AddOrganizationMemberRequest;
 pub mod ai_agent;
 pub use self::ai_agent::{
-    AgentDetailsResponse, AgentToolApprovalRule, AiAgent, AiAgentWithDetails, ApprovalAction,
-    UpdateAgentToolApprovalActionRequest,
+    AgentDetailsResponse, AgentHookStep, AgentHooksConfig, AgentToolApprovalRule, AiAgent,
+    AiAgentWithDetails, ApprovalAction, UpdateAgentToolApprovalActionRequest,
 };
 pub mod ai_skill;
-pub use self::ai_skill::{SkillFileResponse, SkillScope, SkillTreeEntry, SkillTreeResponse};
+pub use self::ai_skill::{
+    AgentSkillsSummary, SkillFileResponse, SkillScope, SkillSummaryEntry, SkillTreeEntry,
+    SkillTreeResponse,
+};
 pub mod paginated;
 pub use self::paginated::PaginatedResponse;
 pub mod ai_knowledge_base;
@@ -82,6 +85,7 @@ pub use self::ai_runtime::{
     Actor, ActorMcpServerConnectResponse, ActorMcpServerSummary, ActorProject, AgentThread,
     AnswerSubmission, AnswerValue, AppendProjectTaskBoardItemJournalRequest, ApprovalSubmission,
     ApprovalSubmissionItem, ConversationRecord, CreateActorProjectRequest, CreateActorRequest,
+    LookupActorParams, LookupActorResponse,
     CreateAgentThreadRequest, CreateProjectTaskBoardItemCommentRequest,
     CreateProjectTaskBoardItemRequest, CursorPage, ProjectTaskBoard,
     ProjectTaskBoardAssignmentMetadata, ProjectTaskBoardAssignmentTarget, ProjectTaskBoardItem,
@@ -101,6 +105,24 @@ pub mod organization_member;
 pub use self::organization_member::OrganizationMember;
 pub mod organization_role;
 pub use self::organization_role::OrganizationRole;
+pub mod organization_invitation;
+pub use self::organization_invitation::{
+    CreateOrganizationInvitationRequest, OrganizationInvitation, OrganizationInvitationSummary,
+};
+pub mod user_membership;
+pub use self::user_membership::{UserOrganizationMembership, UserWorkspaceMembership};
+pub mod delegate_project_task;
+pub use self::delegate_project_task::{DelegateProjectTaskRequest, DelegateProjectTaskResponse};
+pub mod binary_file_response;
+pub use self::binary_file_response::BinaryFileResponse;
+pub mod user_signin;
+pub use self::user_signin::{RevokeAllSigninsResponse, UserSignin};
+pub mod user_passkey;
+pub use self::user_passkey::{RenamePasskeyRequest, UserPasskey};
+pub mod user_mfa;
+pub use self::user_mfa::{
+    CreateAuthenticatorRequest, CreateAuthenticatorResponse, RegeneratedBackupCodesResponse,
+};
 pub mod recent_signup;
 pub use self::recent_signup::RecentSignup;
 pub mod recent_signup_organization;
@@ -185,6 +207,14 @@ pub use self::oauth::{
     OAuthDomainVerificationResponse, OAuthGrant, OAuthScopeDefinition,
     RotateOAuthClientSecretResponse, SetOAuthScopeMappingRequest, UpdateOAuthAppRequest,
     UpdateOAuthClientRequest, UpdateOAuthScopeRequest,
+};
+pub mod oauth_signing_key;
+pub use self::oauth_signing_key::{
+    OAuthAppSigningKey, OAuthAppSigningKeyRotatedResponse, OAuthAppSigningKeysListResponse,
+};
+pub mod deployment_credentials;
+pub use self::deployment_credentials::{
+    DeploymentCredentialsApiKey, DeploymentCredentialsResponse,
 };
 pub mod deployment_ai_settings;
 pub use self::deployment_ai_settings::{

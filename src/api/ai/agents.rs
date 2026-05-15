@@ -2,8 +2,8 @@ use crate::{
     client::WachtClient,
     error::{Error, Result},
     models::{
-        AgentDetailsResponse, AiAgent, AiAgentWithDetails, CreateAiAgentRequest, PaginatedResponse,
-        SkillFileResponse, SkillScope, SkillTreeResponse, UpdateAiAgentRequest,
+        AgentDetailsResponse, AgentSkillsSummary, AiAgent, AiAgentWithDetails, CreateAiAgentRequest,
+        PaginatedResponse, SkillFileResponse, SkillScope, SkillTreeResponse, UpdateAiAgentRequest,
     },
 };
 use reqwest::multipart::{Form, Part};
@@ -40,6 +40,16 @@ impl AgentsApi {
     pub fn fetch_agent_details(&self, agent_id: impl Into<String>) -> FetchAgentDetailsBuilder {
         FetchAgentDetailsBuilder::new(self.client.clone(), agent_id)
     }
+    /// Summary of system + agent skills available to the agent. System skills
+    /// are built-in; agent skills are uploaded per-agent via the import
+    /// bundle endpoint.
+    pub fn list_skills_summary(
+        &self,
+        agent_id: impl Into<String>,
+    ) -> ListAgentSkillsSummaryBuilder {
+        ListAgentSkillsSummaryBuilder::new(self.client.clone(), agent_id)
+    }
+
     pub fn list_skill_tree(
         &self,
         agent_id: impl Into<String>,
@@ -644,6 +654,41 @@ impl DetachSubAgentBuilder {
             Err(api_error(
                 status,
                 "Failed to detach sub-agent",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct ListAgentSkillsSummaryBuilder {
+    client: WachtClient,
+    agent_id: String,
+}
+impl ListAgentSkillsSummaryBuilder {
+    pub fn new(client: WachtClient, agent_id: impl Into<String>) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+        }
+    }
+    pub async fn send(self) -> Result<AgentSkillsSummary> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/agents/{}/skills/list",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to list agent skills summary",
                 response.text().await?,
             ))
         }

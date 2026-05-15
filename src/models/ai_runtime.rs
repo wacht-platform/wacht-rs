@@ -22,6 +22,17 @@ pub struct CreateActorRequest {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct LookupActorParams {
+    pub subject_type: String,
+    pub external_key: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct LookupActorResponse {
+    pub actor: Option<Actor>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Actor {
     pub id: String,
     pub deployment_id: String,

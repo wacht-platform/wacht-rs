@@ -147,4 +147,6 @@ pub struct SessionTicketResponse {
     pub ticket: String,
     /// Unix timestamp when the ticket expires
     pub expires_at: i64,
+    /// Fully-formed vanity URL the redeemer can open in a browser.
+    pub url: String,
 }

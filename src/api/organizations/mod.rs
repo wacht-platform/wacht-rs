@@ -3,6 +3,7 @@
 //! This module contains all organization-related functionality including core operations,
 //! member management, and role management.
 
+pub mod invitations;
 pub mod members;
 pub mod roles;
 
@@ -68,6 +69,10 @@ impl OrganizationsApi {
 
     pub fn roles(&self) -> roles::OrganizationRolesApi {
         roles::OrganizationRolesApi::new(self.client.clone())
+    }
+
+    pub fn invitations(&self) -> invitations::OrganizationInvitationsApi {
+        invitations::OrganizationInvitationsApi::new(self.client.clone())
     }
 }
 

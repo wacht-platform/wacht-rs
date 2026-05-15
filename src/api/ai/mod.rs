@@ -75,7 +75,8 @@ pub use actor_projects::{
     ArchiveActorProjectBoardItemBuilder, ArchiveActorProjectBuilder,
     CancelActorProjectBoardItemBuilder, CreateActorProjectBoardItemBuilder,
     CreateActorProjectBoardItemCommentBuilder, CreateActorProjectBuilder,
-    CreateActorProjectThreadBuilder, FetchActorProjectBoardBuilder,
+    CreateActorProjectThreadBuilder, DelegateProjectTaskBuilder,
+    DownloadActorProjectBoardItemFilesystemFileBuilder, FetchActorProjectBoardBuilder,
     FetchActorProjectBoardItemAssignmentsBuilder, FetchActorProjectBoardItemBuilder,
     FetchActorProjectBoardItemCommentsBuilder, FetchActorProjectBoardItemFilesystemBuilder,
     FetchActorProjectBoardItemFilesystemFileBuilder, FetchActorProjectBuilder,
@@ -87,8 +88,9 @@ pub use actors::CreateActorBuilder;
 pub use agents::{
     AttachSubAgentBuilder, CreateAgentBuilder, DeleteAgentBuilder, DeleteAgentSkillBuilder,
     DetachSubAgentBuilder, FetchAgentBuilder, FetchAgentDetailsBuilder,
-    ImportAgentSkillBundleBuilder, ListAgentSkillTreeBuilder, ListAgentSubAgentsBuilder,
-    ListAgentsBuilder, ListAgentsOptions, ReadAgentSkillFileBuilder, UpdateAgentBuilder,
+    ImportAgentSkillBundleBuilder, ListAgentSkillTreeBuilder, ListAgentSkillsSummaryBuilder,
+    ListAgentSubAgentsBuilder, ListAgentsBuilder, ListAgentsOptions, ReadAgentSkillFileBuilder,
+    UpdateAgentBuilder,
 };
 pub use composio::{
     DisableComposioAppBuilder, EnableComposioAppBuilder, FetchComposioConfigBuilder,

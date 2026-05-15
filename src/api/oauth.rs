@@ -4,8 +4,9 @@ use crate::{
     error::Error,
     models::{
         CreateOAuthAppRequest, CreateOAuthClientRequest, ListOAuthAppsResponse,
-        ListOAuthClientsResponse, ListOAuthGrantsResponse, OAuthApp, OAuthClient,
-        OAuthDomainVerificationResponse, OAuthGrant, RotateOAuthClientSecretResponse,
+        ListOAuthClientsResponse, ListOAuthGrantsResponse, OAuthApp,
+        OAuthAppSigningKey, OAuthAppSigningKeyRotatedResponse, OAuthAppSigningKeysListResponse,
+        OAuthClient, OAuthDomainVerificationResponse, OAuthGrant, RotateOAuthClientSecretResponse,
         SetOAuthScopeMappingRequest, UpdateOAuthAppRequest, UpdateOAuthClientRequest,
         UpdateOAuthScopeRequest,
     },
@@ -146,6 +147,22 @@ impl OauthApi {
             oauth_client_id,
             grant_id,
         )
+    }
+
+    pub fn list_signing_keys(&self, oauth_app_slug: &str) -> ListOAuthAppSigningKeysBuilder {
+        ListOAuthAppSigningKeysBuilder::new(self.client.clone(), oauth_app_slug)
+    }
+
+    pub fn rotate_signing_key(&self, oauth_app_slug: &str) -> RotateOAuthAppSigningKeyBuilder {
+        RotateOAuthAppSigningKeyBuilder::new(self.client.clone(), oauth_app_slug)
+    }
+
+    pub fn compromise_signing_key(
+        &self,
+        oauth_app_slug: &str,
+        kid: &str,
+    ) -> CompromiseOAuthAppSigningKeyBuilder {
+        CompromiseOAuthAppSigningKeyBuilder::new(self.client.clone(), oauth_app_slug, kid)
     }
 }
 
@@ -788,6 +805,115 @@ impl RevokeOAuthGrantBuilder {
             Err(api_error(
                 status,
                 "Failed to revoke OAuth grant",
+                &error_text,
+            ))
+        }
+    }
+}
+
+pub struct ListOAuthAppSigningKeysBuilder {
+    client: WachtClient,
+    oauth_app_slug: String,
+}
+
+impl ListOAuthAppSigningKeysBuilder {
+    pub fn new(client: WachtClient, oauth_app_slug: &str) -> Self {
+        Self {
+            client,
+            oauth_app_slug: oauth_app_slug.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<Vec<OAuthAppSigningKey>> {
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/oauth/apps/{}/signing-keys",
+            self.client.config().base_url,
+            self.oauth_app_slug
+        );
+        let response = client.get(&url).send().await?;
+        if response.status().is_success() {
+            let body: OAuthAppSigningKeysListResponse = response.json().await?;
+            Ok(body.keys)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(api_error(
+                status,
+                "Failed to list OAuth signing keys",
+                &error_text,
+            ))
+        }
+    }
+}
+
+pub struct RotateOAuthAppSigningKeyBuilder {
+    client: WachtClient,
+    oauth_app_slug: String,
+}
+
+impl RotateOAuthAppSigningKeyBuilder {
+    pub fn new(client: WachtClient, oauth_app_slug: &str) -> Self {
+        Self {
+            client,
+            oauth_app_slug: oauth_app_slug.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<OAuthAppSigningKeyRotatedResponse> {
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/oauth/apps/{}/signing-keys/rotate",
+            self.client.config().base_url,
+            self.oauth_app_slug
+        );
+        let response = client.post(&url).send().await?;
+        if response.status().is_success() {
+            Ok(response.json().await?)
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(api_error(
+                status,
+                "Failed to rotate OAuth signing key",
+                &error_text,
+            ))
+        }
+    }
+}
+
+pub struct CompromiseOAuthAppSigningKeyBuilder {
+    client: WachtClient,
+    oauth_app_slug: String,
+    kid: String,
+}
+
+impl CompromiseOAuthAppSigningKeyBuilder {
+    pub fn new(client: WachtClient, oauth_app_slug: &str, kid: &str) -> Self {
+        Self {
+            client,
+            oauth_app_slug: oauth_app_slug.to_string(),
+            kid: kid.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<()> {
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/oauth/apps/{}/signing-keys/{}/compromise",
+            self.client.config().base_url,
+            self.oauth_app_slug,
+            self.kid
+        );
+        let response = client.post(&url).send().await?;
+        if response.status().is_success() {
+            Ok(())
+        } else {
+            let status = response.status();
+            let error_text = response.text().await.unwrap_or_default();
+            Err(api_error(
+                status,
+                "Failed to mark OAuth signing key as compromised",
                 &error_text,
             ))
         }

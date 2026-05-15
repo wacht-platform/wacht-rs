@@ -16,6 +16,28 @@ impl SkillScope {
     }
 }
 
+/// One row of the agent-skills summary. `mount_path` is the path the skill is
+/// surfaced at inside the agent's filesystem; `source` is `"system"` or
+/// `"agent"`.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SkillSummaryEntry {
+    pub slug: String,
+    pub name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    pub mount_path: String,
+    pub source: String,
+}
+
+/// Combined system + agent skills available to an agent. System skills are
+/// built into Wacht; agent skills are uploaded per-agent via the import
+/// bundle endpoint.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AgentSkillsSummary {
+    pub system: Vec<SkillSummaryEntry>,
+    pub agent: Vec<SkillSummaryEntry>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SkillTreeEntry {
     pub name: String,

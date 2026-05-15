@@ -17,6 +17,35 @@ pub struct AgentToolApprovalRule {
     pub action: ApprovalAction,
 }
 
+/// One tool invocation in a lifecycle hook list. The runtime calls
+/// `tool_name` with `args` at the appropriate hook point.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AgentHookStep {
+    pub tool_name: String,
+    #[serde(default)]
+    pub args: Value,
+}
+
+/// Lifecycle hooks an agent runs at well-defined points during an
+/// execution. Each list runs in order; empty / omitted lists are no-ops.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct AgentHooksConfig {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub execution_start: Vec<AgentHookStep>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub before_llm: Vec<AgentHookStep>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub after_llm: Vec<AgentHookStep>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub before_tool: Vec<AgentHookStep>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub after_tool: Vec<AgentHookStep>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub on_budget_exhausted: Vec<AgentHookStep>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub execution_end: Vec<AgentHookStep>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AiAgent {
     pub id: String,
@@ -35,6 +64,8 @@ pub struct AiAgent {
     pub require_approval_virtual: bool,
     #[serde(default)]
     pub tool_approval_rules: Vec<AgentToolApprovalRule>,
+    #[serde(default)]
+    pub hooks: AgentHooksConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -57,6 +88,8 @@ pub struct AiAgentWithDetails {
     pub require_approval_virtual: bool,
     #[serde(default)]
     pub tool_approval_rules: Vec<AgentToolApprovalRule>,
+    #[serde(default)]
+    pub hooks: AgentHooksConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

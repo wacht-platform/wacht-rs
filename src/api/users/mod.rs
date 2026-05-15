@@ -4,7 +4,11 @@
 //! email management, phone management, and social connections.
 
 pub mod emails;
+pub mod memberships;
+pub mod mfa;
+pub mod passkeys;
 pub mod phones;
+pub mod sessions;
 pub mod social_connections;
 
 use crate::{
@@ -64,6 +68,22 @@ impl UsersApi {
 
     pub fn social_connections(&self) -> social_connections::UserSocialConnectionsApi {
         social_connections::UserSocialConnectionsApi::new(self.client.clone())
+    }
+
+    pub fn sessions(&self) -> sessions::UserSessionsApi {
+        sessions::UserSessionsApi::new(self.client.clone())
+    }
+
+    pub fn passkeys(&self) -> passkeys::UserPasskeysApi {
+        passkeys::UserPasskeysApi::new(self.client.clone())
+    }
+
+    pub fn mfa(&self) -> mfa::UserMfaApi {
+        mfa::UserMfaApi::new(self.client.clone())
+    }
+
+    pub fn memberships(&self) -> memberships::UserMembershipsApi {
+        memberships::UserMembershipsApi::new(self.client.clone())
     }
 }
 
