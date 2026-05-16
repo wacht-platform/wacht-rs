@@ -8,14 +8,26 @@ pub enum SchemaVersion {
     V2,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Second-factor policy. Wire values are `"none"`, `"optional"`, `"enforced"`
+/// (matches `platform-api::models::SecondFactorPolicy`). Earlier versions of
+/// this SDK shipped `disabled / optional / required`, which caused user-detail
+/// responses to fail to decode entirely.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
 pub enum SecondFactorPolicy {
-    #[serde(rename = "disabled")]
-    Disabled,
-    #[serde(rename = "optional")]
+    None,
     Optional,
-    #[serde(rename = "required")]
-    Required,
+    Enforced,
+}
+
+impl std::fmt::Display for SecondFactorPolicy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            SecondFactorPolicy::None => "none",
+            SecondFactorPolicy::Optional => "optional",
+            SecondFactorPolicy::Enforced => "enforced",
+        })
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

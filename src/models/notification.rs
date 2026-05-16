@@ -6,9 +6,9 @@ pub struct Notification {
     pub id: String,
     #[serde(rename = "deployment_id")]
     pub deployment_id: String,
-    // Recipients
-    #[serde(rename = "user_id")]
-    pub user_id: String,
+    // Null on broadcast / org-scoped / workspace-scoped notifications.
+    #[serde(default, skip_serializing_if = "Option::is_none", rename = "user_id")]
+    pub user_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "organization_id")]
     pub organization_id: Option<String>,

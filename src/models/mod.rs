@@ -21,8 +21,8 @@ pub use self::ai_tool::{AiTool, AiToolWithDetails};
 pub mod ai_tool_config;
 pub use self::ai_tool_config::{
     AiToolConfiguration, AiToolType, ApiToolConfiguration, AuthorizationConfiguration, HttpMethod,
-    InternalToolConfiguration, InternalToolType, PlatformEventToolConfiguration, SchemaField,
-    UseExternalServiceToolConfiguration,
+    InternalToolConfiguration, InternalToolType, McpToolConfiguration,
+    PlatformEventToolConfiguration, SchemaField, VirtualToolConfiguration,
 };
 pub mod ai_tool_config_parameters_inner;
 pub use self::ai_tool_config_parameters_inner::AiToolConfigParametersInner;

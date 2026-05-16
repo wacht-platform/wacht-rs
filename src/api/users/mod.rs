@@ -294,6 +294,9 @@ impl UpdateUserBuilder {
         if let Some(disabled) = self.request.disabled {
             form = form.text("disabled", disabled.to_string());
         }
+        if let Some(policy) = &self.request.second_factor_policy {
+            form = form.text("second_factor_policy", policy.to_string());
+        }
         if let Some(remove_profile_image) = self.request.remove_profile_image {
             form = form.text("remove_profile_image", remove_profile_image.to_string());
         }

@@ -2,16 +2,28 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::BTreeMap;
 
+/// Wire format for the configuration discriminator is PascalCase
+/// (`"type": "Api" | "PlatformEvent" | "CodeRunner" | "Internal" | "Mcp" |
+/// "Virtual"`) — matches `platform-api::models::AiToolConfiguration` which
+/// uses `#[serde(tag = "type")]` with no rename_all.
+///
+/// Earlier SDK versions applied `rename_all = "snake_case"` here, which
+/// silently broke decode for every tool configuration. Don't reintroduce.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type")]
 pub enum AiToolConfiguration {
     Api(ApiToolConfiguration),
     PlatformEvent(PlatformEventToolConfiguration),
     CodeRunner(CodeRunnerToolConfiguration),
     Internal(InternalToolConfiguration),
-    UseExternalService(UseExternalServiceToolConfiguration),
+    Mcp(McpToolConfiguration),
+    Virtual(VirtualToolConfiguration),
 }
 
+/// Wire format snake_case (per platform `#[serde(rename_all = "snake_case")]`
+/// on `AiToolType`). `Mcp` + `Virtual` replaced the older
+/// `UseExternalService` when external tools were split into MCP servers and
+/// virtual provider-backed tools (Composio etc.).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AiToolType {
@@ -19,7 +31,8 @@ pub enum AiToolType {
     PlatformEvent,
     CodeRunner,
     Internal,
-    UseExternalService,
+    Mcp,
+    Virtual,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -176,11 +189,31 @@ pub struct InternalToolConfiguration {
     pub input_schema: Option<Vec<SchemaField>>,
 }
 
+/// MCP server tool — runtime-resolved via the MCP protocol against a
+/// registered MCP server's tools catalog.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct UseExternalServiceToolConfiguration {
-    pub service_type: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub input_schema: Option<Vec<SchemaField>>,
+pub struct McpToolConfiguration {
+    pub mcp_server_id: String,
+    pub remote_tool_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input_schema: Option<Value>,
+}
+
+/// Virtual tool — runtime-only reference into a third-party provider's
+/// tool catalog (Composio, Arcade, Pipedream, etc.). Never persisted to the
+/// DB on the platform side; instances are constructed from the provider's
+/// search API and held in the agent context.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct VirtualToolConfiguration {
+    /// Provider slug (e.g. `composio`).
+    pub provider: String,
+    /// Provider-specific toolkit slug (e.g. `gmail`).
+    pub toolkit_slug: String,
+    /// Provider-specific tool slug (e.g. `GMAIL_SEND_EMAIL`).
+    pub remote_tool_slug: String,
+    /// Raw JSON Schema for the tool's arguments.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input_schema: Option<Value>,
 }
 
 impl Default for ApiToolConfiguration {
