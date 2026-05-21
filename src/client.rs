@@ -199,10 +199,6 @@ impl WachtClient {
         crate::api::invitations::InvitationsApi::new(self.clone())
     }
 
-    pub fn credentials(&self) -> crate::api::credentials::CredentialsApi {
-        crate::api::credentials::CredentialsApi::new(self.clone())
-    }
-
     pub fn notifications(&self) -> crate::api::notifications::NotificationsApi {
         crate::api::notifications::NotificationsApi::new(self.clone())
     }

@@ -212,10 +212,6 @@ pub mod oauth_signing_key;
 pub use self::oauth_signing_key::{
     OAuthAppSigningKey, OAuthAppSigningKeyRotatedResponse, OAuthAppSigningKeysListResponse,
 };
-pub mod deployment_credentials;
-pub use self::deployment_credentials::{
-    DeploymentCredentialsApiKey, DeploymentCredentialsResponse,
-};
 pub mod deployment_ai_settings;
 pub use self::deployment_ai_settings::{
     DeploymentAiSettings, DeploymentEmbeddingProvider, DeploymentLlmProvider,

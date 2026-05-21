@@ -2,7 +2,6 @@ pub mod ai;
 pub mod ai_settings;
 pub mod analytics;
 pub mod api_keys;
-pub mod credentials;
 pub mod deployments;
 pub mod health;
 pub mod invitations;

@@ -219,6 +219,68 @@ impl ActorProjectsApi {
     ) -> CreateActorProjectThreadBuilder {
         CreateActorProjectThreadBuilder::new(self.client.clone(), project_id, request)
     }
+    pub fn create_board_item_with_attachments(
+        &self,
+        project_id: impl Into<String>,
+        request: CreateProjectTaskBoardItemRequest,
+        files: Vec<WachtFileUpload>,
+    ) -> CreateActorProjectBoardItemWithAttachmentsBuilder {
+        CreateActorProjectBoardItemWithAttachmentsBuilder::new(
+            self.client.clone(),
+            project_id,
+            request,
+            files,
+        )
+    }
+    pub fn update_board_item_with_attachments(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        request: UpdateProjectTaskBoardItemRequest,
+        files: Vec<WachtFileUpload>,
+    ) -> UpdateActorProjectBoardItemWithAttachmentsBuilder {
+        UpdateActorProjectBoardItemWithAttachmentsBuilder::new(
+            self.client.clone(),
+            project_id,
+            item_id,
+            request,
+            files,
+        )
+    }
+    pub fn create_board_item_comment_with_attachments(
+        &self,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        actor_id: impl Into<String>,
+        body: impl Into<String>,
+        files: Vec<WachtFileUpload>,
+    ) -> CreateActorProjectBoardItemCommentWithAttachmentsBuilder {
+        CreateActorProjectBoardItemCommentWithAttachmentsBuilder::new(
+            self.client.clone(),
+            project_id,
+            item_id,
+            actor_id,
+            body,
+            files,
+        )
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct WachtFileUpload {
+    pub filename: String,
+    pub content_type: Option<String>,
+    pub bytes: Vec<u8>,
+}
+
+fn build_attachment_part(file: WachtFileUpload) -> Result<reqwest::multipart::Part> {
+    let mime = file
+        .content_type
+        .unwrap_or_else(|| "application/octet-stream".to_string());
+    reqwest::multipart::Part::bytes(file.bytes)
+        .file_name(file.filename)
+        .mime_str(&mime)
+        .map_err(|e| Error::InvalidRequest(format!("invalid mime type: {e}")))
 }
 
 fn api_error(status: reqwest::StatusCode, prefix: &str, body: String) -> Error {
@@ -1423,4 +1485,221 @@ fn parse_filename_from_content_disposition(header: &str) -> Option<String> {
         }
     }
     None
+}
+
+pub struct CreateActorProjectBoardItemWithAttachmentsBuilder {
+    client: WachtClient,
+    project_id: String,
+    request: CreateProjectTaskBoardItemRequest,
+    files: Vec<WachtFileUpload>,
+}
+impl CreateActorProjectBoardItemWithAttachmentsBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        request: CreateProjectTaskBoardItemRequest,
+        files: Vec<WachtFileUpload>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            request,
+            files,
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItem> {
+        let mut form = reqwest::multipart::Form::new().text("title", self.request.title);
+        if let Some(v) = self.request.description {
+            form = form.text("description", v);
+        }
+        if let Some(v) = self.request.status {
+            form = form.text("status", v);
+        }
+        if let Some(v) = self.request.schedule_kind {
+            form = form.text("schedule_kind", v);
+        }
+        if let Some(v) = self.request.next_run_at {
+            let text = match v {
+                serde_json::Value::String(s) => s,
+                other => serde_json::to_string(&other).map_err(Error::Json)?,
+            };
+            form = form.text("next_run_at", text);
+        }
+        if let Some(v) = self.request.interval_seconds {
+            form = form.text("interval_seconds", v.to_string());
+        }
+        if let Some(v) = self.request.mounts {
+            form = form.text(
+                "mounts",
+                serde_json::to_string(&v).map_err(Error::Json)?,
+            );
+        }
+        for file in self.files {
+            form = form.part("attachments", build_attachment_part(file)?);
+        }
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items",
+                self.client.config().base_url,
+                self.project_id
+            ))
+            .multipart(form)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to create board item with attachments",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct UpdateActorProjectBoardItemWithAttachmentsBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+    request: UpdateProjectTaskBoardItemRequest,
+    files: Vec<WachtFileUpload>,
+}
+impl UpdateActorProjectBoardItemWithAttachmentsBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        request: UpdateProjectTaskBoardItemRequest,
+        files: Vec<WachtFileUpload>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+            request,
+            files,
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItem> {
+        let mut form = reqwest::multipart::Form::new();
+        if let Some(v) = self.request.title {
+            form = form.text("title", v);
+        }
+        if let Some(v) = self.request.description {
+            form = form.text("description", v);
+        }
+        if let Some(v) = self.request.status {
+            form = form.text("status", v);
+        }
+        if let Some(v) = self.request.schedule_kind {
+            form = form.text("schedule_kind", v);
+        }
+        if let Some(v) = self.request.next_run_at {
+            let text = match v {
+                serde_json::Value::String(s) => s,
+                other => serde_json::to_string(&other).map_err(Error::Json)?,
+            };
+            form = form.text("next_run_at", text);
+        }
+        if let Some(v) = self.request.interval_seconds {
+            form = form.text("interval_seconds", v.to_string());
+        }
+        if let Some(v) = self.request.clear_schedule {
+            form = form.text("clear_schedule", v.to_string());
+        }
+        if let Some(v) = self.request.mounts {
+            form = form.text(
+                "mounts",
+                serde_json::to_string(&v).map_err(Error::Json)?,
+            );
+        }
+        for file in self.files {
+            form = form.part("attachments", build_attachment_part(file)?);
+        }
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/update",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .multipart(form)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to update board item with attachments",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct CreateActorProjectBoardItemCommentWithAttachmentsBuilder {
+    client: WachtClient,
+    project_id: String,
+    item_id: String,
+    actor_id: String,
+    body: String,
+    files: Vec<WachtFileUpload>,
+}
+impl CreateActorProjectBoardItemCommentWithAttachmentsBuilder {
+    pub fn new(
+        client: WachtClient,
+        project_id: impl Into<String>,
+        item_id: impl Into<String>,
+        actor_id: impl Into<String>,
+        body: impl Into<String>,
+        files: Vec<WachtFileUpload>,
+    ) -> Self {
+        Self {
+            client,
+            project_id: project_id.into(),
+            item_id: item_id.into(),
+            actor_id: actor_id.into(),
+            body: body.into(),
+            files,
+        }
+    }
+    pub async fn send(self) -> Result<ProjectTaskBoardItemComment> {
+        let mut form = reqwest::multipart::Form::new().text("body", self.body);
+        for file in self.files {
+            form = form.part("attachments", build_attachment_part(file)?);
+        }
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/actor-projects/{}/board/items/{}/comments",
+                self.client.config().base_url,
+                self.project_id,
+                self.item_id
+            ))
+            .query(&ActorIdQuery {
+                actor_id: self.actor_id,
+            })
+            .multipart(form)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to create board item comment with attachments",
+                response.text().await?,
+            ))
+        }
+    }
 }
