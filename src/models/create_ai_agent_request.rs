@@ -1,6 +1,5 @@
-use crate::models::{AgentHooksConfig, AgentToolApprovalRule};
+use crate::models::{AgentHooksConfig, AgentLimits, AgentModelOverride, AgentToolApprovalRule};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CreateAiAgentRequest {
@@ -8,19 +7,26 @@ pub struct CreateAiAgentRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub configuration: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_ids: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub knowledge_base_ids: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_agents: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub strong_model: Option<AgentModelOverride>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub weak_model: Option<AgentModelOverride>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limits: Option<AgentLimits>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub require_approval_mcp: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub require_approval_virtual: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub tool_approval_rules: Option<Vec<AgentToolApprovalRule>>,
+    /// Built-in tool names to disable for this agent (empty = all enabled).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disabled_internal_tools: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hooks: Option<AgentHooksConfig>,
 }
@@ -30,13 +36,16 @@ impl CreateAiAgentRequest {
         Self {
             name: name.into(),
             description: None,
-            configuration: None,
             tool_ids: None,
             knowledge_base_ids: None,
             sub_agents: None,
+            strong_model: None,
+            weak_model: None,
+            limits: None,
             require_approval_mcp: None,
             require_approval_virtual: None,
             tool_approval_rules: None,
+            disabled_internal_tools: None,
             hooks: None,
         }
     }

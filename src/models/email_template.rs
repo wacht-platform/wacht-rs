@@ -12,26 +12,15 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EmailTemplate {
-    #[serde(rename = "template_name", skip_serializing_if = "Option::is_none")]
-    pub template_name: Option<String>,
-    #[serde(rename = "template_data", skip_serializing_if = "Option::is_none")]
-    pub template_data: Option<String>,
-    #[serde(rename = "template_from", skip_serializing_if = "Option::is_none")]
-    pub template_from: Option<String>,
-    #[serde(rename = "template_reply_to", skip_serializing_if = "Option::is_none")]
-    pub template_reply_to: Option<String>,
-    #[serde(rename = "template_subject", skip_serializing_if = "Option::is_none")]
-    pub template_subject: Option<String>,
+    pub template_name: String,
+    pub template_data: String,
+    pub template_from: String,
+    pub template_reply_to: String,
+    pub template_subject: String,
 }
 
 impl EmailTemplate {
     pub fn new() -> EmailTemplate {
-        EmailTemplate {
-            template_name: None,
-            template_data: None,
-            template_from: None,
-            template_reply_to: None,
-            template_subject: None,
-        }
+        EmailTemplate::default()
     }
 }

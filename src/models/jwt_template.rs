@@ -25,38 +25,23 @@ pub struct CustomSigningKey {
 /// JWT template model
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct JwtTemplate {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub id: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub name: Option<String>,
+    pub id: String,
+    pub name: String,
     /// Token lifetime in seconds
-    #[serde(rename = "token_lifetime", skip_serializing_if = "Option::is_none")]
-    pub token_lifetime: Option<i64>,
+    pub token_lifetime: i64,
     /// Allowed clock skew in seconds
-    #[serde(rename = "allowed_clock_skew", skip_serializing_if = "Option::is_none")]
-    pub allowed_clock_skew: Option<i64>,
+    pub allowed_clock_skew: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub custom_signing_key: Option<CustomSigningKey>,
     /// JWT template configuration
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub template: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub created_at: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub updated_at: Option<String>,
+    pub template: Value,
+    pub deployment_id: String,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 impl JwtTemplate {
     pub fn new() -> JwtTemplate {
-        JwtTemplate {
-            id: None,
-            name: None,
-            token_lifetime: None,
-            allowed_clock_skew: None,
-            custom_signing_key: None,
-            template: None,
-            created_at: None,
-            updated_at: None,
-        }
+        JwtTemplate::default()
     }
 }

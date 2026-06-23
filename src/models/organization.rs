@@ -11,6 +11,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::{OrganizationRole, Segment, Workspace};
+
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Organization {
     #[serde(rename = "id")]
@@ -26,7 +28,7 @@ pub struct Organization {
     #[serde(rename = "image_url")]
     pub image_url: String,
     #[serde(rename = "member_count")]
-    pub member_count: i32,
+    pub member_count: i64,
     #[serde(rename = "public_metadata")]
     pub public_metadata: Value,
     #[serde(rename = "private_metadata")]
@@ -47,4 +49,34 @@ impl Organization {
             private_metadata: Value::default(),
         }
     }
+}
+
+/// Organization with its nested roles, workspaces, and segments.
+/// Returned by the single-organization getter.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct OrganizationDetails {
+    #[serde(rename = "id")]
+    pub id: String,
+    #[serde(rename = "created_at")]
+    pub created_at: String,
+    #[serde(rename = "updated_at")]
+    pub updated_at: String,
+    #[serde(rename = "name")]
+    pub name: String,
+    #[serde(rename = "description")]
+    pub description: String,
+    #[serde(rename = "image_url")]
+    pub image_url: String,
+    #[serde(rename = "member_count")]
+    pub member_count: i64,
+    #[serde(rename = "public_metadata")]
+    pub public_metadata: Value,
+    #[serde(rename = "private_metadata")]
+    pub private_metadata: Value,
+    #[serde(rename = "roles")]
+    pub roles: Vec<OrganizationRole>,
+    #[serde(rename = "workspaces")]
+    pub workspaces: Vec<Workspace>,
+    #[serde(rename = "segments")]
+    pub segments: Vec<Segment>,
 }

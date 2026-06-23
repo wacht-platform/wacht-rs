@@ -9,6 +9,8 @@ pub struct McpServer {
     pub updated_at: DateTime<Utc>,
     pub deployment_id: String,
     pub name: String,
+    #[serde(default)]
+    pub slug: String,
     pub config: McpServerConfig,
 }
 

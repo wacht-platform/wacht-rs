@@ -11,19 +11,23 @@
 use crate::models;
 use serde::{Deserialize, Serialize};
 
+/// Response for a knowledge-base search. Mirrors the platform
+/// `SearchKnowledgeBaseResponse`.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct KnowledgeBaseSearchResult {
-    #[serde(rename = "results", skip_serializing_if = "Option::is_none")]
-    pub results: Option<Vec<models::KnowledgeBaseSearchResultResultsInner>>,
-    #[serde(rename = "total_results", skip_serializing_if = "Option::is_none")]
-    pub total_results: Option<i32>,
+    #[serde(default)]
+    pub results: Vec<models::KnowledgeBaseSearchResultResultsInner>,
+    pub total_results: i64,
+    /// Echo of the original search query.
+    pub query: String,
 }
 
 impl KnowledgeBaseSearchResult {
-    pub fn new() -> KnowledgeBaseSearchResult {
+    pub fn new(query: String) -> KnowledgeBaseSearchResult {
         KnowledgeBaseSearchResult {
-            results: None,
-            total_results: None,
+            results: Vec::new(),
+            total_results: 0,
+            query,
         }
     }
 }

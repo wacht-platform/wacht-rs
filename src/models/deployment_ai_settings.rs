@@ -77,6 +77,76 @@ pub struct DeploymentAiSettings {
     pub storage: DeploymentStorageSettingsResponse,
 }
 
+/// A named, deployment-scoped LLM provider profile (keys masked).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DeploymentAiProviderProfileResponse {
+    pub id: String,
+    pub deployment_id: String,
+    pub provider: DeploymentLlmProvider,
+    pub name: String,
+    pub slug: String,
+    pub api_key_set: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_model: Option<String>,
+    pub enabled: bool,
+    pub disable_prompt_caching: bool,
+    pub disable_reasoning_effort: bool,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub updated_at: chrono::DateTime<chrono::Utc>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct CreateDeploymentAiProviderProfileRequest {
+    pub provider: DeploymentLlmProvider,
+    pub name: String,
+    pub slug: String,
+    pub api_key: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disable_prompt_caching: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disable_reasoning_effort: Option<bool>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct UpdateDeploymentAiProviderProfileRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub slug: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub base_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub project: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disable_prompt_caching: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disable_reasoning_effort: Option<bool>,
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct UpdateDeploymentAiSettingsRequest {
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -40,6 +40,24 @@ impl WorkspaceMembersApi {
     pub fn remove_member(&self, workspace_id: &str, membership_id: &str) -> RemoveMemberBuilder {
         RemoveMemberBuilder::new(self.client.clone(), workspace_id, membership_id)
     }
+
+    pub fn assign_role(
+        &self,
+        workspace_id: &str,
+        membership_id: &str,
+        role_id: &str,
+    ) -> AssignMemberRoleBuilder {
+        AssignMemberRoleBuilder::new(self.client.clone(), workspace_id, membership_id, role_id)
+    }
+
+    pub fn remove_role(
+        &self,
+        workspace_id: &str,
+        membership_id: &str,
+        role_id: &str,
+    ) -> RemoveMemberRoleBuilder {
+        RemoveMemberRoleBuilder::new(self.client.clone(), workspace_id, membership_id, role_id)
+    }
 }
 
 /// Builder for fetching workspace members
@@ -264,6 +282,104 @@ impl RemoveMemberBuilder {
             Err(Error::api_from_text(
                 status,
                 "Failed to remove workspace member",
+                &error_body,
+            ))
+        }
+    }
+}
+
+/// Builder for assigning a role to a workspace member
+pub struct AssignMemberRoleBuilder {
+    client: WachtClient,
+    workspace_id: String,
+    membership_id: String,
+    role_id: String,
+}
+
+impl AssignMemberRoleBuilder {
+    pub fn new(
+        client: WachtClient,
+        workspace_id: &str,
+        membership_id: &str,
+        role_id: &str,
+    ) -> Self {
+        Self {
+            client,
+            workspace_id: workspace_id.to_string(),
+            membership_id: membership_id.to_string(),
+            role_id: role_id.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<()> {
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/workspaces/{}/members/{}/roles/{}",
+            self.client.config().base_url,
+            self.workspace_id,
+            self.membership_id,
+            self.role_id
+        );
+
+        let response = client.post(&url).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(())
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::api_from_text(
+                status,
+                "Failed to assign role to workspace member",
+                &error_body,
+            ))
+        }
+    }
+}
+
+/// Builder for removing a role from a workspace member
+pub struct RemoveMemberRoleBuilder {
+    client: WachtClient,
+    workspace_id: String,
+    membership_id: String,
+    role_id: String,
+}
+
+impl RemoveMemberRoleBuilder {
+    pub fn new(
+        client: WachtClient,
+        workspace_id: &str,
+        membership_id: &str,
+        role_id: &str,
+    ) -> Self {
+        Self {
+            client,
+            workspace_id: workspace_id.to_string(),
+            membership_id: membership_id.to_string(),
+            role_id: role_id.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<()> {
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/workspaces/{}/members/{}/roles/{}",
+            self.client.config().base_url,
+            self.workspace_id,
+            self.membership_id,
+            self.role_id
+        );
+
+        let response = client.delete(&url).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(())
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::api_from_text(
+                status,
+                "Failed to remove role from workspace member",
                 &error_body,
             ))
         }

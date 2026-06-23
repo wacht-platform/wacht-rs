@@ -34,6 +34,10 @@ impl UserEmailsApi {
     pub fn delete_email(&self, user_id: &str, email_id: &str) -> DeleteEmailBuilder {
         DeleteEmailBuilder::new(self.client.clone(), user_id, email_id)
     }
+
+    pub fn make_email_primary(&self, user_id: &str, email_id: &str) -> MakeEmailPrimaryBuilder {
+        MakeEmailPrimaryBuilder::new(self.client.clone(), user_id, email_id)
+    }
 }
 
 /// Builder for adding an email to a user
@@ -159,6 +163,47 @@ impl DeleteEmailBuilder {
             Err(Error::api_from_text(
                 status,
                 "Failed to delete email",
+                &error_body,
+            ))
+        }
+    }
+}
+
+/// Builder for marking a user email as primary
+pub struct MakeEmailPrimaryBuilder {
+    client: WachtClient,
+    user_id: String,
+    email_id: String,
+}
+
+impl MakeEmailPrimaryBuilder {
+    pub fn new(client: WachtClient, user_id: &str, email_id: &str) -> Self {
+        Self {
+            client,
+            user_id: user_id.to_string(),
+            email_id: email_id.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<()> {
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/users/{}/emails/{}/make-primary",
+            self.client.config().base_url,
+            self.user_id,
+            self.email_id
+        );
+
+        let response = client.post(&url).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(())
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::api_from_text(
+                status,
+                "Failed to make email primary",
                 &error_body,
             ))
         }

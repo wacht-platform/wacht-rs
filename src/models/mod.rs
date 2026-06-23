@@ -2,8 +2,9 @@ pub mod add_organization_member_request;
 pub use self::add_organization_member_request::AddOrganizationMemberRequest;
 pub mod ai_agent;
 pub use self::ai_agent::{
-    AgentDetailsResponse, AgentHookStep, AgentHooksConfig, AgentToolApprovalRule, AiAgent,
-    AiAgentWithDetails, ApprovalAction, UpdateAgentToolApprovalActionRequest,
+    AgentDetailsResponse, AgentHookStep, AgentHooksConfig, AgentLimits, AgentModelOverride,
+    AgentToolApprovalRule, AiAgent, AiAgentWithDetails, ApprovalAction, SetAgentRoleAgentRequest,
+    UpdateAgentToolApprovalActionRequest,
 };
 pub mod ai_skill;
 pub use self::ai_skill::{
@@ -29,9 +30,9 @@ pub use self::ai_tool_config_parameters_inner::AiToolConfigParametersInner;
 pub mod analytics_stats;
 pub use self::analytics_stats::AnalyticsStats;
 pub mod authentication_settings;
-pub use self::authentication_settings::AuthenticationSettings;
+pub use self::authentication_settings::{AuthenticationSettings, FirstFactor};
 pub mod b2_b_settings;
-pub use self::b2_b_settings::DeploymentB2bSettingsUpdates;
+pub use self::b2_b_settings::{DeploymentB2bSettingsUpdates, DeploymentPermissionCatalogEntry};
 pub mod create_ai_agent_request;
 pub use self::create_ai_agent_request::CreateAiAgentRequest;
 pub mod create_ai_knowledge_base_request;
@@ -51,16 +52,17 @@ pub use self::create_workspace_request::CreateWorkspaceRequest;
 pub mod composio;
 pub use self::composio::{
     ComposioAuthConfigListResponse, ComposioAuthConfigSummary, ComposioConfigResponse,
-    ComposioEnableAppAuth, ComposioEnabledApp, ComposioToolkit, ComposioToolkitAuthField,
-    ComposioToolkitAuthFields, ComposioToolkitAuthMode, ComposioToolkitDetailsResponse,
-    ComposioToolkitListResponse, EnableComposioAppRequest, UpdateComposioConfigRequest,
+    ComposioEnableAppAuth, ComposioEnabledApp, ComposioToolListResponse, ComposioToolSummary,
+    ComposioToolkit, ComposioToolkitAuthField, ComposioToolkitAuthFields, ComposioToolkitAuthMode,
+    ComposioToolkitDetailsResponse, ComposioToolkitListResponse, EnableComposioAppRequest,
+    InternalToolListResponse, InternalToolSummary, UpdateComposioConfigRequest,
 };
 pub mod deployment_roles;
 pub use self::deployment_roles::{DeploymentOrganizationRole, DeploymentWorkspaceRole};
 pub mod deployment_restrictions;
 pub use self::deployment_restrictions::DeploymentRestrictionsUpdates;
 pub mod display_settings;
-pub use self::display_settings::DisplaySettings;
+pub use self::display_settings::{DisplaySettings, ThemeTokens, WaThemeTokens};
 pub mod email_template;
 pub use self::email_template::EmailTemplate;
 pub mod image_upload_response;
@@ -100,7 +102,7 @@ pub use self::knowledge_base_search_result::KnowledgeBaseSearchResult;
 pub mod knowledge_base_search_result_results_inner;
 pub use self::knowledge_base_search_result_results_inner::KnowledgeBaseSearchResultResultsInner;
 pub mod organization;
-pub use self::organization::Organization;
+pub use self::organization::{Organization, OrganizationDetails};
 pub mod organization_member;
 pub use self::organization_member::OrganizationMember;
 pub mod organization_role;
@@ -128,7 +130,10 @@ pub use self::recent_signup::RecentSignup;
 pub mod recent_signup_organization;
 pub use self::recent_signup_organization::RecentSignupOrganization;
 pub mod social_connection;
-pub use self::social_connection::{OauthCredentials, SocialConnection};
+pub use self::social_connection::{
+    DeploymentSocialConnection, OauthCredentials, SocialConnection, SocialConnectionProvider,
+    UserSocialConnection,
+};
 pub mod update_ai_agent_request;
 pub use self::update_ai_agent_request::UpdateAiAgentRequest;
 pub mod update_ai_knowledge_base_request;
@@ -155,9 +160,8 @@ pub mod user;
 pub use self::user::User;
 pub mod user_details;
 pub use self::user_details::{
-    SchemaVersion, SecondFactorPolicy, Segment as UserSegment,
-    SocialConnection as UserSocialConnection, UserDetails, UserEmailAddress, UserPhoneNumber,
-    VerificationStrategy,
+    SchemaVersion, SecondFactorPolicy, Segment as UserSegment, UserDetails, UserEmailAddress,
+    UserPhoneNumber, VerificationStrategy,
 };
 pub mod user_email;
 pub use self::user_email::UserEmail;
@@ -166,7 +170,7 @@ pub use self::user_phone::UserPhone;
 pub mod waitlist_user;
 pub use self::waitlist_user::WaitlistUser;
 pub mod workspace;
-pub use self::workspace::Workspace;
+pub use self::workspace::{Workspace, WorkspaceDetails, WorkspaceWithOrganizationName};
 pub mod workspace_member;
 pub use self::workspace_member::WorkspaceMember;
 pub mod workspace_role;
@@ -214,8 +218,10 @@ pub use self::oauth_signing_key::{
 };
 pub mod deployment_ai_settings;
 pub use self::deployment_ai_settings::{
+    CreateDeploymentAiProviderProfileRequest, DeploymentAiProviderProfileResponse,
     DeploymentAiSettings, DeploymentEmbeddingProvider, DeploymentLlmProvider,
-    DeploymentStorageProvider, DeploymentStorageSettingsResponse, UpdateDeploymentAiSettingsRequest,
+    DeploymentStorageProvider, DeploymentStorageSettingsResponse,
+    UpdateDeploymentAiProviderProfileRequest, UpdateDeploymentAiSettingsRequest,
     UpdateDeploymentStorageSettingsRequest,
 };
 pub mod execute_agent_request;

@@ -119,6 +119,7 @@ pub struct AgentThread {
     pub updated_at: DateTime<Utc>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub archived_at: Option<DateTime<Utc>>,
+    pub state_version: String,
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
@@ -197,6 +198,10 @@ pub struct ProjectTaskBoardItem {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub pending_approval: Option<Value>,
     pub mounts: Value,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub exclusive_owner_agent_id: Option<String>,
+    #[serde(default)]
+    pub deliverables: Value,
 }
 
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
@@ -285,9 +290,14 @@ pub struct QuestionAnswer {
     pub value: AnswerValue,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AnswerSubmission {
+    /// Structured answers; send either these or `freeform_text`, not both.
+    #[serde(default)]
     pub answers: Vec<QuestionAnswer>,
+    /// Freeform answer text; send instead of structured `answers`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub freeform_text: Option<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -413,7 +423,10 @@ pub struct ThreadEvent {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ConversationRecord {
     pub id: String,
-    pub thread_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub thread_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board_item_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub execution_run_id: Option<String>,
     pub timestamp: DateTime<Utc>,

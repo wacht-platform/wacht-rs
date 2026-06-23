@@ -16,4 +16,8 @@ pub struct AddPhoneRequest {
     pub phone_number: String,
     #[serde(rename = "country_code")]
     pub country_code: String,
+    #[serde(rename = "verified", skip_serializing_if = "Option::is_none")]
+    pub verified: Option<bool>,
+    #[serde(rename = "is_primary", skip_serializing_if = "Option::is_none")]
+    pub is_primary: Option<bool>,
 }

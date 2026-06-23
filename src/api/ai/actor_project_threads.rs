@@ -2,9 +2,9 @@ use crate::{
     client::WachtClient,
     error::{Error, Result},
     models::{
-        AgentThread, CursorPage, ExecuteAgentRequest, ExecuteAgentResponse, PaginatedResponse,
-        ProjectTaskBoardItemAssignment, TaskWorkspaceListing, ThreadMessagesResponse,
-        ThreadTaskGraph, UpdateAgentThreadRequest,
+        AgentThread, AnswerSubmission, CursorPage, ExecuteAgentRequest, ExecuteAgentResponse,
+        PaginatedResponse, ProjectTaskBoardItemAssignment, TaskWorkspaceListing,
+        ThreadMessagesResponse, ThreadTaskGraph, UpdateAgentThreadRequest,
     },
 };
 use serde::Serialize;
@@ -77,6 +77,15 @@ impl ActorProjectThreadsApi {
     ) -> RunActorProjectThreadBuilder {
         RunActorProjectThreadBuilder::new(self.client.clone(), thread_id, request)
     }
+    /// Answer a pending question raised on a thread (the agent's `ask_user`).
+    /// Send either structured `answers` or `freeform_text` in the submission.
+    pub fn answer_question(
+        &self,
+        thread_id: impl Into<String>,
+        submission: AnswerSubmission,
+    ) -> AnswerThreadQuestionBuilder {
+        AnswerThreadQuestionBuilder::new(self.client.clone(), thread_id, submission)
+    }
 }
 
 fn api_error(status: reqwest::StatusCode, prefix: &str, body: String) -> Error {
@@ -101,6 +110,9 @@ struct ThreadMessagesQuery {
     before_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     after_id: Option<String>,
+    /// Scope messages to a single task (board item). Omit = whole thread.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    board_item_id: Option<String>,
 }
 #[derive(Debug, Default, Serialize)]
 struct PathQuery {
@@ -408,6 +420,11 @@ impl FetchActorProjectThreadMessagesBuilder {
         self.query.after_id = Some(after_id.into());
         self
     }
+    /// Scope messages to a single task (board item).
+    pub fn board_item_id(mut self, board_item_id: impl Into<String>) -> Self {
+        self.query.board_item_id = Some(board_item_id.into());
+        self
+    }
     pub async fn send(self) -> Result<ThreadMessagesResponse> {
         let response = self
             .client
@@ -555,6 +572,48 @@ impl RunActorProjectThreadBuilder {
             Err(api_error(
                 status,
                 "Failed to run thread",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct AnswerThreadQuestionBuilder {
+    client: WachtClient,
+    thread_id: String,
+    submission: AnswerSubmission,
+}
+impl AnswerThreadQuestionBuilder {
+    pub fn new(
+        client: WachtClient,
+        thread_id: impl Into<String>,
+        submission: AnswerSubmission,
+    ) -> Self {
+        Self {
+            client,
+            thread_id: thread_id.into(),
+            submission,
+        }
+    }
+    pub async fn send(self) -> Result<ExecuteAgentResponse> {
+        let response = self
+            .client
+            .http_client()
+            .post(format!(
+                "{}/ai/threads/{}/messages/answer",
+                self.client.config().base_url,
+                self.thread_id
+            ))
+            .json(&self.submission)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to answer thread question",
                 response.text().await?,
             ))
         }

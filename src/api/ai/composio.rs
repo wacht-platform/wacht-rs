@@ -2,8 +2,9 @@ use crate::{
     client::WachtClient,
     error::{Error, Result},
     models::{
-        ComposioAuthConfigListResponse, ComposioConfigResponse, ComposioToolkitDetailsResponse,
-        ComposioToolkitListResponse, EnableComposioAppRequest, UpdateComposioConfigRequest,
+        ComposioAuthConfigListResponse, ComposioConfigResponse, ComposioToolListResponse,
+        ComposioToolkitDetailsResponse, ComposioToolkitListResponse, EnableComposioAppRequest,
+        UpdateComposioConfigRequest,
     },
 };
 use serde::Serialize;
@@ -31,6 +32,12 @@ impl ComposioApi {
 
     pub fn list_toolkits(&self) -> ListComposioToolkitsBuilder {
         ListComposioToolkitsBuilder::new(self.client.clone())
+    }
+
+    /// List Composio tools available to the deployment. Optionally restrict to
+    /// a set of toolkit slugs via the builder's `toolkits` method.
+    pub fn list_tools(&self) -> ListComposioToolsBuilder {
+        ListComposioToolsBuilder::new(self.client.clone())
     }
 
     pub fn enable_app(&self, request: EnableComposioAppRequest) -> EnableComposioAppBuilder {
@@ -189,6 +196,61 @@ impl ListComposioToolkitsBuilder {
             Err(api_error(
                 status,
                 "Failed to list Composio toolkits",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+#[derive(Debug, Default, Serialize)]
+struct ListToolsQuery {
+    /// Comma-separated toolkit slugs to restrict the listing to.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    toolkits: Option<String>,
+}
+
+pub struct ListComposioToolsBuilder {
+    client: WachtClient,
+    query: ListToolsQuery,
+}
+
+impl ListComposioToolsBuilder {
+    fn new(client: WachtClient) -> Self {
+        Self {
+            client,
+            query: ListToolsQuery::default(),
+        }
+    }
+
+    /// Restrict the listing to the given toolkit slugs.
+    pub fn toolkits(mut self, toolkits: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        let joined = toolkits
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<_>>()
+            .join(",");
+        self.query.toolkits = if joined.is_empty() { None } else { Some(joined) };
+        self
+    }
+
+    pub async fn send(self) -> Result<ComposioToolListResponse> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/composio/tools",
+                self.client.config().base_url
+            ))
+            .query(&self.query)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to list Composio tools",
                 response.text().await?,
             ))
         }

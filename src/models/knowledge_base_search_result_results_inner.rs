@@ -10,28 +10,33 @@
 
 use serde::{Deserialize, Serialize};
 
+/// One knowledge-base search hit (a chunk). Mirrors the platform
+/// `KnowledgeBaseSearchResult` item shape.
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct KnowledgeBaseSearchResultResultsInner {
-    #[serde(rename = "document_id", skip_serializing_if = "Option::is_none")]
-    pub document_id: Option<String>,
-    #[serde(rename = "document_name", skip_serializing_if = "Option::is_none")]
-    pub document_name: Option<String>,
-    #[serde(rename = "content", skip_serializing_if = "Option::is_none")]
-    pub content: Option<String>,
-    #[serde(rename = "score", skip_serializing_if = "Option::is_none")]
-    pub score: Option<f64>,
-    #[serde(rename = "metadata", skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<serde_json::Value>,
+    pub id: String,
+    pub content: String,
+    pub score: f32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub knowledge_base_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub file_type: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chunk_index: Option<i64>,
 }
 
 impl KnowledgeBaseSearchResultResultsInner {
-    pub fn new() -> KnowledgeBaseSearchResultResultsInner {
+    pub fn new(id: String, content: String, score: f32) -> KnowledgeBaseSearchResultResultsInner {
         KnowledgeBaseSearchResultResultsInner {
-            document_id: None,
-            document_name: None,
-            content: None,
-            score: None,
-            metadata: None,
+            id,
+            content,
+            score,
+            knowledge_base_id: None,
+            title: None,
+            file_type: None,
+            chunk_index: None,
         }
     }
 }

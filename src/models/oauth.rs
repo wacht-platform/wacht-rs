@@ -124,6 +124,8 @@ pub struct Jwk {
     pub x5t: Option<String>,
     #[serde(rename = "x5t#S256", skip_serializing_if = "Option::is_none")]
     pub x5t_s256: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub public_key_pem: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -142,6 +144,22 @@ pub struct OAuthClient {
     #[serde(default)]
     pub redirect_uris: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logo_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tos_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy_uri: Option<String>,
+    #[serde(default)]
+    pub contacts: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub software_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub software_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token_endpoint_auth_signing_alg: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jwks_uri: Option<String>,
@@ -150,6 +168,12 @@ pub struct OAuthClient {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_key_pem: Option<String>,
     pub is_active: bool,
+    #[serde(default)]
+    pub post_logout_redirect_uris: Vec<String>,
+    pub id_token_signing_alg: String,
+    pub access_token_format: String,
+    pub access_token_ttl_seconds: i32,
+    pub skip_consent: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -162,6 +186,22 @@ pub struct CreateOAuthClientRequest {
     pub grant_types: Vec<String>,
     pub redirect_uris: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logo_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tos_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contacts: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub software_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub software_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token_endpoint_auth_signing_alg: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jwks_uri: Option<String>,
@@ -169,6 +209,16 @@ pub struct CreateOAuthClientRequest {
     pub jwks: Option<JwksDocument>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_key_pem: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_logout_redirect_uris: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_token_signing_alg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_token_format: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_token_ttl_seconds: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skip_consent: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -180,6 +230,22 @@ pub struct UpdateOAuthClientRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub redirect_uris: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub client_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logo_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tos_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy_uri: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contacts: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub software_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub software_version: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub token_endpoint_auth_signing_alg: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jwks_uri: Option<String>,
@@ -187,6 +253,16 @@ pub struct UpdateOAuthClientRequest {
     pub jwks: Option<JwksDocument>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub public_key_pem: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub post_logout_redirect_uris: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id_token_signing_alg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_token_format: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_token_ttl_seconds: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub skip_consent: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -11,6 +11,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::{Segment, WorkspaceRole};
+
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Workspace {
     #[serde(rename = "id")]
@@ -26,7 +28,7 @@ pub struct Workspace {
     #[serde(rename = "image_url")]
     pub image_url: String,
     #[serde(rename = "member_count")]
-    pub member_count: i32,
+    pub member_count: i64,
     #[serde(rename = "public_metadata")]
     pub public_metadata: Value,
     #[serde(rename = "private_metadata")]
@@ -47,4 +49,58 @@ impl Workspace {
             private_metadata: Value::default(),
         }
     }
+}
+
+/// Workspace list item: includes the parent organization name but omits
+/// metadata. Returned by the workspace list endpoint.
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct WorkspaceWithOrganizationName {
+    #[serde(rename = "id")]
+    pub id: String,
+    #[serde(rename = "created_at")]
+    pub created_at: String,
+    #[serde(rename = "updated_at")]
+    pub updated_at: String,
+    #[serde(rename = "name")]
+    pub name: String,
+    #[serde(rename = "image_url")]
+    pub image_url: String,
+    #[serde(rename = "description")]
+    pub description: String,
+    #[serde(rename = "member_count")]
+    pub member_count: i64,
+    #[serde(rename = "organization_name")]
+    pub organization_name: String,
+}
+
+/// Workspace with its nested roles and segments plus parent organization
+/// info. Returned by the single-workspace getter.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct WorkspaceDetails {
+    #[serde(rename = "id")]
+    pub id: String,
+    #[serde(rename = "created_at")]
+    pub created_at: String,
+    #[serde(rename = "updated_at")]
+    pub updated_at: String,
+    #[serde(rename = "name")]
+    pub name: String,
+    #[serde(rename = "image_url")]
+    pub image_url: String,
+    #[serde(rename = "description")]
+    pub description: String,
+    #[serde(rename = "member_count")]
+    pub member_count: i32,
+    #[serde(rename = "public_metadata")]
+    pub public_metadata: Value,
+    #[serde(rename = "private_metadata")]
+    pub private_metadata: Value,
+    #[serde(rename = "organization_id")]
+    pub organization_id: String,
+    #[serde(rename = "organization_name")]
+    pub organization_name: String,
+    #[serde(rename = "roles")]
+    pub roles: Vec<WorkspaceRole>,
+    #[serde(rename = "segments")]
+    pub segments: Vec<Segment>,
 }

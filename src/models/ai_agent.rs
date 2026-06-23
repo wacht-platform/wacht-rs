@@ -17,6 +17,30 @@ pub struct AgentToolApprovalRule {
     pub action: ApprovalAction,
 }
 
+/// Per-agent override for one of the model roles (strong / weak). Any field
+/// left `None` falls back to the deployment-level AI settings.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct AgentModelOverride {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile_id: Option<String>,
+}
+
+/// Per-agent runtime limits. Each field falls back to the engine default when
+/// `None`.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct AgentLimits {
+    /// Prompt-token count at which conversation history compacts.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_window_tokens: Option<u32>,
+    /// Cumulative token cap per execution run; exceeding it preempts the run.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub run_token_budget: Option<u64>,
+}
+
 /// One tool invocation in a lifecycle hook list. The runtime calls
 /// `tool_name` with `args` at the appropriate hook point.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -55,9 +79,18 @@ pub struct AiAgent {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub deployment_id: String,
-    pub configuration: Value,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_agents: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strong_model: Option<AgentModelOverride>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weak_model: Option<AgentModelOverride>,
+    #[serde(default)]
+    pub limits: AgentLimits,
+    /// Names of built-in (internal) tools disabled for this agent. Empty = all
+    /// internal tools enabled.
+    #[serde(default)]
+    pub disabled_internal_tools: Vec<String>,
     #[serde(default)]
     pub require_approval_mcp: bool,
     #[serde(default)]
@@ -77,11 +110,26 @@ pub struct AiAgentWithDetails {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub deployment_id: String,
-    pub configuration: Value,
     pub tools_count: i64,
     pub knowledge_bases_count: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_agents: Option<Vec<String>>,
+    /// Designated reviewer agent (None = the agent reviews its own work).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reviewer_agent_id: Option<String>,
+    /// Designated conversation agent (None = the agent handles its own chats).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversation_agent_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strong_model: Option<AgentModelOverride>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weak_model: Option<AgentModelOverride>,
+    #[serde(default)]
+    pub limits: AgentLimits,
+    /// Names of built-in (internal) tools disabled for this agent. Empty = all
+    /// internal tools enabled.
+    #[serde(default)]
+    pub disabled_internal_tools: Vec<String>,
     #[serde(default)]
     pub require_approval_mcp: bool,
     #[serde(default)]
@@ -101,16 +149,45 @@ pub struct AgentDetailsResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
     pub deployment_id: String,
-    pub configuration: Value,
     pub tools_count: i64,
     pub knowledge_bases_count: i64,
     pub tools: Vec<Value>,
     pub knowledge_bases: Vec<Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_agents: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reviewer_agent_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub conversation_agent_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strong_model: Option<AgentModelOverride>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weak_model: Option<AgentModelOverride>,
+    #[serde(default)]
+    pub limits: AgentLimits,
+    #[serde(default)]
+    pub disabled_internal_tools: Vec<String>,
+    #[serde(default)]
+    pub require_approval_mcp: bool,
+    #[serde(default)]
+    pub require_approval_virtual: bool,
+    #[serde(default)]
+    pub tool_approval_rules: Vec<AgentToolApprovalRule>,
+    #[serde(default)]
+    pub hooks: AgentHooksConfig,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct UpdateAgentToolApprovalActionRequest {
     pub approval_action: ApprovalAction,
+}
+
+/// Request to set (or reset) a role agent for an agent. `agent_id` of `None`
+/// resets the role back to the agent itself (the default).
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct SetAgentRoleAgentRequest {
+    /// Which role to set: "reviewer" or "conversation".
+    pub role: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub agent_id: Option<String>,
 }

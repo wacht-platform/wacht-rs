@@ -20,6 +20,10 @@ pub struct CreateNotificationRequest {
     pub title: String,
     pub body: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub action_label: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub ctas: Option<Vec<CallToAction>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub severity: Option<String>,
@@ -27,7 +31,7 @@ pub struct CreateNotificationRequest {
     pub metadata: Option<HashMap<String, serde_json::Value>>,
     /// Expiration time in hours
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub expires_in_hours: Option<i32>,
+    pub expires_hours: Option<i64>,
 }
 
 impl CreateNotificationRequest {
@@ -39,10 +43,12 @@ impl CreateNotificationRequest {
             workspace_id: None,
             title,
             body,
+            action_url: None,
+            action_label: None,
             ctas: None,
             severity: None,
             metadata: None,
-            expires_in_hours: None,
+            expires_hours: None,
         }
     }
 
@@ -66,6 +72,16 @@ impl CreateNotificationRequest {
         self
     }
 
+    pub fn with_action_url(mut self, action_url: String) -> Self {
+        self.action_url = Some(action_url);
+        self
+    }
+
+    pub fn with_action_label(mut self, action_label: String) -> Self {
+        self.action_label = Some(action_label);
+        self
+    }
+
     pub fn with_ctas(mut self, ctas: Vec<CallToAction>) -> Self {
         self.ctas = Some(ctas);
         self
@@ -86,8 +102,8 @@ impl CreateNotificationRequest {
         self
     }
 
-    pub fn with_expires_in_hours(mut self, hours: i32) -> Self {
-        self.expires_in_hours = Some(hours);
+    pub fn with_expires_hours(mut self, hours: i64) -> Self {
+        self.expires_hours = Some(hours);
         self
     }
 }

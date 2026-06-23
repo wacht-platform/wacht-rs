@@ -10,6 +10,16 @@
 
 use serde::{Deserialize, Serialize};
 
+/// A single entry in a deployment permission catalog (org or workspace).
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct DeploymentPermissionCatalogEntry {
+    /// Stable permission key.
+    pub key: String,
+    /// Whether this permission is archived.
+    #[serde(default)]
+    pub archived: bool,
+}
+
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DeploymentB2bSettingsUpdates {
     // Organization/Workspace Enablement
@@ -137,13 +147,13 @@ pub struct DeploymentB2bSettingsUpdates {
         rename = "workspace_permission_catalog",
         skip_serializing_if = "Option::is_none"
     )]
-    pub workspace_permission_catalog: Option<serde_json::Value>,
+    pub workspace_permission_catalog: Option<Vec<DeploymentPermissionCatalogEntry>>,
 
     #[serde(
         rename = "organization_permission_catalog",
         skip_serializing_if = "Option::is_none"
     )]
-    pub organization_permission_catalog: Option<serde_json::Value>,
+    pub organization_permission_catalog: Option<Vec<DeploymentPermissionCatalogEntry>>,
 
     #[serde(
         rename = "ip_allowlist_per_workspace_enabled",

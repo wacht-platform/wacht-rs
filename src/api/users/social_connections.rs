@@ -5,6 +5,7 @@
 use crate::{
     client::WachtClient,
     error::{Error, Result},
+    models::{PaginatedResponse, UserSocialConnection},
 };
 
 #[derive(Debug, Clone)]
@@ -17,12 +18,54 @@ impl UserSocialConnectionsApi {
         Self { client }
     }
 
+    pub fn list_social_connections(&self, user_id: &str) -> ListSocialConnectionsBuilder {
+        ListSocialConnectionsBuilder::new(self.client.clone(), user_id)
+    }
+
     pub fn delete_social_connection(
         &self,
         user_id: &str,
         connection_id: &str,
     ) -> DeleteSocialConnectionBuilder {
         DeleteSocialConnectionBuilder::new(self.client.clone(), user_id, connection_id)
+    }
+}
+
+/// Builder for listing a user's social connections
+pub struct ListSocialConnectionsBuilder {
+    client: WachtClient,
+    user_id: String,
+}
+
+impl ListSocialConnectionsBuilder {
+    pub fn new(client: WachtClient, user_id: &str) -> Self {
+        Self {
+            client,
+            user_id: user_id.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<PaginatedResponse<UserSocialConnection>> {
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/users/{}/social-connections",
+            self.client.config().base_url,
+            self.user_id
+        );
+
+        let response = client.get(&url).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::api_from_text(
+                status,
+                "Failed to list social connections",
+                &error_body,
+            ))
+        }
     }
 }
 

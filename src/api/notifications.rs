@@ -19,6 +19,12 @@ impl NotificationsApi {
     }
 }
 
+#[derive(serde::Deserialize)]
+struct CreateNotificationsResponse {
+    #[serde(default)]
+    data: Vec<Notification>,
+}
+
 /// Builder for creating a notification
 pub struct CreateBuilder {
     client: WachtClient,
@@ -30,7 +36,7 @@ impl CreateBuilder {
         Self { client, request }
     }
 
-    pub async fn send(self) -> Result<Notification> {
+    pub async fn send(self) -> Result<Vec<Notification>> {
         let client = self.client.http_client();
         let url = format!("{}/notifications", self.client.config().base_url);
 
@@ -38,7 +44,8 @@ impl CreateBuilder {
         let status = response.status();
 
         if status.is_success() {
-            Ok(response.json().await?)
+            let body: CreateNotificationsResponse = response.json().await?;
+            Ok(body.data)
         } else {
             let error_body = response.text().await?;
             Err(Error::api_from_text(

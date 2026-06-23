@@ -18,6 +18,29 @@ pub struct OauthCredentials {
     pub scopes: Vec<String>,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SocialConnectionProvider {
+    XOauth,
+    GithubOauth,
+    GitlabOauth,
+    GoogleOauth,
+    FacebookOauth,
+    MicrosoftOauth,
+    LinkedinOauth,
+    DiscordOauth,
+    AppleOauth,
+}
+
+impl Default for SocialConnectionProvider {
+    fn default() -> SocialConnectionProvider {
+        Self::GoogleOauth
+    }
+}
+
+/// Backwards-compatible alias for the social connection provider enum.
+pub type Provider = SocialConnectionProvider;
+
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DeploymentSocialConnection {
     #[serde(rename = "id")]
@@ -26,8 +49,10 @@ pub struct DeploymentSocialConnection {
     pub created_at: String,
     #[serde(rename = "updated_at")]
     pub updated_at: String,
-    #[serde(rename = "provider")]
-    pub provider: String,
+    #[serde(rename = "deployment_id", skip_serializing_if = "Option::is_none")]
+    pub deployment_id: Option<String>,
+    #[serde(rename = "provider", skip_serializing_if = "Option::is_none")]
+    pub provider: Option<SocialConnectionProvider>,
     #[serde(rename = "enabled")]
     pub enabled: bool,
     #[serde(rename = "credentials", skip_serializing_if = "Option::is_none")]
@@ -36,42 +61,7 @@ pub struct DeploymentSocialConnection {
 
 impl DeploymentSocialConnection {
     pub fn new() -> DeploymentSocialConnection {
-        DeploymentSocialConnection {
-            id: String::new(),
-            created_at: String::new(),
-            updated_at: String::new(),
-            provider: String::new(),
-            enabled: false,
-            credentials: None,
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
-pub enum Provider {
-    #[serde(rename = "x_oauth")]
-    XOauth,
-    #[serde(rename = "github_oauth")]
-    GithubOauth,
-    #[serde(rename = "gitlab_oauth")]
-    GitlabOauth,
-    #[serde(rename = "google_oauth")]
-    GoogleOauth,
-    #[serde(rename = "facebook_oauth")]
-    FacebookOauth,
-    #[serde(rename = "microsoft_oauth")]
-    MicrosoftOauth,
-    #[serde(rename = "linkedin_oauth")]
-    LinkedinOauth,
-    #[serde(rename = "discord_oauth")]
-    DiscordOauth,
-    #[serde(rename = "apple_oauth")]
-    AppleOauth,
-}
-
-impl Default for Provider {
-    fn default() -> Provider {
-        Self::GoogleOauth
+        DeploymentSocialConnection::default()
     }
 }
 
@@ -79,7 +69,7 @@ impl Default for Provider {
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct SocialConnection {
     #[serde(rename = "provider", skip_serializing_if = "Option::is_none")]
-    pub provider: Option<Provider>,
+    pub provider: Option<SocialConnectionProvider>,
     #[serde(rename = "enabled", skip_serializing_if = "Option::is_none")]
     pub enabled: Option<bool>,
     #[serde(
@@ -100,4 +90,20 @@ impl SocialConnection {
             credentials: None,
         }
     }
+}
+
+/// A user's social (OAuth) connection, as returned by
+/// `GET /users/{user_id}/social-connections`. Mirrors the backend `SocialConnection`
+/// model field-for-field (ids and timestamps are emitted as strings).
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct UserSocialConnection {
+    pub id: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub user_id: String,
+    pub user_email_address_id: String,
+    pub provider: SocialConnectionProvider,
+    pub email_address: String,
+    pub access_token: String,
+    pub refresh_token: String,
 }

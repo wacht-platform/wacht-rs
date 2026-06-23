@@ -9,10 +9,13 @@ pub mod roles;
 use crate::{
     client::WachtClient,
     error::{Error, Result},
-    models::{ListOptions, PaginatedResponse, UpdateWorkspaceRequest, Workspace},
+    models::{
+        ListOptions, PaginatedResponse, UpdateWorkspaceRequest, Workspace, WorkspaceDetails,
+        WorkspaceWithOrganizationName,
+    },
 };
 
-pub type WorkspaceListResponse = PaginatedResponse<Workspace>;
+pub type WorkspaceListResponse = PaginatedResponse<WorkspaceWithOrganizationName>;
 
 #[derive(Debug, Clone)]
 pub struct WorkspacesApi {
@@ -129,7 +132,7 @@ impl FetchWorkspaceBuilder {
         }
     }
 
-    pub async fn send(self) -> Result<Workspace> {
+    pub async fn send(self) -> Result<WorkspaceDetails> {
         let client = self.client.http_client();
         let url = format!(
             "{}/workspaces/{}",

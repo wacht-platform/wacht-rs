@@ -53,6 +53,41 @@ pub struct ComposioToolkitListResponse {
     pub next_cursor: Option<String>,
 }
 
+/// One Composio tool, deployment-scoped. `name` is the runtime-prefixed
+/// identifier the agent calls; `remote_tool_slug` is the raw provider slug;
+/// `input_schema` is Composio's JSON schema for the args.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ComposioToolSummary {
+    pub name: String,
+    pub toolkit_slug: String,
+    pub remote_tool_slug: String,
+    #[serde(default)]
+    pub display_name: String,
+    #[serde(default)]
+    pub description: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub input_schema: Option<Value>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ComposioToolListResponse {
+    pub tools: Vec<ComposioToolSummary>,
+}
+
+/// One built-in tool exposed by the runtime — name, description, and JSON
+/// input schema.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct InternalToolSummary {
+    pub name: String,
+    pub description: String,
+    pub input_schema: Value,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct InternalToolListResponse {
+    pub tools: Vec<InternalToolSummary>,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ComposioAuthConfigSummary {
     pub id: String,

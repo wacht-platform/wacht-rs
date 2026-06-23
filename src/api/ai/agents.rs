@@ -3,7 +3,8 @@ use crate::{
     error::{Error, Result},
     models::{
         AgentDetailsResponse, AgentSkillsSummary, AiAgent, AiAgentWithDetails, CreateAiAgentRequest,
-        PaginatedResponse, SkillFileResponse, SkillScope, SkillTreeResponse, UpdateAiAgentRequest,
+        PaginatedResponse, SetAgentRoleAgentRequest, SkillFileResponse, SkillScope,
+        SkillTreeResponse, UpdateAiAgentRequest,
     },
 };
 use reqwest::multipart::{Form, Part};
@@ -115,6 +116,16 @@ impl AgentsApi {
         sub_agent_id: impl Into<String>,
     ) -> DetachSubAgentBuilder {
         DetachSubAgentBuilder::new(self.client.clone(), agent_id, sub_agent_id)
+    }
+
+    /// Set (or reset) a role agent — the designated reviewer or conversation
+    /// agent. Pass a request with `agent_id: None` to reset to the agent itself.
+    pub fn set_role_agent(
+        &self,
+        agent_id: impl Into<String>,
+        request: SetAgentRoleAgentRequest,
+    ) -> SetAgentRoleAgentBuilder {
+        SetAgentRoleAgentBuilder::new(self.client.clone(), agent_id, request)
     }
 }
 
@@ -689,6 +700,48 @@ impl ListAgentSkillsSummaryBuilder {
             Err(api_error(
                 status,
                 "Failed to list agent skills summary",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct SetAgentRoleAgentBuilder {
+    client: WachtClient,
+    agent_id: String,
+    request: SetAgentRoleAgentRequest,
+}
+impl SetAgentRoleAgentBuilder {
+    pub fn new(
+        client: WachtClient,
+        agent_id: impl Into<String>,
+        request: SetAgentRoleAgentRequest,
+    ) -> Self {
+        Self {
+            client,
+            agent_id: agent_id.into(),
+            request,
+        }
+    }
+    pub async fn send(self) -> Result<AiAgentWithDetails> {
+        let response = self
+            .client
+            .http_client()
+            .put(format!(
+                "{}/ai/agents/{}/role-agent",
+                self.client.config().base_url,
+                self.agent_id
+            ))
+            .json(&self.request)
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to set agent role agent",
                 response.text().await?,
             ))
         }

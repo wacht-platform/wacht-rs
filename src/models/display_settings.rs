@@ -10,40 +10,142 @@
 
 use serde::{Deserialize, Serialize};
 
+/// The 23 `--wa-*` SDK design tokens (plus the two optional font tokens), per
+/// theme. Field names are snake_case and map to the kebab-case CSS custom
+/// property suffix on the SDK side (e.g. `surface_subtle` -> `--wa-surface-subtle`).
+/// Every token is optional; anything left unset falls back to the SDK default.
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct WaThemeTokens {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub surface: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub surface_subtle: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub background: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub canvas: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_secondary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_muted: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_faint: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub border: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub border_strong: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub primary: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub primary_soft: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub primary_foreground: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub success: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub success_soft: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub info: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub info_soft: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub warning: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub warning_soft: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub error_soft: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub radius: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub radius_lg: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub font_sans: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub font_mono: Option<String>,
+}
+
+/// Per-deployment override of the SDK `--wa-*` token contract, split by mode.
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ThemeTokens {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub light: Option<WaThemeTokens>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dark: Option<WaThemeTokens>,
+}
+
+/// Deployment display / branding settings. Mirrors the backend
+/// `DeploymentUISettings` response and serves as the `PATCH /settings/display`
+/// update body (every field optional so partial updates serialize cleanly).
 #[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DisplaySettings {
-    #[serde(rename = "logo_url", skip_serializing_if = "Option::is_none")]
-    pub logo_url: Option<String>,
-    #[serde(rename = "primary_color", skip_serializing_if = "Option::is_none")]
-    pub primary_color: Option<String>,
-    #[serde(rename = "secondary_color", skip_serializing_if = "Option::is_none")]
-    pub secondary_color: Option<String>,
-    #[serde(rename = "font_family", skip_serializing_if = "Option::is_none")]
-    pub font_family: Option<String>,
-    #[serde(rename = "app_name", skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub created_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub deployment_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub app_name: Option<String>,
-    #[serde(rename = "welcome_message", skip_serializing_if = "Option::is_none")]
-    pub welcome_message: Option<String>,
-    #[serde(rename = "support_email", skip_serializing_if = "Option::is_none")]
-    pub support_email: Option<String>,
-    #[serde(rename = "terms_url", skip_serializing_if = "Option::is_none")]
-    pub terms_url: Option<String>,
-    #[serde(rename = "privacy_url", skip_serializing_if = "Option::is_none")]
-    pub privacy_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tos_page_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sign_in_page_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sign_up_page_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub after_sign_out_one_page_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub after_sign_out_all_page_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub favicon_image_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logo_image_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub privacy_policy_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signup_terms_statement: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub signup_terms_statement_shown: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub theme_tokens: Option<ThemeTokens>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub after_logo_click_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_profile_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub create_organization_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_user_profile_image_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_organization_profile_image_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_workspace_profile_image_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub use_initials_for_user_profile_image: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub use_initials_for_organization_profile_image: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub after_signup_redirect_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub after_signin_redirect_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_profile_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub after_create_organization_redirect_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub waitlist_page_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub support_page_url: Option<String>,
 }
 
 impl DisplaySettings {
     pub fn new() -> DisplaySettings {
-        DisplaySettings {
-            logo_url: None,
-            primary_color: None,
-            secondary_color: None,
-            font_family: None,
-            app_name: None,
-            welcome_message: None,
-            support_email: None,
-            terms_url: None,
-            privacy_url: None,
-        }
+        DisplaySettings::default()
     }
 }

@@ -54,6 +54,10 @@ impl UsersApi {
         UpdatePasswordBuilder::new(self.client.clone(), user_id, request)
     }
 
+    pub fn remove_password(&self, user_id: &str) -> RemovePasswordBuilder {
+        RemovePasswordBuilder::new(self.client.clone(), user_id)
+    }
+
     pub fn delete_user(&self, user_id: &str) -> DeleteUserBuilder {
         DeleteUserBuilder::new(self.client.clone(), user_id)
     }
@@ -360,6 +364,44 @@ impl UpdatePasswordBuilder {
             Err(Error::api_from_text(
                 status,
                 "Failed to update password",
+                &error_body,
+            ))
+        }
+    }
+}
+
+/// Builder for removing a user's password (force passwordless)
+pub struct RemovePasswordBuilder {
+    client: WachtClient,
+    user_id: String,
+}
+
+impl RemovePasswordBuilder {
+    pub fn new(client: WachtClient, user_id: &str) -> Self {
+        Self {
+            client,
+            user_id: user_id.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<()> {
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/users/{}/password",
+            self.client.config().base_url,
+            self.user_id
+        );
+
+        let response = client.delete(&url).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(())
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::api_from_text(
+                status,
+                "Failed to remove password",
                 &error_body,
             ))
         }

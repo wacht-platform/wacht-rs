@@ -10,6 +10,26 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::models::SecondFactorPolicy;
+
+/// First-factor authentication strategy. Wire values match
+/// `platform-api::models::FirstFactor`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum FirstFactor {
+    EmailPassword,
+    UsernamePassword,
+    EmailOtp,
+    EmailMagicLink,
+    PhoneOtp,
+}
+
+impl Default for FirstFactor {
+    fn default() -> Self {
+        Self::EmailPassword
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EmailSettings {
     pub enabled: bool,
@@ -127,18 +147,12 @@ pub struct AuthenticationSettings {
     pub passkey: Option<PasskeySettings>,
     pub auth_factors_enabled: AuthFactorsEnabled,
     pub verification_policy: VerificationPolicy,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub second_factor_policy: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_factor: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub multi_session_support: Option<MultiSessionSupport>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub session_token_lifetime: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub session_validity_period: Option<i64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub session_inactive_timeout: Option<i64>,
+    pub second_factor_policy: SecondFactorPolicy,
+    pub first_factor: FirstFactor,
+    pub multi_session_support: MultiSessionSupport,
+    pub session_token_lifetime: i64,
+    pub session_validity_period: i64,
+    pub session_inactive_timeout: i64,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub deployment_id: Option<String>,
 }
@@ -249,12 +263,16 @@ impl Default for AuthenticationSettings {
             }),
             auth_factors_enabled: AuthFactorsEnabled::default(),
             verification_policy: VerificationPolicy::default(),
-            second_factor_policy: None,
-            first_factor: None,
-            multi_session_support: None,
-            session_token_lifetime: None,
-            session_validity_period: None,
-            session_inactive_timeout: None,
+            second_factor_policy: SecondFactorPolicy::Optional,
+            first_factor: FirstFactor::EmailPassword,
+            multi_session_support: MultiSessionSupport {
+                enabled: true,
+                max_accounts_per_session: 5,
+                max_sessions_per_account: 5,
+            },
+            session_token_lifetime: 30 * 60,
+            session_validity_period: 30 * 24 * 60 * 60,
+            session_inactive_timeout: 7 * 60 * 60 * 24,
             deployment_id: None,
         }
     }

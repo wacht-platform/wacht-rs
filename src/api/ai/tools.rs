@@ -2,7 +2,7 @@ use crate::{
     client::WachtClient,
     error::{Error, Result},
     models::{
-        AiTool, AiToolWithDetails, CreateAiToolRequest, PaginatedResponse,
+        AiTool, AiToolWithDetails, CreateAiToolRequest, InternalToolListResponse, PaginatedResponse,
         UpdateAgentToolApprovalActionRequest, UpdateAiToolRequest,
     },
 };
@@ -28,6 +28,10 @@ impl ToolsApi {
     }
     pub fn list_tools(&self) -> ListToolsBuilder {
         ListToolsBuilder::new(self.client.clone())
+    }
+    /// List the built-in (internal) tools the runtime exposes.
+    pub fn list_internal_tools(&self) -> ListInternalToolsBuilder {
+        ListInternalToolsBuilder::new(self.client.clone())
     }
     pub fn fetch_tool(&self, tool_id: impl Into<String>) -> FetchToolBuilder {
         FetchToolBuilder::new(self.client.clone(), tool_id)
@@ -114,6 +118,36 @@ impl ListToolsBuilder {
             Err(api_error(
                 status,
                 "Failed to list tools",
+                response.text().await?,
+            ))
+        }
+    }
+}
+
+pub struct ListInternalToolsBuilder {
+    client: WachtClient,
+}
+impl ListInternalToolsBuilder {
+    pub fn new(client: WachtClient) -> Self {
+        Self { client }
+    }
+    pub async fn send(self) -> Result<InternalToolListResponse> {
+        let response = self
+            .client
+            .http_client()
+            .get(format!(
+                "{}/ai/internal-tools",
+                self.client.config().base_url
+            ))
+            .send()
+            .await?;
+        let status = response.status();
+        if status.is_success() {
+            Ok(response.json().await?)
+        } else {
+            Err(api_error(
+                status,
+                "Failed to list internal tools",
                 response.text().await?,
             ))
         }

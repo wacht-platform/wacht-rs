@@ -1,6 +1,7 @@
 use crate::{
     client::WachtClient,
     error::{Error, Result},
+    models::RecentSignup,
 };
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -24,6 +25,16 @@ pub struct AnalyticsStatsResponse {
     pub workspaces_created_change: Option<f64>,
     #[serde(default)]
     pub daily_metrics: Vec<DailyAuthMetric>,
+    #[serde(default)]
+    pub recent_signups: Vec<RecentSignup>,
+    #[serde(default)]
+    pub recent_signins: Vec<RecentSignup>,
+    #[serde(default)]
+    pub methods: Vec<BreakdownItem>,
+    #[serde(default)]
+    pub top_countries: Vec<BreakdownItem>,
+    #[serde(default)]
+    pub devices: Vec<BreakdownItem>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,6 +42,12 @@ pub struct DailyAuthMetric {
     pub day: String,
     pub signins: i64,
     pub signups: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BreakdownItem {
+    pub label: String,
+    pub count: i64,
 }
 
 #[derive(Debug, Clone)]

@@ -14,9 +14,8 @@ use serde::{Deserialize, Serialize};
 pub struct AddEmailRequest {
     #[serde(rename = "email")]
     pub email: String,
-    #[serde(
-        rename = "verification_strategy",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub verification_strategy: Option<String>,
+    #[serde(rename = "verified", skip_serializing_if = "Option::is_none")]
+    pub verified: Option<bool>,
+    #[serde(rename = "is_primary", skip_serializing_if = "Option::is_none")]
+    pub is_primary: Option<bool>,
 }

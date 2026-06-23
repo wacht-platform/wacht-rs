@@ -305,7 +305,6 @@ pub struct WebhookEndpoint {
     pub description: Option<String>,
     pub headers: Option<Value>,
     pub is_active: bool,
-    pub signing_secret: Option<String>,
     pub max_retries: i32,
     pub timeout_seconds: i32,
     pub failure_count: i32,

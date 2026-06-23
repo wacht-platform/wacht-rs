@@ -5,6 +5,12 @@ use serde_json::Value;
 
 #[derive(Debug, Serialize)]
 pub struct CreateApiAuthAppRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
     pub app_slug: String,
     pub name: String,
     pub key_prefix: String,
@@ -12,10 +18,18 @@ pub struct CreateApiAuthAppRequest {
     pub description: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rate_limit_scheme_slug: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permissions: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resources: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
 pub struct UpdateApiAuthAppRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub organization_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub workspace_id: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -26,6 +40,10 @@ pub struct UpdateApiAuthAppRequest {
     pub is_active: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rate_limit_scheme_slug: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub permissions: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub resources: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize)]
@@ -45,21 +63,26 @@ pub struct RevokeApiKeyRequest {
     pub reason: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum RateLimitMode {
+    PerApp,
     PerKey,
-    PerIp,
     PerKeyAndIp,
+    PerAppAndIp,
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum RateLimitUnit {
+    Millisecond,
     Second,
     Minute,
     Hour,
     Day,
+    CalendarDay,
+    Month,
+    CalendarMonth,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -69,39 +92,58 @@ pub struct RateLimit {
     pub max_requests: i32,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub mode: Option<RateLimitMode>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoints: Option<Vec<String>>,
+    #[serde(default)]
+    pub priority: i32,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ApiAuthApp {
-    pub id: String,
     pub deployment_id: String,
+    pub user_id: Option<String>,
+    pub organization_id: Option<String>,
+    pub workspace_id: Option<String>,
     pub app_slug: String,
     pub name: String,
-    pub key_prefix: String,
     pub description: Option<String>,
     pub is_active: bool,
+    pub key_prefix: String,
+    #[serde(default)]
+    pub permissions: Vec<String>,
+    #[serde(default)]
+    pub resources: Vec<String>,
+    #[serde(default)]
     pub rate_limits: Vec<RateLimit>,
+    pub rate_limit_scheme_slug: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct ApiKey {
     pub id: String,
-    pub app_id: String,
     pub deployment_id: String,
     pub app_slug: String,
     pub name: String,
     pub key_prefix: String,
     pub key_suffix: String,
+    #[serde(default)]
     pub permissions: Vec<String>,
-    pub org_role_permissions: Vec<String>,
-    pub workspace_role_permissions: Vec<String>,
     pub metadata: serde_json::Value,
+    #[serde(default)]
+    pub rate_limits: Vec<RateLimit>,
+    pub rate_limit_scheme_slug: Option<String>,
+    pub owner_user_id: Option<String>,
     pub organization_id: Option<String>,
     pub workspace_id: Option<String>,
     pub organization_membership_id: Option<String>,
     pub workspace_membership_id: Option<String>,
+    #[serde(default)]
+    pub org_role_permissions: Vec<String>,
+    #[serde(default)]
+    pub workspace_role_permissions: Vec<String>,
     pub expires_at: Option<DateTime<Utc>>,
     pub last_used_at: Option<DateTime<Utc>>,
     pub is_active: bool,
@@ -147,10 +189,13 @@ pub struct UpdateRateLimitSchemeRequest {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RateLimitScheme {
     pub id: String,
+    pub deployment_id: String,
     pub slug: String,
     pub name: String,
     pub description: Option<String>,
     pub rules: Vec<RateLimit>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -190,6 +235,95 @@ pub struct GetApiAuditTimeseriesQuery {
     pub end_date: Option<DateTime<Utc>>,
     pub interval: Option<String>,
     pub key_id: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAuditLog {
+    pub request_id: String,
+    pub deployment_id: String,
+    pub app_slug: String,
+    pub key_id: String,
+    pub key_name: String,
+    pub outcome: String,
+    pub blocked_by_rule: Option<String>,
+    pub client_ip: String,
+    pub path: String,
+    pub user_agent: Option<String>,
+    pub rate_limits: Option<Value>,
+    pub timestamp: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAuditLogsResponse {
+    #[serde(default)]
+    pub data: Vec<ApiAuditLog>,
+    pub limit: u32,
+    pub has_more: bool,
+    pub next_cursor: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAuditTopKey {
+    pub key_id: String,
+    pub key_name: String,
+    pub total_requests: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAuditTopPath {
+    pub path: String,
+    pub total_requests: i64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAuditBlockedReason {
+    pub blocked_by_rule: String,
+    pub count: i64,
+    pub percentage: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAuditRateLimitRule {
+    pub rule: String,
+    pub hit_count: i64,
+    pub percentage: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAuditRateLimitBreakdown {
+    pub total_hits: i64,
+    pub percentage_of_blocked: f64,
+    #[serde(default)]
+    pub top_rules: Vec<ApiAuditRateLimitRule>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAuditAnalyticsResponse {
+    pub total_requests: u64,
+    pub allowed_requests: u64,
+    pub blocked_requests: u64,
+    pub success_rate: f64,
+    pub keys_used_24h: u64,
+    pub top_keys: Option<Vec<ApiAuditTopKey>>,
+    pub top_paths: Option<Vec<ApiAuditTopPath>>,
+    pub blocked_reasons: Option<Vec<ApiAuditBlockedReason>>,
+    pub rate_limit_stats: Option<ApiAuditRateLimitBreakdown>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAuditTimeseriesPoint {
+    pub timestamp: DateTime<Utc>,
+    pub total_requests: i64,
+    pub allowed_requests: i64,
+    pub blocked_requests: i64,
+    pub success_rate: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiAuditTimeseriesResponse {
+    #[serde(default)]
+    pub data: Vec<ApiAuditTimeseriesPoint>,
+    pub interval: String,
 }
 
 #[derive(Debug, Clone)]
@@ -853,7 +987,7 @@ impl GetApiAuditLogsBuilder {
         }
     }
 
-    pub async fn send(self) -> Result<Value> {
+    pub async fn send(self) -> Result<ApiAuditLogsResponse> {
         let client = self.client.http_client();
         let url = format!(
             "{}/api-auth/apps/{}/audit/logs",
@@ -891,7 +1025,7 @@ impl GetApiAuditAnalyticsBuilder {
         }
     }
 
-    pub async fn send(self) -> Result<Value> {
+    pub async fn send(self) -> Result<ApiAuditAnalyticsResponse> {
         let client = self.client.http_client();
         let url = format!(
             "{}/api-auth/apps/{}/audit/analytics",
@@ -929,7 +1063,7 @@ impl GetApiAuditTimeseriesBuilder {
         }
     }
 
-    pub async fn send(self) -> Result<Value> {
+    pub async fn send(self) -> Result<ApiAuditTimeseriesResponse> {
         let client = self.client.http_client();
         let url = format!(
             "{}/api-auth/apps/{}/audit/timeseries",

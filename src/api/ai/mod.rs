@@ -63,12 +63,12 @@ pub use actor_mcp_servers::{
     ConnectActorMcpServerBuilder, DisconnectActorMcpServerBuilder, ListActorMcpServersBuilder,
 };
 pub use actor_project_threads::{
-    ArchiveActorProjectThreadBuilder, FetchActorProjectThreadAssignmentsBuilder,
-    FetchActorProjectThreadBuilder, FetchActorProjectThreadFilesystemBuilder,
-    FetchActorProjectThreadFilesystemFileBuilder, FetchActorProjectThreadMessagesBuilder,
-    FetchActorProjectThreadTaskGraphsBuilder, RunActorProjectThreadBuilder,
-    SearchActorProjectThreadsBuilder, UnarchiveActorProjectThreadBuilder,
-    UpdateActorProjectThreadBuilder,
+    AnswerThreadQuestionBuilder, ArchiveActorProjectThreadBuilder,
+    FetchActorProjectThreadAssignmentsBuilder, FetchActorProjectThreadBuilder,
+    FetchActorProjectThreadFilesystemBuilder, FetchActorProjectThreadFilesystemFileBuilder,
+    FetchActorProjectThreadMessagesBuilder, FetchActorProjectThreadTaskGraphsBuilder,
+    RunActorProjectThreadBuilder, SearchActorProjectThreadsBuilder,
+    UnarchiveActorProjectThreadBuilder, UpdateActorProjectThreadBuilder,
 };
 pub use actor_projects::{
     AnswerActorProjectBoardItemQuestionBuilder, ApproveActorProjectBoardItemToolBuilder,
@@ -84,18 +84,18 @@ pub use actor_projects::{
     UnarchiveActorProjectBoardItemBuilder, UnarchiveActorProjectBuilder,
     UpdateActorProjectBoardItemBuilder, UpdateActorProjectBuilder,
 };
-pub use actors::CreateActorBuilder;
+pub use actors::{CreateActorBuilder, ListActorsBuilder, ListActorsOptions};
 pub use agents::{
     AttachSubAgentBuilder, CreateAgentBuilder, DeleteAgentBuilder, DeleteAgentSkillBuilder,
     DetachSubAgentBuilder, FetchAgentBuilder, FetchAgentDetailsBuilder,
     ImportAgentSkillBundleBuilder, ListAgentSkillTreeBuilder, ListAgentSkillsSummaryBuilder,
     ListAgentSubAgentsBuilder, ListAgentsBuilder, ListAgentsOptions, ReadAgentSkillFileBuilder,
-    UpdateAgentBuilder,
+    SetAgentRoleAgentBuilder, UpdateAgentBuilder,
 };
 pub use composio::{
     DisableComposioAppBuilder, EnableComposioAppBuilder, FetchComposioConfigBuilder,
     FetchComposioToolkitAuthDetailsBuilder, ListComposioToolkitAuthConfigsBuilder,
-    ListComposioToolkitsBuilder, UpdateComposioConfigBuilder,
+    ListComposioToolsBuilder, ListComposioToolkitsBuilder, UpdateComposioConfigBuilder,
 };
 pub use knowledge_bases::{
     AttachKnowledgeBaseBuilder, CreateKnowledgeBaseBuilder, DeleteDocumentBuilder,
@@ -109,6 +109,6 @@ pub use mcp_servers::{
 };
 pub use tools::{
     AttachToolBuilder, CreateToolBuilder, DeleteToolBuilder, DetachToolBuilder,
-    FetchAgentToolsBuilder, FetchToolBuilder, ListToolsBuilder, ListToolsOptions,
-    UpdateToolBuilder,
+    FetchAgentToolsBuilder, FetchToolBuilder, ListInternalToolsBuilder, ListToolsBuilder,
+    ListToolsOptions, UpdateToolBuilder,
 };

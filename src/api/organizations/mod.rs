@@ -11,8 +11,8 @@ use crate::{
     client::WachtClient,
     error::{Error, Result},
     models::{
-        CreateOrganizationRequest, ListOptions, Organization, PaginatedResponse,
-        UpdateOrganizationRequest,
+        CreateOrganizationRequest, ListOptions, Organization, OrganizationDetails,
+        PaginatedResponse, UpdateOrganizationRequest,
     },
 };
 
@@ -210,7 +210,7 @@ impl FetchOrganizationBuilder {
         }
     }
 
-    pub async fn send(self) -> Result<Organization> {
+    pub async fn send(self) -> Result<OrganizationDetails> {
         let client = self.client.http_client();
         let url = format!(
             "{}/organizations/{}",

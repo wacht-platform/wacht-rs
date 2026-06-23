@@ -34,6 +34,10 @@ impl UserPhonesApi {
     pub fn delete_phone(&self, user_id: &str, phone_id: &str) -> DeletePhoneBuilder {
         DeletePhoneBuilder::new(self.client.clone(), user_id, phone_id)
     }
+
+    pub fn make_phone_primary(&self, user_id: &str, phone_id: &str) -> MakePhonePrimaryBuilder {
+        MakePhonePrimaryBuilder::new(self.client.clone(), user_id, phone_id)
+    }
 }
 
 /// Builder for adding a phone to a user
@@ -159,6 +163,47 @@ impl DeletePhoneBuilder {
             Err(Error::api_from_text(
                 status,
                 "Failed to delete phone",
+                &error_body,
+            ))
+        }
+    }
+}
+
+/// Builder for marking a user phone as primary
+pub struct MakePhonePrimaryBuilder {
+    client: WachtClient,
+    user_id: String,
+    phone_id: String,
+}
+
+impl MakePhonePrimaryBuilder {
+    pub fn new(client: WachtClient, user_id: &str, phone_id: &str) -> Self {
+        Self {
+            client,
+            user_id: user_id.to_string(),
+            phone_id: phone_id.to_string(),
+        }
+    }
+
+    pub async fn send(self) -> Result<()> {
+        let client = self.client.http_client();
+        let url = format!(
+            "{}/users/{}/phones/{}/make-primary",
+            self.client.config().base_url,
+            self.user_id,
+            self.phone_id
+        );
+
+        let response = client.post(&url).send().await?;
+        let status = response.status();
+
+        if status.is_success() {
+            Ok(())
+        } else {
+            let error_body = response.text().await?;
+            Err(Error::api_from_text(
+                status,
+                "Failed to make phone primary",
                 &error_body,
             ))
         }
