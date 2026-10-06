@@ -55,7 +55,7 @@ impl AuthLayer {
     pub fn new() -> Self {
         let public_key = crate::get_public_signing_key().unwrap_or_default();
         let public_jwks = crate::get_public_signing_jwks();
-        if public_key.is_empty() && public_jwks.is_none() {
+        if public_key.trim().is_empty() && public_jwks.is_none() {
             panic!(
                 "Public signing material must be configured in Wacht SDK. Initialize SDK with WachtConfig::with_public_key() or load_public_key()"
             );
@@ -65,10 +65,7 @@ impl AuthLayer {
             config: Arc::new(AuthConfig {
                 public_key,
                 public_jwks,
-                allowed_clock_skew: 5,
-                validate_exp: true,
-                validate_nbf: true,
-                required_issuer: None,
+                ..AuthConfig::default()
             }),
         }
     }
@@ -79,7 +76,7 @@ impl AuthLayer {
     pub fn try_new() -> Option<Self> {
         let public_key = crate::get_public_signing_key().unwrap_or_default();
         let public_jwks = crate::get_public_signing_jwks();
-        if public_key.is_empty() && public_jwks.is_none() {
+        if public_key.trim().is_empty() && public_jwks.is_none() {
             return None;
         }
 
@@ -87,10 +84,7 @@ impl AuthLayer {
             config: Arc::new(AuthConfig {
                 public_key,
                 public_jwks,
-                allowed_clock_skew: 5,
-                validate_exp: true,
-                validate_nbf: true,
-                required_issuer: None,
+                ..AuthConfig::default()
             }),
         })
     }
@@ -102,11 +96,7 @@ impl AuthLayer {
         Self {
             config: Arc::new(AuthConfig {
                 public_key: key.into(),
-                public_jwks: None,
-                allowed_clock_skew: 5,
-                validate_exp: true,
-                validate_nbf: true,
-                required_issuer: None,
+                ..AuthConfig::default()
             }),
         }
     }
@@ -126,6 +116,18 @@ impl AuthLayer {
     /// Set the required issuer claim value.
     pub fn required_issuer(mut self, issuer: impl Into<String>) -> Self {
         Arc::make_mut(&mut self.config).required_issuer = Some(issuer.into());
+        self
+    }
+
+    /// Set the required audience claim value.
+    pub fn required_audience(mut self, audience: impl Into<String>) -> Self {
+        Arc::make_mut(&mut self.config).required_audience = Some(audience.into());
+        self
+    }
+
+    /// Restrict accepted algorithms (intersected with those implied by the key type).
+    pub fn allowed_algorithms(mut self, algorithms: impl IntoIterator<Item = Algorithm>) -> Self {
+        Arc::make_mut(&mut self.config).allowed_algorithms = Some(algorithms.into_iter().collect());
         self
     }
 
@@ -252,33 +254,34 @@ async fn validate_token(
         )
     })?;
 
-    let algorithm = match header.alg {
-        Algorithm::HS256 => Algorithm::HS256,
-        Algorithm::HS384 => Algorithm::HS384,
-        Algorithm::HS512 => Algorithm::HS512,
-        Algorithm::RS256 => Algorithm::RS256,
-        Algorithm::RS384 => Algorithm::RS384,
-        Algorithm::RS512 => Algorithm::RS512,
-        Algorithm::ES256 => Algorithm::ES256,
-        Algorithm::ES384 => Algorithm::ES384,
-        _ => {
-            return Err(error_response(
-                StatusCode::UNAUTHORIZED,
-                "Unsupported algorithm",
-            ));
-        }
-    };
+    if matches!(
+        header.alg,
+        Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512
+    ) {
+        return Err(error_response(
+            StatusCode::UNAUTHORIZED,
+            "Unsupported algorithm",
+        ));
+    }
 
-    let decoding_key = build_decoding_key(token, &header, algorithm, config)?;
+    let (decoding_key, algorithm) = resolve_verification_key(&header, config)?;
 
     let mut validation = Validation::new(algorithm);
+    validation.algorithms = vec![algorithm];
     validation.leeway = config.allowed_clock_skew;
     validation.validate_exp = config.validate_exp;
     validation.validate_nbf = config.validate_nbf;
 
+    let mut required_claims = vec!["exp"];
     if let Some(ref issuer) = config.required_issuer {
         validation.set_issuer(&[issuer]);
+        required_claims.push("iss");
     }
+    if let Some(ref audience) = config.required_audience {
+        validation.set_audience(&[audience]);
+        required_claims.push("aud");
+    }
+    validation.set_required_spec_claims(&required_claims);
 
     // Decode and validate token
     let token_data = decode::<TokenClaims>(token, &decoding_key, &validation)
@@ -298,73 +301,118 @@ async fn validate_token(
     ))
 }
 
-fn build_decoding_key(
-    token: &str,
+const RSA_ALGORITHMS: &[Algorithm] = &[
+    Algorithm::RS256,
+    Algorithm::RS384,
+    Algorithm::RS512,
+    Algorithm::PS256,
+    Algorithm::PS384,
+    Algorithm::PS512,
+];
+
+/// Resolves the key and the algorithm pinned by its key type; the header alg is only
+/// accepted if it matches. If a JWKS is configured, the PEM key is never consulted.
+fn resolve_verification_key(
     header: &jsonwebtoken::Header,
-    algorithm: Algorithm,
     config: &AuthConfig,
-) -> Result<DecodingKey, Response> {
-    if let Some(jwk) = select_jwk_for_token(header, config) {
-        return DecodingKey::from_jwk(&jwk).map_err(|e| {
-            error_response(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                &format!("Invalid JWK for token verification: {e}"),
-            )
-        });
+) -> Result<(DecodingKey, Algorithm), Response> {
+    let (decoding_key, key_algorithms) = match config.public_jwks.as_ref() {
+        Some(jwks) => {
+            let jwk = jwks
+                .keys
+                .iter()
+                .find(|key| {
+                    header
+                        .kid
+                        .as_ref()
+                        .is_none_or(|kid| key.kid.as_ref() == Some(kid))
+                        && jwk_algorithms(key).contains(&header.alg)
+                })
+                .ok_or_else(|| {
+                    error_response(StatusCode::UNAUTHORIZED, "No matching verification key")
+                })?;
+            let parsed = serde_json::to_value(jwk)
+                .ok()
+                .and_then(|value| serde_json::from_value::<Jwk>(value).ok())
+                .ok_or_else(|| {
+                    error_response(StatusCode::INTERNAL_SERVER_ERROR, "Invalid JWK")
+                })?;
+            let key = DecodingKey::from_jwk(&parsed).map_err(|e| {
+                error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    &format!("Invalid JWK for token verification: {e}"),
+                )
+            })?;
+            (key, jwk_algorithms(jwk))
+        }
+        None => pem_decoding_key(&config.public_key)?,
+    };
+
+    let allowed_by_config = config
+        .allowed_algorithms
+        .as_ref()
+        .is_none_or(|allowed| allowed.contains(&header.alg));
+    if !allowed_by_config || !key_algorithms.contains(&header.alg) {
+        return Err(error_response(
+            StatusCode::UNAUTHORIZED,
+            "Token algorithm not allowed for verification key",
+        ));
     }
 
-    match algorithm {
-        Algorithm::ES256 | Algorithm::ES384 => {
-            DecodingKey::from_ec_pem(config.public_key.as_bytes()).map_err(|e| {
-                error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    &format!("Invalid EC public key: {e}"),
-                )
-            })
-        }
-        Algorithm::RS256 | Algorithm::RS384 | Algorithm::RS512 => {
-            DecodingKey::from_rsa_pem(config.public_key.as_bytes()).map_err(|e| {
-                error_response(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    &format!("Invalid RSA public key: {e}"),
-                )
-            })
-        }
-        Algorithm::HS256 | Algorithm::HS384 | Algorithm::HS512 => {
-            Ok(DecodingKey::from_secret(config.public_key.as_bytes()))
-        }
-        _ => Err(error_response(
-            StatusCode::UNAUTHORIZED,
-            &format!(
-                "Unsupported algorithm for token: {}",
-                token.split('.').next().unwrap_or("unknown")
-            ),
-        )),
-    }
+    Ok((decoding_key, header.alg))
 }
 
-fn select_jwk_for_token(header: &jsonwebtoken::Header, config: &AuthConfig) -> Option<Jwk> {
-    let jwks = config.public_jwks.as_ref()?;
+fn jwk_algorithms(jwk: &crate::models::Jwk) -> Vec<Algorithm> {
+    let by_type: &[Algorithm] = match (jwk.kty.as_str(), jwk.crv.as_deref()) {
+        ("EC", Some("P-256")) => &[Algorithm::ES256],
+        ("EC", Some("P-384")) => &[Algorithm::ES384],
+        ("RSA", _) => RSA_ALGORITHMS,
+        ("OKP", Some("Ed25519")) => &[Algorithm::EdDSA],
+        _ => &[],
+    };
+    by_type
+        .iter()
+        .copied()
+        .filter(|alg| jwk.alg.as_deref().is_none_or(|a| a == algorithm_name(*alg)))
+        .collect()
+}
 
-    let matching = jwks.keys.iter().find(|key| {
-        if let Some(header_kid) = header.kid.as_ref() {
-            if key.kid.as_ref() != Some(header_kid) {
-                return false;
-            }
-        }
+fn pem_decoding_key(pem: &str) -> Result<(DecodingKey, Vec<Algorithm>), Response> {
+    const OID_P256: &[u8] = &[0x06, 0x08, 0x2A, 0x86, 0x48, 0xCE, 0x3D, 0x03, 0x01, 0x07];
+    const OID_P384: &[u8] = &[0x06, 0x05, 0x2B, 0x81, 0x04, 0x00, 0x22];
+    const OID_RSA: &[u8] = &[0x06, 0x09, 0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01];
+    const OID_ED25519: &[u8] = &[0x06, 0x03, 0x2B, 0x65, 0x70];
 
-        if let Some(alg) = key.alg.as_ref() {
-            if alg != algorithm_name(header.alg) {
-                return false;
-            }
-        }
+    let misconfigured = |msg: &str| error_response(StatusCode::INTERNAL_SERVER_ERROR, msg);
+    let pem = pem.trim();
+    if pem.is_empty() {
+        return Err(misconfigured("No verification key configured"));
+    }
 
-        true
-    })?;
+    use base64::Engine;
+    let body: String = pem
+        .lines()
+        .filter(|line| !line.starts_with("-----"))
+        .map(str::trim)
+        .collect();
+    let der = base64::engine::general_purpose::STANDARD
+        .decode(body)
+        .map_err(|_| misconfigured("Invalid public key PEM"))?;
+    let has = |oid: &[u8]| der.windows(oid.len()).any(|w| w == oid);
 
-    serde_json::to_value(matching)
-        .ok()
-        .and_then(|value| serde_json::from_value::<Jwk>(value).ok())
+    let (key, algorithms) = if has(OID_P256) {
+        (DecodingKey::from_ec_pem(pem.as_bytes()), vec![Algorithm::ES256])
+    } else if has(OID_P384) {
+        (DecodingKey::from_ec_pem(pem.as_bytes()), vec![Algorithm::ES384])
+    } else if has(OID_RSA) || pem.starts_with("-----BEGIN RSA PUBLIC KEY-----") {
+        (DecodingKey::from_rsa_pem(pem.as_bytes()), RSA_ALGORITHMS.to_vec())
+    } else if has(OID_ED25519) {
+        (DecodingKey::from_ed_pem(pem.as_bytes()), vec![Algorithm::EdDSA])
+    } else {
+        return Err(misconfigured("Unsupported public key type"));
+    };
+    let key = key.map_err(|e| misconfigured(&format!("Invalid public key: {e}")))?;
+    Ok((key, algorithms))
 }
 
 fn algorithm_name(algorithm: Algorithm) -> &'static str {
@@ -412,5 +460,148 @@ fn error_response(status: StatusCode, message: &str) -> Response {
                     Response::new(Body::from("Authentication error"))
                 })
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{Jwk as ModelJwk, JwksDocument};
+    use base64::Engine;
+    use jsonwebtoken::{EncodingKey, Header, encode};
+
+    const PRIVATE_PEM: &str = "-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgAPJlZ5isUZONbIII
+kkVAQoVmh0hWR8WxfhkM+JjKTQuhRANCAATuXhF7Bk6lePn6kzVAC7qIum5roTPV
+PqXuI/JIen2YOxazEucwpThE5CylEvMqS+j7BRoEf+ZHYJJbhlPWOGDx
+-----END PRIVATE KEY-----";
+    const PUBLIC_PEM: &str = "-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE7l4RewZOpXj5+pM1QAu6iLpua6Ez
+1T6l7iPySHp9mDsWsxLnMKU4ROQspRLzKkvo+wUaBH/mR2CSW4ZT1jhg8Q==
+-----END PUBLIC KEY-----";
+
+    fn jwks_config() -> AuthConfig {
+        let jwk: ModelJwk = serde_json::from_value(serde_json::json!({
+            "kty": "EC",
+            "kid": "k1",
+            "alg": "ES256",
+            "crv": "P-256",
+            "x": "7l4RewZOpXj5-pM1QAu6iLpua6Ez1T6l7iPySHp9mDs",
+            "y": "FrMS5zClOETkLKUS8ypL6PsFGgR_5kdgkluGU9Y4YPE",
+        }))
+        .unwrap();
+        AuthConfig {
+            public_jwks: Some(JwksDocument { keys: vec![jwk] }),
+            ..AuthConfig::default()
+        }
+    }
+
+    fn pem_config() -> AuthConfig {
+        AuthConfig {
+            public_key: PUBLIC_PEM.to_string(),
+            ..AuthConfig::default()
+        }
+    }
+
+    fn claims(iss: &str) -> serde_json::Value {
+        let now = chrono::Utc::now().timestamp();
+        serde_json::json!({
+            "iss": iss, "sub": "user_1", "sid": "sess_1", "iat": now, "exp": now + 300,
+            "organization": "org_victim",
+        })
+    }
+
+    fn hs256(secret: &[u8], kid: Option<&str>) -> String {
+        let mut header = Header::new(Algorithm::HS256);
+        header.kid = kid.map(str::to_string);
+        encode(&header, &claims("https://issuer"), &EncodingKey::from_secret(secret)).unwrap()
+    }
+
+    fn es256(kid: Option<&str>, iss: &str) -> String {
+        let mut header = Header::new(Algorithm::ES256);
+        header.kid = kid.map(str::to_string);
+        let key = EncodingKey::from_ec_pem(PRIVATE_PEM.as_bytes()).unwrap();
+        encode(&header, &claims(iss), &key).unwrap()
+    }
+
+    async fn check(token: &str, config: &AuthConfig) -> Result<AuthContext, StatusCode> {
+        let req = Request::builder()
+            .header(header::AUTHORIZATION, format!("Bearer {token}"))
+            .body(Body::empty())
+            .unwrap();
+        validate_token(req, config)
+            .await
+            .map(|(_, ctx)| ctx)
+            .map_err(|resp| resp.status())
+    }
+
+    #[tokio::test]
+    async fn valid_es256_accepted() {
+        assert!(check(&es256(Some("k1"), "x"), &jwks_config()).await.is_ok());
+        assert!(check(&es256(None, "x"), &pem_config()).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn hs256_with_empty_secret_rejected() {
+        for kid in [None, Some("k1"), Some("unknown")] {
+            let token = hs256(b"", kid);
+            assert!(check(&token, &jwks_config()).await.is_err());
+            assert!(check(&token, &pem_config()).await.is_err());
+        }
+        let empty_key = AuthConfig::default();
+        assert!(check(&hs256(b"", None), &empty_key).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn hs256_with_public_pem_as_secret_rejected() {
+        let token = hs256(PUBLIC_PEM.as_bytes(), None);
+        assert!(check(&token, &pem_config()).await.is_err());
+        let mut both = jwks_config();
+        both.public_key = PUBLIC_PEM.to_string();
+        assert!(check(&hs256(PUBLIC_PEM.as_bytes(), Some("unknown")), &both).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn unknown_kid_rejected_without_pem_fallback() {
+        let mut both = jwks_config();
+        both.public_key = PUBLIC_PEM.to_string();
+        let token = es256(Some("unknown"), "x");
+        assert_eq!(check(&token, &both).await.unwrap_err(), StatusCode::UNAUTHORIZED);
+    }
+
+    #[tokio::test]
+    async fn header_alg_mismatching_key_type_rejected() {
+        let token = es256(Some("k1"), "x");
+        let mut parts: Vec<&str> = token.split('.').collect();
+        let forged = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .encode(r#"{"alg":"ES384","typ":"JWT","kid":"k1"}"#);
+        parts[0] = &forged;
+        let forged_token = parts.join(".");
+        assert!(check(&forged_token, &jwks_config()).await.is_err());
+        assert!(check(&forged_token, &pem_config()).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn empty_public_key_rejected() {
+        let config = AuthConfig {
+            public_key: "  ".to_string(),
+            ..AuthConfig::default()
+        };
+        assert!(check(&es256(None, "x"), &config).await.is_err());
+    }
+
+    #[tokio::test]
+    async fn issuer_audience_and_allowlist_enforced() {
+        let mut config = jwks_config();
+        config.required_issuer = Some("https://issuer".to_string());
+        assert!(check(&es256(Some("k1"), "https://issuer"), &config).await.is_ok());
+        assert!(check(&es256(Some("k1"), "https://evil"), &config).await.is_err());
+
+        config.required_audience = Some("console".to_string());
+        assert!(check(&es256(Some("k1"), "https://issuer"), &config).await.is_err());
+
+        let mut config = jwks_config();
+        config.allowed_algorithms = Some(vec![Algorithm::RS256]);
+        assert!(check(&es256(Some("k1"), "x"), &config).await.is_err());
     }
 }
