@@ -91,6 +91,11 @@ pub struct AuthConfig {
     pub validate_nbf: bool,
     /// Required issuer claim value
     pub required_issuer: Option<String>,
+    /// Required audience claim value
+    pub required_audience: Option<String>,
+    /// Optional allowlist further restricting the algorithms implied by the key type.
+    /// Symmetric (HS*) algorithms are always rejected.
+    pub allowed_algorithms: Option<Vec<jsonwebtoken::Algorithm>>,
 }
 
 impl Default for AuthConfig {
@@ -102,6 +107,8 @@ impl Default for AuthConfig {
             validate_exp: true,
             validate_nbf: true,
             required_issuer: None,
+            required_audience: None,
+            allowed_algorithms: None,
         }
     }
 }

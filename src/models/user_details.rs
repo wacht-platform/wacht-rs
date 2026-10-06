@@ -41,6 +41,8 @@ pub enum VerificationStrategy {
     OauthLinkedin,
     OauthDiscord,
     OauthApple,
+    EnterpriseSso,
+    Scim,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
